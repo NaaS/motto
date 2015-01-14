@@ -6,13 +6,41 @@ open Crisp_syntax
   https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html
 *)
 
+(*NOTE this code depends on side-effects to expand tokens, to deal with the
+  contraint that the lexer only emits one token at a time.*)
+let token_q : Crisp_parser.token Queue.t = Queue.create ()
+
+let expand_macro_tokens (lexer : Lexing.lexbuf -> Crisp_parser.token) (lexbuf : Lexing.lexbuf) : Crisp_parser.token =
+  let rec enqueue_token (i : int) (token : Crisp_parser.token) =
+    if i = 0 then ()
+    else
+      begin
+        Queue.enqueue token_q token;
+        enqueue_token (i - 1) token
+      end in
+  let expand_macro (times : int) (token : Crisp_parser.token) =
+      assert (times > -1); (*we can have UNINDENTN 0 times, in case we just had
+                           an \n*)
+      enqueue_token times token;
+      Crisp_parser.NL (*always end in an NL*)
+  in
+  if Queue.is_empty token_q then
+    match lexer lexbuf with
+(*    | Crisp_parser.INDENTN n -> expand_macro n Crisp_parser.INDENT*)
+    | Crisp_parser.UNDENTN n -> expand_macro n Crisp_parser.UNDENT
+    | token -> token
+  else
+    Queue.dequeue_exn token_q
+
+
 let print_position outx lexbuf =
   let pos = lexbuf.lex_curr_p in
   fprintf outx "%s:%d:%d" pos.pos_fname
     pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
 
 let parse_with_error lexbuf : Crisp_syntax.program =
-  try Crisp_parser.program Crisp_lexer.main lexbuf with
+  (*try Crisp_parser.program Crisp_lexer.main lexbuf with*)
+  try Crisp_parser.program (expand_macro_tokens Crisp_lexer.main) lexbuf with
 (*
   | SyntaxError msg ->
     fprintf stderr "%a: %s\n" print_position lexbuf msg;
@@ -59,7 +87,8 @@ let lex_looper filename () =
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
   let results =
     let rec contents acc =
-      let x = Crisp_lexer.main lexbuf in
+      (*let x = Crisp_lexer.main lexbuf in*)
+      let x = expand_macro_tokens Crisp_lexer.main lexbuf in
       if x = Crisp_parser.EOF then (List.rev (x :: acc))
       else contents (x :: acc)
     in contents [] in
@@ -67,10 +96,79 @@ let lex_looper filename () =
   results
 ;;
 
+open Crisp_parser
+let string_of_token = function
+  | INTEGER x -> "INTEGER(" ^ string_of_int x ^ ")"
+  | STRING x -> "STRING(" ^ x ^ ")"
+  | BOOLEAN x -> "BOOLEAN(" ^ string_of_bool x ^ ")"
+
+  (*Punctuation*)
+  | COLON -> "COLON"
+  | SEMICOLON -> "SEMICOLON"
+  | BANG -> "BANG"
+  | QUESTION -> "QUESTION"
+  | PERIOD -> "PERIOD"
+  | COLONCOLON -> "COLONCOLON"
+  | LEFT_R_BRACKET -> "LEFT_R_BRACKET"
+  | RIGHT_R_BRACKET -> "RIGHT_R_BRACKET"
+  | LEFT_S_BRACKET -> "LEFT_S_BRACKET"
+  | RIGHT_S_BRACKET -> "RIGHT_S_BRACKET"
+  | LEFT_C_BRACKET -> "LEFT_C_BRACKET"
+  | RIGHT_C_BRACKET -> "RIGHT_C_BRACKET"
+  | LEFT_A_BRACKET -> "LEFT_A_BRACKET"
+  | RIGHT_A_BRACKET -> "RIGHT_A_BRACKET"
+  | AT -> "AT"
+  | PIPE -> "PIPE"
+  | PLUS -> "PLUS"
+  | UNDERSCORE -> "UNDERSCORE"
+  | DASH -> "DASH"
+  | ASTERIX -> "ASTERIX"
+  | SLASH -> "SLASH"
+  | EOF -> "EOF"
+  | COMMA -> "COMMA"
+  | NL -> "NL"
+  | HASH -> "HASH"
+
+(*  | INDENTN x -> "INDENTN(" ^ string_of_int x ^ ")"*)
+  | UNDENTN x -> "UNDENTN(" ^ string_of_int x ^ ")"
+  | INDENT -> "INDENT"
+  | UNDENT -> "UNDENT"
+
+  (*Reserved words*)
+  | IF -> "IF"
+  | ELSE -> "ELSE"
+  | IN -> "IN"
+  | DEF -> "DEF"
+  | CARRY_ON -> "CARRY_ON"
+  | YIELD -> "YIELD"
+  | TYPE -> "TYPE"
+  | TYPE_INTEGER -> "TYPE_INTEGER"
+  | TYPE_BOOLEAN -> "TYPE_BOOLEAN"
+  | TYPE_STRING -> "TYPE_STRING"
+  | TYPE_RECORD -> "TYPE_RECORD"
+  | TYPE_VARIANT -> "TYPE_VARIANT"
+  | CASE -> "CASE"
+  | OF -> "OF"
+  | AND -> "AND"
+  | NOT -> "NOT"
+  | OR -> "OR"
+  | IMPORT -> "IMPORT"
+
+  (*Names*)
+  | UPPER_ALPHA x -> "UPPER_ALPHA(" ^ x ^ ")"
+  | LOWER_ALPHA x -> "LOWER_ALPHA(" ^ x ^ ")"
+  | NAT_NUM x -> "NAT_NUM(" ^ x ^ ")"
+  | VARIABLE x -> "VARIABLE(" ^ x ^ ")"
+  | IDENTIFIER x -> "IDENTIFIER(" ^ x ^ ")"
+
+  | _ -> "<UNKNOWN TOKEN>"
 
 let default_file = "test.cp";;
 
 print_endline "*crisp* *crisp*";
+printf "%s\n"
+  ((List.map ~f:string_of_token (lex_looper default_file ()))
+   |> List.fold ~init:"" ~f:(fun s acc -> s ^ ", " ^ acc));
 
 loop default_file ()
 

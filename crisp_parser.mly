@@ -10,6 +10,7 @@
 %token <string> STRING
 %token <bool> BOOLEAN
 (*FIXME include float?*)
+(*FIXME need to include unit type + value*)
 
 (*Punctuation*)
 %token COLON
@@ -40,6 +41,9 @@
 
 (*Since we're relying on the offside rule for scoping, code blocks aren't
   explicitly delimited as in e.g., Algol-68-style languages.*)
+%token <int> UNDENTN
+(*The lexer will produce UNDENTN tokens, then a filter (sitting between
+  the lexer and parser) will expand these into UNDENT tokens.*)
 %token INDENT
 %token UNDENT
 
@@ -83,6 +87,8 @@ base_type:
   | TYPE_INTEGER {fun name -> Crisp_syntax.Integer name}
   | TYPE_BOOLEAN {fun name -> Crisp_syntax.Boolean name}
 
+(*FIXME need to include termination conditions for lists and string*)
+(*FIXME include byte-order annotations*)
 (*The kinds of type declarations we want to parse:
 
    type alias_example: string
@@ -108,12 +114,13 @@ type_line:
 
 type_lines:
   | tl = type_line; NL; rest = type_lines { tl :: rest }
-  | tl = type_line; UNDENT { [tl] }
+  | tl = type_line; NL; UNDENT { [tl] } (*FIXME is the NL redundant?*)
 
 type_def:
   | bt = base_type
     {fun (name : Crisp_syntax.label option) -> bt name}
-  | TYPE_RECORD; NL; INDENT; tl = type_lines
+(*  | TYPE_RECORD; NL; INDENT; tl = type_lines*)
+  | TYPE_RECORD; INDENT; tl = type_lines (*FIXME in this case we don't have an NL*)
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Record (name, tl)}
   | TYPE_VARIANT; NL; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, tl)}
@@ -123,5 +130,6 @@ type_decl:
     { {Crisp_syntax.type_name = type_name;
        Crisp_syntax.type_value = td None} }
 
+(*TODO include process definitions*)
 toplevel_decl:
   | ty_decl = type_decl {Crisp_syntax.Type ty_decl}

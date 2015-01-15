@@ -88,9 +88,11 @@ let loop filename () =
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
   let result = parse_and_print lexbuf in
     In_channel.close inx;
+  print_endline "Starting program";
   result
   |> Crisp_syntax.program_to_string
-  |> print_endline
+  |> print_endline;
+  print_endline "Finished program"
 
 (*
 let loop filename () =
@@ -169,6 +171,8 @@ let string_of_token = function
   | TYPE_STRING -> "TYPE_STRING"
   | TYPE_RECORD -> "TYPE_RECORD"
   | TYPE_VARIANT -> "TYPE_VARIANT"
+  | TYPE_UNIT -> "TYPE_UNIT"
+  | TYPE_LIST -> "TYPE_LIST"
   | CASE -> "CASE"
   | OF -> "OF"
   | AND -> "AND"

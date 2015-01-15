@@ -68,6 +68,8 @@ rule main = parse
   | "boolean" {TYPE_BOOLEAN}
   | "record" {TYPE_RECORD}
   | "variant" {TYPE_VARIANT}
+  | "unit" {TYPE_UNIT}
+  | "list" {TYPE_LIST}
   | ":" {COLON}
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
   | nl {test_indentation Crisp_syntax.min_indentation lexbuf}

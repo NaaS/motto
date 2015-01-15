@@ -48,22 +48,31 @@ type type_value =
   | Boolean of label option
   | Record of label option * type_value list
   | Disjoint_Union of label option * type_value list
+  | Unit of label option
+  | List of label option * type_value
 ;;
-let rec type_value_to_string indent = function
+let rec type_value_to_string indent ty_value =
+  let endline = "\n"
+  in match ty_value with
   | UserDefinedType type_name ->
-      indn indent ^ type_name ^ "\n"
+      indn indent ^ type_name ^ endline
   | String label ->
-      opt_string (indn indent) label " : " ^ "string" ^ "\n"
+      opt_string (indn indent) label " : " ^ "string" ^ endline
   | Integer label ->
-      opt_string (indn indent) label " : " ^ "integer" ^ "\n"
+      opt_string (indn indent) label " : " ^ "integer" ^ endline
   | Boolean label ->
-      opt_string (indn indent) label " : " ^ "boolean" ^ "\n"
+      opt_string (indn indent) label " : " ^ "boolean" ^ endline
   | Record (label, tys) ->
       opt_string (indn indent) label " : " ^ "record" ^ "\n" ^
       mk_block (indent + 2) type_value_to_string tys
   | Disjoint_Union (label, tys) ->
       opt_string (indn indent) label " : " ^ "variant" ^ "\n" ^
       mk_block (indent + 2) type_value_to_string tys
+  | Unit label ->
+      opt_string (indn indent) label " : " ^ "unit" ^ endline
+  | List (label, ty) ->
+      opt_string (indn indent) label " : " ^ "list" ^ " " ^
+       type_value_to_string indent ty
 ;;
 
 type typing = value_name * type_value

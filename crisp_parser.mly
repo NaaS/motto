@@ -10,7 +10,8 @@
 %token <string> STRING
 %token <bool> BOOLEAN
 (*FIXME include float?*)
-(*FIXME need to include unit type + value*)
+(*FIXME include char?*)
+(*FIXME need to include unit value*)
 
 (*Punctuation*)
 %token COLON
@@ -64,6 +65,8 @@
 %token TYPE_STRING
 %token TYPE_RECORD
 %token TYPE_VARIANT
+%token TYPE_UNIT
+%token TYPE_LIST
 %token CASE
 %token OF
 %token AND
@@ -90,6 +93,7 @@ base_type:
   | TYPE_STRING {fun name -> Crisp_syntax.String name}
   | TYPE_INTEGER {fun name -> Crisp_syntax.Integer name}
   | TYPE_BOOLEAN {fun name -> Crisp_syntax.Boolean name}
+  | TYPE_UNIT {fun name -> Crisp_syntax.Unit name}
 
 (*FIXME need to include termination conditions for lists and string*)
 (*FIXME include byte-order annotations*)
@@ -127,6 +131,8 @@ type_def:
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Record (name, List.rev tl)}
   | TYPE_VARIANT; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, List.rev tl)}
+  | TYPE_LIST; td = type_def
+    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.List (name, td None)}
 
 type_decl:
   | TYPE; type_name = IDENTIFIER; COLON; td = type_def

@@ -5,4 +5,5 @@ type record_example: record
   field_4 : record
     f1 : string
     f2 : integer
+  field_5 : string
 

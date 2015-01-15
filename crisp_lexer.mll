@@ -59,34 +59,7 @@ rule main = parse
   | "variant" {TYPE_VARIANT}
   | ":" {COLON}
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
-(*
-       | nl {Lexing.new_line lexbuf;
-             let scope_depth = Stack.length scope_stack in
-             Stack.clear scope_stack;
-             Stack.push min_indentation scope_stack; (*must preserve the invariant that the
-                                         bottom element of the stack is 0*)
-             UNDENTN scope_depth}
-*)
   | nl {test_indentation 0}
   | ws {main lexbuf}
-(*
-  | ws as spaces
-       {test_indentation spaces (fun () -> main lexbuf)}
-       {if !count_ws then
-          let prev = !prev_ws_count in
-          let indentation = String.length spaces in
-            begin
-              prev_ws_count := indentation;
-              count_ws := false;
-              if (indentation > prev) then
-                INDENT
-              else if (indentation < prev) then
-                UNDENT
-              else
-                main lexbuf
-            end
-        else
-          main lexbuf}
-*)
   | eof {EOF}
 

@@ -10,9 +10,17 @@ let min_indentation = 0;;
   indentation. Cannot think of a reason why this policy is a bad thing.*)
 Stack.push min_indentation scope_stack;;
 
-let test_indentation indentation =
+let test_indentation indentation lexbuf =
   assert (not (Stack.is_empty scope_stack)); (*There should always be at least
                                                one element in the stack: 0*)
+  let next_line () =
+    (*this function was adapted from
+      https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html*)
+    let pos = lexbuf.lex_curr_p in
+    lexbuf.lex_curr_p <-
+      { pos with pos_bol = lexbuf.lex_curr_pos;
+        pos_lnum = pos.pos_lnum + 1
+      } in
   (*Count how many scopes we've moved down (out of).*)
   let rec undented_scopes (offset : int) =
     if Stack.top scope_stack = indentation then
@@ -28,15 +36,18 @@ let test_indentation indentation =
     if indentation > prev then
       begin
         Stack.push indentation scope_stack;
+        next_line ();
         INDENT
       end
     else if indentation = prev then
       begin
+        next_line ();
         NL
       end
     else
       begin
         assert (indentation < prev);
+        next_line ();
         UNDENTN (undented_scopes min_indentation)
       end
 }
@@ -50,7 +61,7 @@ let nl = '\n'
 
 rule main = parse
   | nl (ws as spaces)
-      {test_indentation (String.length spaces)}
+      {test_indentation (String.length spaces) lexbuf}
   | "type" {TYPE}
   | "integer" {TYPE_INTEGER}
   | "string" {TYPE_STRING}
@@ -59,7 +70,7 @@ rule main = parse
   | "variant" {TYPE_VARIANT}
   | ":" {COLON}
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
-  | nl {test_indentation min_indentation}
+  | nl {test_indentation min_indentation lexbuf}
   | ws {main lexbuf}
   | eof {EOF}
 

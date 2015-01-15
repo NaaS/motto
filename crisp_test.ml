@@ -111,7 +111,7 @@ let lex_looper filename () =
     let rec contents acc =
       (*let x = Crisp_lexer.main lexbuf in*)
       let x = expand_macro_tokens Crisp_lexer.main lexbuf in
-      if x = Crisp_parser.EOF then (List.rev (x :: acc))
+      if x = Crisp_parser.EOF then List.rev (x :: acc)
       else contents (x :: acc)
     in contents [] in
   In_channel.close inx;

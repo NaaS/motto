@@ -5,6 +5,9 @@
    Target parser-generator: menhir 20140422
 *)
 
+(*FIXME add terminator indicators for strings and lists, and gap indicators for
+  lists. this should also allow us to encode lists of lists etc.*)
+
 (*Native value interpretations*)
 %token <int> INTEGER (*FIXME is OCaml's "int" of the precision we want to support?*)
 %token <string> STRING

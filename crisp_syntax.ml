@@ -158,4 +158,4 @@ let toplevel_decl_to_string = function
 type program = toplevel_decl list
 let program_to_string (p : program) =
   List.map toplevel_decl_to_string p
-  |> (fun l -> List.fold_right (fun s acc -> acc ^ s) l "")
+  |> (fun l -> List.fold_right (fun s acc -> s ^ acc) l "")

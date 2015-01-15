@@ -52,11 +52,14 @@ let test_indentation indentation lexbuf =
 (*NOTE tabs are not recognised, because they suck. They also make it more
   difficult to measure indentation when mixed with spaces..*)
 let ws = ' '+
+let comment = '#'[^'\n']*
 
 (*NOTE currently only Unix-style newline is supported, because it's simpler.*)
 let nl = '\n'
 
 rule main = parse
+  | comment {main lexbuf}
+  | nl ' '* comment {main lexbuf}
   | nl (ws as spaces)
       {test_indentation (String.length spaces) lexbuf}
   | "type" {TYPE}

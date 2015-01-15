@@ -46,6 +46,10 @@
   the lexer and parser) will expand these into UNDENT tokens.*)
 %token INDENT
 %token UNDENT
+(* NOTE that INDENT also means that a NL occurred (before the indent)
+        and UNDENT also means that a newline occurred (before the first indent).
+        UNDENTN n means that NL followed by UNDENTs occurred.
+*)
 
 (*Reserved words*)
 %token IF
@@ -114,15 +118,14 @@ type_line:
 
 type_lines:
   | tl = type_line; NL; rest = type_lines { tl :: rest }
-  | tl = type_line; NL; UNDENT { [tl] } (*FIXME is the NL redundant?*)
+  | tl = type_line; UNDENT { [tl] }
 
 type_def:
   | bt = base_type
     {fun (name : Crisp_syntax.label option) -> bt name}
-(*  | TYPE_RECORD; NL; INDENT; tl = type_lines*)
-  | TYPE_RECORD; INDENT; tl = type_lines (*FIXME in this case we don't have an NL*)
+  | TYPE_RECORD; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Record (name, tl)}
-  | TYPE_VARIANT; NL; INDENT; tl = type_lines
+  | TYPE_VARIANT; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, tl)}
 
 type_decl:

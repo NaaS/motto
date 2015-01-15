@@ -20,13 +20,18 @@ let expand_macro_tokens (lexer : Lexing.lexbuf -> Crisp_parser.token) (lexbuf : 
       end in
   let expand_macro (times : int) (token : Crisp_parser.token) =
       assert (times > -1); (*we can have UNINDENTN 0 times, in case we just had
-                           an \n*)
-      enqueue_token times token;
-      Crisp_parser.NL (*always end in an NL*)
+                             an \n*)
+      if times > 0 then
+        begin
+          enqueue_token (times - 1) token;
+          token
+        end
+      else
+        Crisp_parser.NL (*if we have 0 undents then it still means that we had a
+                          newline.*)
   in
   if Queue.is_empty token_q then
     match lexer lexbuf with
-(*    | Crisp_parser.INDENTN n -> expand_macro n Crisp_parser.INDENT*)
     | Crisp_parser.UNDENTN n -> expand_macro n Crisp_parser.UNDENT
     | token -> token
   else

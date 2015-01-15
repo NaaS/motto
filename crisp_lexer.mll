@@ -37,7 +37,7 @@ let test_indentation indentation =
     else
       begin
         assert (indentation < prev);
-        UNDENTN (undented_scopes 0)
+        UNDENTN (undented_scopes min_indentation)
       end
 }
 
@@ -59,7 +59,7 @@ rule main = parse
   | "variant" {TYPE_VARIANT}
   | ":" {COLON}
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
-  | nl {test_indentation 0}
+  | nl {test_indentation min_indentation}
   | ws {main lexbuf}
   | eof {EOF}
 

@@ -124,9 +124,9 @@ type_def:
   | bt = base_type
     {fun (name : Crisp_syntax.label option) -> bt name}
   | TYPE_RECORD; INDENT; tl = type_lines
-    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Record (name, tl)}
+    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Record (name, List.rev tl)}
   | TYPE_VARIANT; INDENT; tl = type_lines
-    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, tl)}
+    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, List.rev tl)}
 
 type_decl:
   | TYPE; type_name = IDENTIFIER; COLON; td = type_def

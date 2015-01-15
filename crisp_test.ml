@@ -22,12 +22,18 @@ let expand_macro_tokens (lexer : Lexing.lexbuf -> Crisp_parser.token) (lexbuf : 
         Queue.enqueue token_q token;
         enqueue_token (i - 1) token
       end in
-  let expand_macro (times : int) (token : Crisp_parser.token) =
+  let expand_macro (times : int) (token : Crisp_parser.token)
+        (trailing_token_opt : Crisp_parser.token option) =
       assert (times > -1); (*we can have UNINDENTN 0 times, in case we just had
                              an \n*)
+      let insert_trailing_token () =
+          match trailing_token_opt with
+            | None -> ()
+            | Some tok -> Queue.enqueue token_q tok in
       if times > 0 then
         begin
           enqueue_token (times - 1) token;
+          insert_trailing_token ();
           token
         end
       else
@@ -36,7 +42,13 @@ let expand_macro_tokens (lexer : Lexing.lexbuf -> Crisp_parser.token) (lexbuf : 
   in
   if Queue.is_empty token_q then
     match lexer lexbuf with
-    | Crisp_parser.UNDENTN n -> expand_macro n Crisp_parser.UNDENT
+    | Crisp_parser.UNDENTN n ->
+        expand_macro n Crisp_parser.UNDENT
+         (Some Crisp_parser.NL) (*always have an NL following
+                                  (one or more) UNDENTs. This allows us to
+                                  parse nested records, for example, since
+                                  the contents of the containing record
+                                  must be separated by an NL.*)
     | token -> token
   else
     Queue.dequeue_exn token_q

@@ -31,11 +31,12 @@ let indn (indent : int) : string =
 ;;
 let mk_block (indent : int) (f : int -> 'a -> string) (l : 'a list) : string =
   List.fold_right (fun x already ->
-    already ^ f indent x ^ "\n") l ""
+    already ^ indn indent ^ f indent x ^ "\n") l ""
 ;;
 
 (*Labels are used to implement labelled variants over disjoint unions.*)
 type type_value =
+  (*FIXME include unit, list, and delimiters for string and list*)
   | UserDefinedType of type_name (*A reference to a type defined earlier in the
                                  program*)
   | String of label option
@@ -46,16 +47,15 @@ type type_value =
 ;;
 let rec type_value_to_string indent = function
   | UserDefinedType type_name ->
-      indn indent ^ type_name
+      indn indent ^ type_name ^ "\n"
   | String label ->
-      "string" ^ opt_string " " label
+      "string" ^ opt_string " " label ^ "\n"
   | Integer label ->
-      "integer" ^ opt_string " " label
+      "integer" ^ opt_string " " label ^ "\n"
   | Boolean label ->
-      "boolean" ^ opt_string " " label
+      "boolean" ^ opt_string " " label ^ "\n"
   | Record (label, tys) ->
-      "record" ^ opt_string " " label ^
-      ":" ^ (*FIXME should be optional*)
+      "record" ^ opt_string " " label ^ "\n" ^
       mk_block (indent + 2) type_value_to_string tys
   | Disjoint_Union _ -> failwith "Unsupported"
 ;;

@@ -61,7 +61,9 @@ let rec type_value_to_string indent = function
   | Record (label, tys) ->
       opt_string (indn indent) label " : " ^ "record" ^ "\n" ^
       mk_block (indent + 2) type_value_to_string tys
-  | Disjoint_Union _ -> failwith "Unsupported"
+  | Disjoint_Union (label, tys) ->
+      opt_string (indn indent) label " : " ^ "variant" ^ "\n" ^
+      mk_block (indent + 2) type_value_to_string tys
 ;;
 
 type typing = value_name * type_value

@@ -5,10 +5,7 @@ open Crisp_parser
 let scope_stack : int Stack.t =
   Stack.create ()
 ;;
-let min_indentation = 0;;
-(*NOTE currently we don't allow programmers to have a non-zero program-level
-  indentation. Cannot think of a reason why this policy is a bad thing.*)
-Stack.push min_indentation scope_stack;;
+Stack.push Crisp_syntax.min_indentation scope_stack;;
 
 let test_indentation indentation lexbuf =
   assert (not (Stack.is_empty scope_stack)); (*There should always be at least
@@ -48,7 +45,7 @@ let test_indentation indentation lexbuf =
       begin
         assert (indentation < prev);
         next_line ();
-        UNDENTN (undented_scopes min_indentation)
+        UNDENTN (undented_scopes Crisp_syntax.min_indentation)
       end
 }
 
@@ -70,7 +67,7 @@ rule main = parse
   | "variant" {TYPE_VARIANT}
   | ":" {COLON}
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
-  | nl {test_indentation min_indentation lexbuf}
+  | nl {test_indentation Crisp_syntax.min_indentation lexbuf}
   | ws {main lexbuf}
   | eof {EOF}
 

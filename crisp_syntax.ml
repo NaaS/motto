@@ -4,6 +4,10 @@
    (based on prototypical Matron language from last November)
 *)
 
+(*NOTE currently we don't allow programmers to have a non-zero program-level
+  indentation. Cannot think of a reason why this policy is a bad thing.*)
+let min_indentation = 0
+
 (*FIXME could generalise to abstract names*)
 type type_name = string
 (*NOTE this language is first-order, and functions are not values.*)
@@ -13,10 +17,10 @@ type decorator_name = string
 type label = string
 type univ_type = string (*FIXME hack*)
 
-let opt_string (prefix : string) (s : string option) : string =
+let opt_string (prefix : string) (s : string option) (suffix : string) : string =
   match s with
   | None -> ""
-  | Some s' -> prefix ^ s'
+  | Some s' -> prefix ^ s' ^ suffix
 ;;
 let replicate (s : string) (count : int) =
   assert (count > -1);
@@ -31,7 +35,7 @@ let indn (indent : int) : string =
 ;;
 let mk_block (indent : int) (f : int -> 'a -> string) (l : 'a list) : string =
   List.fold_right (fun x already ->
-    already ^ indn indent ^ f indent x) l ""
+    already ^ f indent x) l ""
 ;;
 
 (*Labels are used to implement labelled variants over disjoint unions.*)
@@ -49,13 +53,13 @@ let rec type_value_to_string indent = function
   | UserDefinedType type_name ->
       indn indent ^ type_name ^ "\n"
   | String label ->
-      "string" ^ opt_string " " label ^ "\n"
+      opt_string (indn indent) label " : " ^ "string" ^ "\n"
   | Integer label ->
-      "integer" ^ opt_string " " label ^ "\n"
+      opt_string (indn indent) label " : " ^ "integer" ^ "\n"
   | Boolean label ->
-      "boolean" ^ opt_string " " label ^ "\n"
+      opt_string (indn indent) label " : " ^ "boolean" ^ "\n"
   | Record (label, tys) ->
-      "record" ^ opt_string " " label ^ "\n" ^
+      opt_string (indn indent) label " : " ^ "record" ^ "\n" ^
       mk_block (indent + 2) type_value_to_string tys
   | Disjoint_Union _ -> failwith "Unsupported"
 ;;
@@ -131,7 +135,7 @@ type ty_decl =
   {type_name : type_name;
    type_value : type_value}
 let ty_decl_to_string {type_name; type_value} =
-  type_name ^ ": " ^ type_value_to_string 2 type_value
+  type_name ^ ": " ^ type_value_to_string min_indentation type_value
 type co_decl =
   {decorator : decorator option;
    co_name : function_name;

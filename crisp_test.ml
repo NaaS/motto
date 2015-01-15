@@ -1,10 +1,14 @@
+(*
+  Test framework for the Crisp parser
+  Nik Sultana, Cambridge University Computer Lab, January 2015
+
+  Parts of this module is based on explanation & code given at
+  https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html
+*)
+
 open Core.Std
 open Lexing
 open Crisp_syntax
-
-(*from
-  https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html
-*)
 
 (*NOTE this code depends on side-effects to expand tokens, to deal with the
   contraint that the lexer only emits one token at a time.*)

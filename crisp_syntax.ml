@@ -31,7 +31,7 @@ let indn (indent : int) : string =
 ;;
 let mk_block (indent : int) (f : int -> 'a -> string) (l : 'a list) : string =
   List.fold_right (fun x already ->
-    already ^ indn indent ^ f indent x ^ "\n") l ""
+    already ^ indn indent ^ f indent x) l ""
 ;;
 
 (*Labels are used to implement labelled variants over disjoint unions.*)

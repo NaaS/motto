@@ -133,6 +133,8 @@ type_def:
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, List.rev tl)}
   | TYPE_LIST; td = type_def
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.List (name, td None)}
+  | TYPE; type_name = IDENTIFIER
+    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.UserDefinedType (name, type_name)}
 
 type_decl:
   | TYPE; type_name = IDENTIFIER; COLON; td = type_def

@@ -40,9 +40,9 @@ let mk_block (indent : int) (f : int -> 'a -> string) (l : 'a list) : string =
 
 (*Labels are used to implement labelled variants over disjoint unions.*)
 type type_value =
-  (*FIXME include unit, list, and delimiters for string and list*)
-  | UserDefinedType of type_name (*A reference to a type defined earlier in the
-                                 program*)
+  (*FIXME include delimiters for string and list*)
+  (*A reference to a type defined earlier in the program*)
+  | UserDefinedType of label option * type_name
   | String of label option
   | Integer of label option
   | Boolean of label option
@@ -54,8 +54,8 @@ type type_value =
 let rec type_value_to_string indent ty_value =
   let endline = "\n"
   in match ty_value with
-  | UserDefinedType type_name ->
-      indn indent ^ type_name ^ endline
+  | UserDefinedType (label, type_name) ->
+      opt_string (indn indent) label " : " ^ "type " ^ type_name ^ endline
   | String label ->
       opt_string (indn indent) label " : " ^ "string" ^ endline
   | Integer label ->

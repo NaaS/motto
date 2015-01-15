@@ -167,13 +167,27 @@ let string_of_token = function
   | IDENTIFIER x -> "IDENTIFIER(" ^ x ^ ")"
 
   | _ -> "<UNKNOWN TOKEN>"
+;;
 
-let default_file = "test.cp";;
+let test filepath =
+  print_endline ("Testing " ^ filepath);
+  printf "%s\n"
+    ((List.map ~f:string_of_token (lex_looper filepath ()))
+     |> List.fold ~init:"" ~f:(fun s acc -> s ^ ", " ^ acc));
+  loop filepath ()
+;;
 
 print_endline "*crisp* *crisp*";
-printf "%s\n"
-  ((List.map ~f:string_of_token (lex_looper default_file ()))
-   |> List.fold ~init:"" ~f:(fun s acc -> s ^ ", " ^ acc));
 
-loop default_file ()
+let testdir = "tests" in
+let dh = Unix.opendir testdir in
+try
+  while true do
+    let file = Unix.readdir dh in
+    (*FIXME naive*)
+    if file <> "." && file <> ".." then test (testdir ^ "/" ^ file)
+    else ()
+  done
+with End_of_file ->
+  Unix.closedir dh;
 

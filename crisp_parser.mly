@@ -48,6 +48,7 @@
 %token GT
 %token LT
 %token ARR_RIGHT
+%token MINUS
 
 (*Since we're relying on the offside rule for scoping, code blocks aren't
   explicitly delimited as in e.g., Algol-68-style languages.*)
@@ -161,8 +162,16 @@ type_decl:
 (*NOTE this is quite powerful, since we could have structured types specified
   at this point, but that wouldn't be a very neat thing to do, so i might
   forbid by blocking it during one of the early compiler passes.*)
-channel_type_kind1: from_type = type_def; SLASH; to_type = type_def
- {Crisp_syntax.ChannelSingle (from_type None, to_type None)}
+channel_type_kind1:
+  | from_type = type_def; SLASH; to_type = type_def
+      {Crisp_syntax.ChannelSingle (from_type None, to_type None)}
+  (*NOTE We cannot represents channels of type -/- since they are useless.*)
+  | MINUS; SLASH; to_type = type_def
+      {Crisp_syntax.ChannelSingle (Crisp_syntax.Empty, to_type None)}
+  | from_type = type_def; SLASH; MINUS
+      {Crisp_syntax.ChannelSingle (from_type None, Crisp_syntax.Empty)}
+  (*NOTE we cannot use the empty type anywhere other than in channels,
+    since there isn't any point.*)
 
 channel_type_kind2:
  | LEFT_S_BRACKET; ctk1 = channel_type_kind1; RIGHT_S_BRACKET;

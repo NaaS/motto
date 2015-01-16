@@ -52,6 +52,7 @@ type type_value =
   | Disjoint_Union of label option * type_value list
   | Unit of label option
   | List of label option * type_value * dependency_index option
+  | Empty
 ;;
 (*FIXME this pretty-printing code feels hacky -- particlarly the newline-related
   bit*)
@@ -78,6 +79,7 @@ let rec type_value_to_string ending_newline indent ty_value =
       opt_string (indn indent) label " : " ^ "list" ^
        opt_string "{" dep_idx_opt "}" ^ " " ^
         type_value_to_string ending_newline indent ty
+  | Empty -> "-"
 ;;
 
 type typing = value_name * type_value

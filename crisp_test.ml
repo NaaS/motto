@@ -187,6 +187,17 @@ let string_of_token = function
   | VARIABLE x -> "VARIABLE(" ^ x ^ ")"
   | IDENTIFIER x -> "IDENTIFIER(" ^ x ^ ")"
 
+  | COLON -> "COLON"
+  | PROC -> "PROC"
+  | SLASH -> "SLASH"
+  | LEFT_S_BRACKET -> "LEFT_S_BRACKET"
+  | RIGHT_S_BRACKET -> "RIGHT_S_BRACKET"
+  | LEFT_R_BRACKET -> "LEFT_R_BRACKET"
+  | RIGHT_R_BRACKET -> "RIGHT_R_BRACKET"
+  | LEFT_C_BRACKET -> "LEFT_C_BRACKET"
+  | RIGHT_C_BRACKET -> "RIGHT_C_BRACKET"
+  | ARR_RIGHT -> "ARR_RIGHT"
+
   | _ -> "<UNKNOWN TOKEN>"
 ;;
 

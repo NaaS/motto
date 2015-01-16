@@ -7,6 +7,8 @@
 
 (*FIXME add terminator indicators for strings and lists, and gap indicators for
   lists. this should also allow us to encode lists of lists etc.*)
+(*TODO add type variables?*)
+(*TODO add (first-order) functions?*)
 
 (*Native value interpretations*)
 %token <int> INTEGER (*FIXME is OCaml's "int" of the precision we want to support?*)
@@ -42,6 +44,10 @@
 %token COMMA
 %token NL
 %token HASH
+%token EQUALS
+%token GT
+%token LT
+%token ARR_RIGHT
 
 (*Since we're relying on the offside rule for scoping, code blocks aren't
   explicitly delimited as in e.g., Algol-68-style languages.*)
@@ -56,6 +62,7 @@
 *)
 
 (*Reserved words*)
+%token PROC
 %token IF
 %token ELSE
 %token IN
@@ -93,6 +100,7 @@ program:
   | e = toplevel_decl; p = program {e :: p}
 
 base_type:
+(*TODO include the empty type!*)
   | TYPE_STRING {fun name -> Crisp_syntax.String name}
   | TYPE_INTEGER {fun name -> Crisp_syntax.Integer name}
   | TYPE_BOOLEAN {fun name -> Crisp_syntax.Boolean name}
@@ -127,7 +135,8 @@ type_lines:
   | tl = type_line; NL; rest = type_lines { tl :: rest }
   | tl = type_line; UNDENT { [tl] }
 
-(*TODO Haskell-style list notation for lists and channel arrays*)
+(*TODO Haskell-style list notation for lists. It's already being used for
+  channel arrays.*)
 type_def:
   | bt = base_type
     {fun (name : Crisp_syntax.label option) -> bt name}
@@ -135,7 +144,7 @@ type_def:
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Record (name, List.rev tl)}
   | TYPE_VARIANT; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, List.rev tl)}
-  | TYPE_LIST; td = type_def
+  | TYPE_LIST(*TODO include size dependency option*); td = type_def
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.List (name, td None)}
   | TYPE; type_name = IDENTIFIER
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.UserDefinedType (name, type_name)}
@@ -145,6 +154,51 @@ type_decl:
     { {Crisp_syntax.type_name = type_name;
        Crisp_syntax.type_value = td None} }
 
-(*TODO include process definitions*)
+(*NOTE this is quite powerful, since we could have structured types specified
+  at this point, but that wouldn't be a very neat thing to do, so i might
+  forbid by blocking it during one of the early compiler passes.*)
+channel_type_kind1: from_type = type_def; SLASH; to_type = type_def
+ {Crisp_syntax.ChannelSingle (from_type None, to_type None)}
+
+(*TODO include size dependency option*)
+channel_type_kind2: LEFT_S_BRACKET; ctk1 = channel_type_kind1; RIGHT_S_BRACKET
+ {match ctk1 with
+  | Crisp_syntax.ChannelSingle (from_type, to_type) ->
+    Crisp_syntax.ChannelArray (from_type, to_type, None)}
+
+channel_type:
+  | ctk1 = channel_type_kind1 {ctk1}
+  | ctk2 = channel_type_kind2 {ctk2}
+
+channel: cty = channel_type; chan_name = IDENTIFIER {Crisp_syntax.Channel (cty, chan_name)}
+
+(*There must be at least one channel*)
+channels:
+  | chan = channel; COMMA; chans = channels {chan :: chans}
+  | chan = channel {[chan]}
+
+dep_var: id = IDENTIFIER {id}
+
+dep_vars:
+  | dvar = dep_var; COMMA; dvars = dep_vars {dvar :: dvars}
+  | dvar = dep_var {[dvar]}
+
+(*NOTE that an independent_process_type may contain free variables -- this is
+  picked up during type-checking, not during parsing.*)
+independent_process_type: LEFT_R_BRACKET; chans = channels; RIGHT_R_BRACKET
+  {chans}
+dependent_process_type: LEFT_C_BRACKET; dvars = dep_vars; RIGHT_C_BRACKET; ARR_RIGHT;
+  ipt = independent_process_type
+  {Crisp_syntax.ProcessType (dvars, ipt)}
+process_type:
+  | chans = independent_process_type {Crisp_syntax.ProcessType ([], chans)}
+  | dpt = dependent_process_type {dpt}
+
+
+(*TODO include process definition body*)
+process_decl: PROC; name = IDENTIFIER; COLON; pt = process_type
+  {Crisp_syntax.Process (name, pt)}
+
 toplevel_decl:
   | ty_decl = type_decl {Crisp_syntax.Type ty_decl}
+  | process = process_decl {process}

@@ -71,6 +71,16 @@ rule main = parse
   | "unit" {TYPE_UNIT}
   | "list" {TYPE_LIST}
   | ":" {COLON}
+  | "proc" {PROC}
+  | "/" {SLASH}
+  | "[" {LEFT_S_BRACKET}
+  | "]" {RIGHT_S_BRACKET}
+  | "(" {LEFT_R_BRACKET}
+  | ")" {RIGHT_R_BRACKET}
+  | "{" {LEFT_C_BRACKET}
+  | "}" {RIGHT_C_BRACKET}
+  | "," {COMMA}
+  | "=>" {ARR_RIGHT}
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
   | nl {test_indentation Crisp_syntax.min_indentation lexbuf}
   | ws {main lexbuf}

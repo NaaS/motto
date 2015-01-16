@@ -51,8 +51,10 @@ type type_value =
   | Unit of label option
   | List of label option * type_value
 ;;
-let rec type_value_to_string indent ty_value =
-  let endline = "\n"
+(*FIXME this pretty-printing code feels hacky -- particlarly the newline-related
+  bit*)
+let rec type_value_to_string ending_newline indent ty_value =
+  let endline = if ending_newline then "\n" else ""
   in match ty_value with
   | UserDefinedType (label, type_name) ->
       opt_string (indn indent) label " : " ^ "type " ^ type_name ^ endline
@@ -64,15 +66,15 @@ let rec type_value_to_string indent ty_value =
       opt_string (indn indent) label " : " ^ "boolean" ^ endline
   | Record (label, tys) ->
       opt_string (indn indent) label " : " ^ "record" ^ "\n" ^
-      mk_block (indent + 2) type_value_to_string tys
+      mk_block (indent + 2) (type_value_to_string ending_newline) tys
   | Disjoint_Union (label, tys) ->
       opt_string (indn indent) label " : " ^ "variant" ^ "\n" ^
-      mk_block (indent + 2) type_value_to_string tys
+      mk_block (indent + 2) (type_value_to_string ending_newline) tys
   | Unit label ->
       opt_string (indn indent) label " : " ^ "unit" ^ endline
   | List (label, ty) ->
       opt_string (indn indent) label " : " ^ "list" ^ " " ^
-       type_value_to_string indent ty
+       type_value_to_string ending_newline indent ty
 ;;
 
 type typing = value_name * type_value
@@ -84,6 +86,36 @@ type decorator_param =
 type decorator =
   {dec_name : decorator_name;
    dec_params : decorator_param list}
+
+type dependency_index = string
+type channel_type =
+  | ChannelSingle of type_value * type_value
+  | ChannelArray of type_value * type_value * dependency_index option
+let channel_type_to_string = function
+  | ChannelSingle (type_value1, type_value2) ->
+    type_value_to_string false 0 type_value1 ^ "/" ^ type_value_to_string false 0 type_value2
+  | ChannelArray (type_value1, type_value2, dep_idx_opt) ->
+    "[" ^ type_value_to_string false 0 type_value1 ^ "/" ^
+    type_value_to_string false 0 type_value2 ^ "]" ^ opt_string "{" dep_idx_opt "}"
+type channel_name = string
+type channel = Channel of channel_type * channel_name
+let channel_to_string (Channel (channel_type, channel_name)) =
+  channel_type_to_string channel_type ^ " " ^ channel_name
+
+let inter (mid : string) (ss : string list) =
+  List.fold_right (fun x s ->
+    if s = "" then x
+    else x ^ mid ^ s) ss ""
+;;
+
+type process_type = ProcessType of dependency_index list * channel list
+let process_type_to_string (ProcessType (dvars, chans)) =
+  let deps =
+    if dvars = [] then ""
+    else
+      "{" ^ inter ", " dvars ^ "} => "
+  in deps ^ "(" ^ inter ", " (List.map channel_to_string chans) ^ ")"
+;;
 
 type bool_exp =
   | True
@@ -146,7 +178,7 @@ type ty_decl =
   {type_name : type_name;
    type_value : type_value}
 let ty_decl_to_string {type_name; type_value} =
-  type_name ^ ": " ^ type_value_to_string min_indentation type_value
+  type_name ^ ": " ^ type_value_to_string true min_indentation type_value
 type co_decl =
   {decorator : decorator option;
    co_name : function_name;
@@ -157,13 +189,18 @@ type fn_decl =
    fn_params : type_value list;
    fn_body : function_body}
 
+type process_name = string
+
 (*Top-level declarations. We cannot define types or functions within functions*)
 type toplevel_decl =
   | Type of ty_decl
   | Carry_On of co_decl
   | Function of fn_decl
+  | Process of process_name * process_type (*FIXME add process body*)
 let toplevel_decl_to_string = function
   | Type ty_decl -> "type " ^ ty_decl_to_string ty_decl
+  | Process (process_name, process_type) (*FIXME add process body*) ->
+    "proc " ^ process_name ^ " : " ^ process_type_to_string process_type
   | _ -> failwith "Unsupported"
 
 type program = toplevel_decl list

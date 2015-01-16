@@ -26,7 +26,7 @@ let test_indentation indentation lexbuf =
       failwith "Undershot the scope?"
     else
       begin
-        Stack.pop scope_stack;
+        ignore(Stack.pop scope_stack);
         undented_scopes (offset + 1)
       end in
   let prev = Stack.top scope_stack in
@@ -81,7 +81,7 @@ rule main = parse
   | "}" {RIGHT_C_BRACKET}
   | "," {COMMA}
   | "=>" {ARR_RIGHT}
-  | "-" {MINUS}
+  | "-" {DASH}
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
   | nl {test_indentation Crisp_syntax.min_indentation lexbuf}
   | ws {main lexbuf}

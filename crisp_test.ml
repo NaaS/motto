@@ -122,36 +122,44 @@ let lex_looper filename () =
 
 open Crisp_parser
 let string_of_token = function
+(*
   | INTEGER x -> "INTEGER(" ^ string_of_int x ^ ")"
   | STRING x -> "STRING(" ^ x ^ ")"
   | BOOLEAN x -> "BOOLEAN(" ^ string_of_bool x ^ ")"
+*)
 
   (*Punctuation*)
   | COLON -> "COLON"
+(*
   | SEMICOLON -> "SEMICOLON"
   | BANG -> "BANG"
   | QUESTION -> "QUESTION"
   | PERIOD -> "PERIOD"
   | COLONCOLON -> "COLONCOLON"
+*)
   | LEFT_R_BRACKET -> "LEFT_R_BRACKET"
   | RIGHT_R_BRACKET -> "RIGHT_R_BRACKET"
   | LEFT_S_BRACKET -> "LEFT_S_BRACKET"
   | RIGHT_S_BRACKET -> "RIGHT_S_BRACKET"
   | LEFT_C_BRACKET -> "LEFT_C_BRACKET"
   | RIGHT_C_BRACKET -> "RIGHT_C_BRACKET"
+(*
   | LEFT_A_BRACKET -> "LEFT_A_BRACKET"
   | RIGHT_A_BRACKET -> "RIGHT_A_BRACKET"
   | AT -> "AT"
   | PIPE -> "PIPE"
   | PLUS -> "PLUS"
   | UNDERSCORE -> "UNDERSCORE"
+*)
   | DASH -> "DASH"
+(*
   | ASTERIX -> "ASTERIX"
   | SLASH -> "SLASH"
+  | HASH -> "HASH"
+*)
   | EOF -> "EOF"
   | COMMA -> "COMMA"
   | NL -> "NL"
-  | HASH -> "HASH"
 
 (*  | INDENTN x -> "INDENTN(" ^ string_of_int x ^ ")"*)
   | UNDENTN x -> "UNDENTN(" ^ string_of_int x ^ ")"
@@ -159,12 +167,14 @@ let string_of_token = function
   | UNDENT -> "UNDENT"
 
   (*Reserved words*)
+(*
   | IF -> "IF"
   | ELSE -> "ELSE"
   | IN -> "IN"
   | DEF -> "DEF"
   | CARRY_ON -> "CARRY_ON"
   | YIELD -> "YIELD"
+*)
   | TYPE -> "TYPE"
   | TYPE_INTEGER -> "TYPE_INTEGER"
   | TYPE_BOOLEAN -> "TYPE_BOOLEAN"
@@ -173,6 +183,7 @@ let string_of_token = function
   | TYPE_VARIANT -> "TYPE_VARIANT"
   | TYPE_UNIT -> "TYPE_UNIT"
   | TYPE_LIST -> "TYPE_LIST"
+(*
   | CASE -> "CASE"
   | OF -> "OF"
   | AND -> "AND"
@@ -185,20 +196,12 @@ let string_of_token = function
   | LOWER_ALPHA x -> "LOWER_ALPHA(" ^ x ^ ")"
   | NAT_NUM x -> "NAT_NUM(" ^ x ^ ")"
   | VARIABLE x -> "VARIABLE(" ^ x ^ ")"
+*)
   | IDENTIFIER x -> "IDENTIFIER(" ^ x ^ ")"
 
-  | COLON -> "COLON"
   | PROC -> "PROC"
   | SLASH -> "SLASH"
-  | LEFT_S_BRACKET -> "LEFT_S_BRACKET"
-  | RIGHT_S_BRACKET -> "RIGHT_S_BRACKET"
-  | LEFT_R_BRACKET -> "LEFT_R_BRACKET"
-  | RIGHT_R_BRACKET -> "RIGHT_R_BRACKET"
-  | LEFT_C_BRACKET -> "LEFT_C_BRACKET"
-  | RIGHT_C_BRACKET -> "RIGHT_C_BRACKET"
   | ARR_RIGHT -> "ARR_RIGHT"
-
-  | _ -> "<UNKNOWN TOKEN>"
 ;;
 
 let test filepath =

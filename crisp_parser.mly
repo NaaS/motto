@@ -144,8 +144,12 @@ type_def:
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Record (name, List.rev tl)}
   | TYPE_VARIANT; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, List.rev tl)}
-  | TYPE_LIST(*TODO include size dependency option*); td = type_def
-    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.List (name, td None)}
+  | TYPE_LIST; LEFT_C_BRACKET; dv = dep_var; RIGHT_C_BRACKET; td = type_def
+    {fun (name : Crisp_syntax.label option) ->
+       Crisp_syntax.List (name, td None, Some dv)}
+  | TYPE_LIST; td = type_def
+    {fun (name : Crisp_syntax.label option) ->
+       Crisp_syntax.List (name, td None, None)}
   | TYPE; type_name = IDENTIFIER
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.UserDefinedType (name, type_name)}
 
@@ -160,11 +164,16 @@ type_decl:
 channel_type_kind1: from_type = type_def; SLASH; to_type = type_def
  {Crisp_syntax.ChannelSingle (from_type None, to_type None)}
 
-(*TODO include size dependency option*)
-channel_type_kind2: LEFT_S_BRACKET; ctk1 = channel_type_kind1; RIGHT_S_BRACKET
- {match ctk1 with
-  | Crisp_syntax.ChannelSingle (from_type, to_type) ->
-    Crisp_syntax.ChannelArray (from_type, to_type, None)}
+channel_type_kind2:
+ | LEFT_S_BRACKET; ctk1 = channel_type_kind1; RIGHT_S_BRACKET;
+   LEFT_C_BRACKET; dv = dep_var; RIGHT_C_BRACKET
+   {match ctk1 with
+    | Crisp_syntax.ChannelSingle (from_type, to_type) ->
+       Crisp_syntax.ChannelArray (from_type, to_type, Some dv)}
+ | LEFT_S_BRACKET; ctk1 = channel_type_kind1; RIGHT_S_BRACKET
+   {match ctk1 with
+    | Crisp_syntax.ChannelSingle (from_type, to_type) ->
+       Crisp_syntax.ChannelArray (from_type, to_type, None)}
 
 channel_type:
   | ctk1 = channel_type_kind1 {ctk1}

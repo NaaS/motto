@@ -38,6 +38,8 @@ let mk_block (indent : int) (f : int -> 'a -> string) (l : 'a list) : string =
     already ^ f indent x) l ""
 ;;
 
+type dependency_index = string
+
 (*Labels are used to implement labelled variants over disjoint unions.*)
 type type_value =
   (*FIXME include delimiters for string and list*)
@@ -49,7 +51,7 @@ type type_value =
   | Record of label option * type_value list
   | Disjoint_Union of label option * type_value list
   | Unit of label option
-  | List of label option * type_value
+  | List of label option * type_value * dependency_index option
 ;;
 (*FIXME this pretty-printing code feels hacky -- particlarly the newline-related
   bit*)
@@ -72,9 +74,10 @@ let rec type_value_to_string ending_newline indent ty_value =
       mk_block (indent + 2) (type_value_to_string ending_newline) tys
   | Unit label ->
       opt_string (indn indent) label " : " ^ "unit" ^ endline
-  | List (label, ty) ->
-      opt_string (indn indent) label " : " ^ "list" ^ " " ^
-       type_value_to_string ending_newline indent ty
+  | List (label, ty, dep_idx_opt) ->
+      opt_string (indn indent) label " : " ^ "list" ^
+       opt_string "{" dep_idx_opt "}" ^ " " ^
+        type_value_to_string ending_newline indent ty
 ;;
 
 type typing = value_name * type_value
@@ -87,7 +90,6 @@ type decorator =
   {dec_name : decorator_name;
    dec_params : decorator_param list}
 
-type dependency_index = string
 type channel_type =
   | ChannelSingle of type_value * type_value
   | ChannelArray of type_value * type_value * dependency_index option

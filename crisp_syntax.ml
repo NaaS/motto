@@ -220,7 +220,7 @@ let guard_to_string = function
 type block = Block of guard * block list
 let rec block_to_string indent = function
   Block (g, bs) ->
-    indn indent ^ guard_to_string g ^
+    indn indent ^ guard_to_string g ^ "\n" ^
       mk_block (indent + indentation) block_to_string bs
 
 type process_body = block list

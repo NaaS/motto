@@ -245,7 +245,7 @@ block:
 (*NOTE a process_body is nested between an INDENT and an UNDENT*)
 (*NOTE we cannot have empty processes*)
 process_body:
-  | b = block; p = process_body {b :: p}
+  | b = block; NL; p = process_body {b :: p}
   | b = block {[b]}
 
 process_decl: PROC; name = IDENTIFIER; COLON; pt = process_type; INDENT;

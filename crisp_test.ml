@@ -202,6 +202,7 @@ let string_of_token = function
   | PROC -> "PROC"
   | SLASH -> "SLASH"
   | ARR_RIGHT -> "ARR_RIGHT"
+  | UNITY -> "UNITY"
 ;;
 
 let test filepath =

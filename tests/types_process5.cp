@@ -4,4 +4,4 @@ type awesome: record
   b : integer
 
 proc Test : {m, n, o} => ([type awesome/boolean]{m} input, list{m} boolean/type awesome output)
-  # Empty process
+  <>

@@ -7,6 +7,8 @@
 (*NOTE currently we don't allow programmers to have a non-zero program-level
   indentation. Cannot think of a reason why this policy is a bad thing.*)
 let min_indentation = 0
+(*When we indent, we indent by this amount of space*)
+let indentation = 2
 
 (*FIXME could generalise to abstract names*)
 type type_name = string
@@ -76,10 +78,10 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
       opt_string (indn indent) label " : " ^ "boolean" ^ endline
   | Record (label, tys) ->
       opt_string (indn indent) label " : " ^ "record" ^ "\n" ^
-      mk_block (indent + 2) (type_value_to_string mixfix_lists ending_newline) tys
+      mk_block (indent + indentation) (type_value_to_string mixfix_lists ending_newline) tys
   | Disjoint_Union (label, tys) ->
       opt_string (indn indent) label " : " ^ "variant" ^ "\n" ^
-      mk_block (indent + 2) (type_value_to_string mixfix_lists ending_newline) tys
+      mk_block (indent + indentation) (type_value_to_string mixfix_lists ending_newline) tys
   | Unit label ->
       opt_string (indn indent) label " : " ^ "unit" ^ endline
   | List (label, ty, dep_idx_opt) ->
@@ -211,19 +213,35 @@ type fn_decl =
 
 type process_name = string
 
+type guard =
+  | Unity
+let guard_to_string = function
+  | Unity -> "<>"
+type block = Block of guard * block list
+let rec block_to_string indent = function
+  Block (g, bs) ->
+    indn indent ^ guard_to_string g ^
+      mk_block (indent + indentation) block_to_string bs
+
+type process_body = block list
+let process_body_to_string indent pb =
+  List.map (block_to_string indent) pb
+  |> inter "\n"
+
 (*Top-level declarations. We cannot define types or functions within functions*)
 type toplevel_decl =
   | Type of ty_decl
   | Carry_On of co_decl
   | Function of fn_decl
-  | Process of process_name * process_type (*FIXME add process body*)
+  | Process of process_name * process_type * process_body
 let toplevel_decl_to_string = function
   | Type ty_decl -> "type " ^ ty_decl_to_string ty_decl
-  | Process (process_name, process_type) (*FIXME add process body*) ->
-    "proc " ^ process_name ^ " : " ^ process_type_to_string process_type
+  | Process (process_name, process_type, process_body) ->
+    "proc " ^ process_name ^ " : " ^ process_type_to_string process_type ^
+     "\n" ^ process_body_to_string indentation process_body
   | _ -> failwith "Unsupported"
 
 type program = toplevel_decl list
 let program_to_string (p : program) =
   List.map toplevel_decl_to_string p
-  |> (fun l -> List.fold_right (fun s acc -> s ^ acc) l "")
+  |> inter "\n"

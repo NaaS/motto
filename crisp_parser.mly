@@ -68,6 +68,7 @@
 
 (*Reserved words*)
 %token PROC
+%token UNITY
 (*
 %token IF
 %token ELSE
@@ -233,10 +234,23 @@ process_type:
   | chans = independent_process_type {Crisp_syntax.ProcessType ([], chans)}
   | dpt = dependent_process_type {dpt}
 
+(*TODO describe expression forms*)
+guard:
+  | UNITY {Crisp_syntax.Unity}
 
-(*TODO include process definition body*)
-process_decl: PROC; name = IDENTIFIER; COLON; pt = process_type
-  {Crisp_syntax.Process (name, pt)}
+block:
+  | g = guard; INDENT; pb = process_body; UNDENT {Crisp_syntax.Block (g, pb)}
+  | g = guard {Crisp_syntax.Block (g, [])}
+
+(*NOTE a process_body is nested between an INDENT and an UNDENT*)
+(*NOTE we cannot have empty processes*)
+process_body:
+  | b = block; p = process_body {b :: p}
+  | b = block {[b]}
+
+process_decl: PROC; name = IDENTIFIER; COLON; pt = process_type; INDENT;
+  pb = process_body; UNDENT
+  {Crisp_syntax.Process (name, pt, pb)}
 
 toplevel_decl:
   | ty_decl = type_decl {Crisp_syntax.Type ty_decl}

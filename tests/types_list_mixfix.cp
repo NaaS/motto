@@ -10,6 +10,6 @@ type r : record
   z : [type l]
 
 proc P : {m} => ([[integer]/-]{m} input, -/[integer]{m} output)
-  # Empty process
+  <>
 
 

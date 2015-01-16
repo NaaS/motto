@@ -82,6 +82,7 @@ rule main = parse
   | "," {COMMA}
   | "=>" {ARR_RIGHT}
   | "-" {DASH}
+  | "<>" {UNITY}
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
   | nl {test_indentation Crisp_syntax.min_indentation lexbuf}
   | ws {main lexbuf}

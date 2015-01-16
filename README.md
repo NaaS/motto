@@ -11,7 +11,8 @@ To run: `ocamlrun crisp_test.byte`
 * Passes (not necessarily in this order):
   * Type checking+inference, to detect malformed expressions.
   * Isolation analysis, to detect dead code (forming a loop that's disjoint from
-    the rest of the graph).
+    the rest of the graph), and warn about channels over which nothing is ever
+    transferred.
   * Termination condition checks (the main process must have termination
     conditions associated with at least one channel?).
   * Inlining processes as much as possible, removing redundancies, then breaking

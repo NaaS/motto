@@ -136,13 +136,9 @@ type_lines:
   | tl = type_line; NL; rest = type_lines { tl :: rest }
   | tl = type_line; UNDENT { [tl] }
 
-type_def:
+single_line_type_def:
   | bt = base_type
     {fun (name : Crisp_syntax.label option) -> bt name}
-  | TYPE_RECORD; INDENT; tl = type_lines
-    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Record (name, List.rev tl)}
-  | TYPE_VARIANT; INDENT; tl = type_lines
-    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, List.rev tl)}
   | TYPE_LIST; LEFT_C_BRACKET; dv = dep_var; RIGHT_C_BRACKET; td = type_def
     {fun (name : Crisp_syntax.label option) ->
        Crisp_syntax.List (name, td None, Some dv)}
@@ -158,21 +154,26 @@ type_def:
     {fun (name : Crisp_syntax.label option) ->
        Crisp_syntax.List (name, td None, Some dv)}
 
+type_def:
+  | sltd = single_line_type_def
+    {sltd}
+  | TYPE_RECORD; INDENT; tl = type_lines
+    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Record (name, List.rev tl)}
+  | TYPE_VARIANT; INDENT; tl = type_lines
+    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, List.rev tl)}
+
 type_decl:
   | TYPE; type_name = IDENTIFIER; COLON; td = type_def
     { {Crisp_syntax.type_name = type_name;
        Crisp_syntax.type_value = td None} }
 
-(*NOTE this is quite powerful, since we could have structured types specified
-  at this point, but that wouldn't be a very neat thing to do, so i might
-  forbid by blocking it during one of the early compiler passes.*)
 channel_type_kind1:
-  | from_type = type_def; SLASH; to_type = type_def
+  | from_type = single_line_type_def; SLASH; to_type = single_line_type_def
       {Crisp_syntax.ChannelSingle (from_type None, to_type None)}
   (*NOTE We cannot represents channels of type -/- since they are useless.*)
-  | MINUS; SLASH; to_type = type_def
+  | MINUS; SLASH; to_type = single_line_type_def
       {Crisp_syntax.ChannelSingle (Crisp_syntax.Empty, to_type None)}
-  | from_type = type_def; SLASH; MINUS
+  | from_type = single_line_type_def; SLASH; MINUS
       {Crisp_syntax.ChannelSingle (from_type None, Crisp_syntax.Empty)}
   (*NOTE we cannot use the empty type anywhere other than in channels,
     since there isn't any point.*)

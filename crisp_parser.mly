@@ -136,8 +136,6 @@ type_lines:
   | tl = type_line; NL; rest = type_lines { tl :: rest }
   | tl = type_line; UNDENT { [tl] }
 
-(*TODO Haskell-style list notation for lists. It's already being used for
-  channel arrays.*)
 type_def:
   | bt = base_type
     {fun (name : Crisp_syntax.label option) -> bt name}
@@ -153,6 +151,12 @@ type_def:
        Crisp_syntax.List (name, td None, None)}
   | TYPE; type_name = IDENTIFIER
     {fun (name : Crisp_syntax.label option) -> Crisp_syntax.UserDefinedType (name, type_name)}
+  | LEFT_S_BRACKET; td = type_def; RIGHT_S_BRACKET
+    {fun (name : Crisp_syntax.label option) ->
+       Crisp_syntax.List (name, td None, None)}
+  | LEFT_S_BRACKET; td = type_def; RIGHT_S_BRACKET; LEFT_C_BRACKET; dv = dep_var; RIGHT_C_BRACKET
+    {fun (name : Crisp_syntax.label option) ->
+       Crisp_syntax.List (name, td None, Some dv)}
 
 type_decl:
   | TYPE; type_name = IDENTIFIER; COLON; td = type_def

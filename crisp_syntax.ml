@@ -54,10 +54,17 @@ type type_value =
   | List of label option * type_value * dependency_index option
   | Empty
 ;;
-(*FIXME this pretty-printing code feels hacky -- particlarly the newline-related
-  bit*)
-let rec type_value_to_string ending_newline indent ty_value =
-  let endline = if ending_newline then "\n" else ""
+
+let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
+  let endline = if ending_newline then "\n" else "" in
+  let use_mixfix_list_syntax_for = function
+    | UserDefinedType _
+    | String _
+    | Integer _
+    | Boolean _
+    | Unit _
+    | List _ -> true
+    | _ -> false
   in match ty_value with
   | UserDefinedType (label, type_name) ->
       opt_string (indn indent) label " : " ^ "type " ^ type_name ^ endline
@@ -69,16 +76,21 @@ let rec type_value_to_string ending_newline indent ty_value =
       opt_string (indn indent) label " : " ^ "boolean" ^ endline
   | Record (label, tys) ->
       opt_string (indn indent) label " : " ^ "record" ^ "\n" ^
-      mk_block (indent + 2) (type_value_to_string ending_newline) tys
+      mk_block (indent + 2) (type_value_to_string mixfix_lists ending_newline) tys
   | Disjoint_Union (label, tys) ->
       opt_string (indn indent) label " : " ^ "variant" ^ "\n" ^
-      mk_block (indent + 2) (type_value_to_string ending_newline) tys
+      mk_block (indent + 2) (type_value_to_string mixfix_lists ending_newline) tys
   | Unit label ->
       opt_string (indn indent) label " : " ^ "unit" ^ endline
   | List (label, ty, dep_idx_opt) ->
+    if mixfix_lists && use_mixfix_list_syntax_for ty then
+      opt_string (indn indent) label " : " ^ "[" ^
+       type_value_to_string mixfix_lists false indent ty ^
+         "]" ^ opt_string "{" dep_idx_opt "}" ^ endline
+    else
       opt_string (indn indent) label " : " ^ "list" ^
        opt_string "{" dep_idx_opt "}" ^ " " ^
-        type_value_to_string ending_newline indent ty
+        type_value_to_string mixfix_lists ending_newline indent ty
   | Empty -> "-"
 ;;
 
@@ -92,15 +104,19 @@ type decorator =
   {dec_name : decorator_name;
    dec_params : decorator_param list}
 
+let default_use_mixfix_lists = true;;
+
 type channel_type =
   | ChannelSingle of type_value * type_value
   | ChannelArray of type_value * type_value * dependency_index option
 let channel_type_to_string = function
   | ChannelSingle (type_value1, type_value2) ->
-    type_value_to_string false 0 type_value1 ^ "/" ^ type_value_to_string false 0 type_value2
+    type_value_to_string default_use_mixfix_lists false 0 type_value1 ^ "/" ^
+    type_value_to_string default_use_mixfix_lists false 0 type_value2
   | ChannelArray (type_value1, type_value2, dep_idx_opt) ->
-    "[" ^ type_value_to_string false 0 type_value1 ^ "/" ^
-    type_value_to_string false 0 type_value2 ^ "]" ^ opt_string "{" dep_idx_opt "}"
+    "[" ^ type_value_to_string default_use_mixfix_lists false 0 type_value1 ^ "/" ^
+    type_value_to_string default_use_mixfix_lists false 0 type_value2 ^ "]" ^
+    opt_string "{" dep_idx_opt "}"
 type channel_name = string
 type channel = Channel of channel_type * channel_name
 let channel_to_string (Channel (channel_type, channel_name)) =
@@ -182,7 +198,7 @@ type ty_decl =
   {type_name : type_name;
    type_value : type_value}
 let ty_decl_to_string {type_name; type_value} =
-  type_name ^ ": " ^ type_value_to_string true min_indentation type_value
+  type_name ^ ": " ^ type_value_to_string default_use_mixfix_lists true min_indentation type_value
 type co_decl =
   {decorator : decorator option;
    co_name : function_name;

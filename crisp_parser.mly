@@ -18,7 +18,6 @@
 *)
 (*FIXME include float?*)
 (*FIXME include char?*)
-(*FIXME need to include unit value*)
 
 (*Punctuation*)
 %token COLON

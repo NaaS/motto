@@ -101,7 +101,6 @@ program:
   | e = toplevel_decl; p = program {e :: p}
 
 base_type:
-(*TODO include the empty type!*)
   | TYPE_STRING {fun name -> Crisp_syntax.String name}
   | TYPE_INTEGER {fun name -> Crisp_syntax.Integer name}
   | TYPE_BOOLEAN {fun name -> Crisp_syntax.Boolean name}

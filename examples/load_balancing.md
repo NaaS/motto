@@ -150,7 +150,8 @@ In addition to HTTP and HTTPS,
 
 
 # Sketch of an improved HLB use-case
-These are the processes in this setup:
+These are the processes in this setup, they will be described in more detail
+later.
 
 1. the *load monitor*, which tracks one or more metrics related to each backend
    server --- for instance, the number of active connections on each
@@ -175,3 +176,135 @@ Anil and mort had proposed, based on
 
 In this design, we don't need to replicate the load balancer, but rather the
 load monitor, to improve availability.
+
+
+## Application-level processing
+
+So far, this design doesn't include any application-level processing. This will
+be added below. We will create, examine and update cookies to bind sessions to
+specific backends. The client will continue communicating to the same backend
+(through the proxy) for a duration of a session.
+
+We now look at the *load balancer* process, which does the following:
+
+1. When a client request arrives, check for a valid cookie indicating that it
+   has previously been bound to a backend.
+
+2. If this exists, then use it to route to that backend.
+
+  1. If the backend is unavailable, then
+
+     1. Assign a new backend (by consulting the *load monitor*)
+
+     2. Update the client's cookie when relaying the backend's response to the
+        client.
+
+  2. Otherwise route the request to that backend, leaving the client's cookie
+     unchanged when relaying the backend's response to the client.
+
+3. Otherwise, consult the load monitor to assign a backend to this client.
+
+   1. Forward the client's request to the backend
+
+   2. Encode the choice of backend in a cookie that gets sent to the client
+      together with the backend's response.
+
+Slightly more formally:
+```
+proc http_load_balancer : (http_request/http_reply client,
+                           int/- next_srv,
+                           [http_reply/http_request] backends)
+  let input = client?
+    # Assuming associative arrays, which can be encoded as lists of pairs
+    if defined(input.cookie["backend_info"]) &&
+        defined(input.cookie["backend_expiry"]):
+        # FIXME Decode info and expiry
+        # FIXME Check expiry
+        server[input.cookie["backend"]] ! input
+      else:
+        # next_srv is a channel that contains an ordering for balancing load
+        # among servers. if it is a queue, it could end up becoming unfair. so
+        # instead, it should be a queue that's backed by a process -- the load monitor.
+        let backend_id = next_srv?
+          backends[backend_id] ! input
+            let response = backends[backend_id]?
+              # FIXME could encode backend_info
+              response.cookie["backend_info"] := backend_id
+                # FIXME could encode backend_expiry
+                # FIXME set backend_expiry
+                  client ! response
+```
+
+A problem with this design is that it checks the backend cookie upon the receipt
+of each request. Instead, we could check this at the start of the connection
+and use the same backend for the duration of the connection (for all requests
+therein), and set the cookie in case the client connects again soon.
+
+The two different designs also reveal two different ways in which the load
+balancer interacts with the load monitor. In the first way, we could achieve
+a much finer granularity --- informing the monitor each time a backend has
+started and finished serving a request. It's not clear if this level of detail
+is useful. Using the second approach we can achieve a coarser granularity ---
+informing the monitor each time a backend has been connected and disconnected
+with a client.
+
+```
+# Alternates between sending a client request to a backend, and sending the
+# backend's response to the client.
+# NOTE does this forever, but in practice will be killed when either channel
+#      is closed.
+# NOTE this code doesn't do any application-level processing, so it can be
+#      heavily optimised during compilation.
+proc to_and_fro : (http_request/http_reply client, http_reply/http_request backend)
+  repeat 1 instance forever
+    backend ! client?
+      client ! backend?
+
+# Used to communicate activity updates from load balancers to the load monitor.
+# Updates indicate whether a backend has been forwarded a connection, or if a
+# previously forward connection has been closed. This allows the load monitor
+# to monitor the "load" on each backend, estimated using a "number of
+# connections" metric.
+type activity : record
+  backend : int
+  activity : variant
+    client_inc : unit
+    client_dec : unit
+
+proc http_load_balancer : (http_request/http_reply client,
+                           int/- next_srv,
+                           -/activity monitor_updates,
+                           [http_reply/http_request] backends)
+  let input = client?
+    # Assuming associative arrays, which can be encoded as lists of pairs
+    if defined(input.cookie["backend_info"]) &&
+        defined(input.cookie["backend_expiry"]):
+        # FIXME Decode info and expiry
+        # FIXME Check expiry
+        let backend = server[input.cookie["backend"]]
+          monitor_updates ! {backend := backend, activity := client_inc}
+            backend ! input
+              to_and_fro(client, backend)
+            on_close(client) || on_close(backend)
+              monitor_updates ! {backend := backend, activity := client_dec}
+                exit
+      else:
+        # next_srv is a channel that contains an ordering for balancing load
+        # among servers. if it is a queue, it could end up becoming unfair. so
+        # instead, it should be a queue that's backed by a process -- the load monitor.
+        let backend_id = next_srv?
+          let backend = backends[backend_id]
+            monitor_updates ! {backend := backend, activity := client_inc}
+              backend ! input
+                let response = backend?
+                  # FIXME could encode backend_info
+                  response.cookie["backend_info"] := backend_id
+                    # FIXME could encode backend_expiry
+                    # FIXME set backend_expiry
+                      client ! response
+                        to_and_fro(client, backend)
+          on_close(client) || on_close(backend)
+            monitor_updates ! {backend := backend, activity := client_dec}
+              exit
+```
+

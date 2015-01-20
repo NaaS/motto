@@ -272,7 +272,7 @@ type activity : record
     client_dec : unit
 
 proc Http_load_balancer : (http_request/http_reply client,
-                           int/- next_srv,
+                           int/unit next_srv,
                            -/activity monitor_updates,
                            [http_reply/http_request] backends)
   let input = client?
@@ -292,39 +292,64 @@ proc Http_load_balancer : (http_request/http_reply client,
         # next_srv is a channel that contains an ordering for balancing load
         # among servers. if it is a queue, it could end up becoming unfair. so
         # instead, it should be a queue that's backed by a process -- the load monitor.
-        let backend_id = next_srv?
-          let backend = backends[backend_id]
-            # NOTE technically we require a unity value following client_inc,
-            #      but since we don't have HO functions we can safely insert
-            #      such values in this context (i.e., when specifying which arm
-            #      of a variant to use) i think.
-            monitor_updates ! {backend := backend, activity := client_inc}
-              backend ! input
-                let response = backend?
-                  # FIXME could encode backend_info
-                  response.cookie["backend_info"] := backend_id
-                    # FIXME could encode backend_expiry
-                    # FIXME set backend_expiry
-                      client ! response
-                        To_and_fro(client, backend)
-          on_close(client) || on_close(backend)
-            monitor_updates ! {backend := backend, activity := client_dec}
-              exit
+        # We request information from the load monitor by sending unity down the
+        # channel.
+        next_srv ! <>
+          let backend_id = next_srv?
+            let backend = backends[backend_id]
+              # NOTE technically we require a unity value following client_inc,
+              #      but since we don't have HO functions we can safely insert
+              #      such values in this context (i.e., when specifying which arm
+              #      of a variant to use) i think.
+              monitor_updates ! {backend := backend, activity := client_inc}
+                backend ! input
+                  let response = backend?
+                    # FIXME could encode backend_info
+                    response.cookie["backend_info"] := backend_id
+                      # FIXME could encode backend_expiry
+                      # FIXME set backend_expiry
+                        client ! response
+                          To_and_fro(client, backend)
+            on_close(client) || on_close(backend)
+              monitor_updates ! {backend := backend, activity := client_dec}
+                exit
 ```
 
 ## Load monitor
 The *load monitor* does not process the data exchanged between the client or
 backend; that is the task of the *load balancer* process.
 
-We continuously listen for monitor_updates
-use this to update our scheduling, continuously
+The logic of the monitor is as follows: we continuously listen for monitor_updates,
+and we use these values to update our scheduling (continuously). In parallel to
+this, we listen for next_srv requests, to which we reply with a scheduling
+decision based on the latest estimate of how loaded each backend is.
 ```
+type cfg = list int
+
 # Symmetric to what load balancer does, the load monitor only emits to next_srv
 #  and only reads from monitor_updates
-proc Http_load_monitor : (-/int next_srv,
+proc Http_load_monitor : (unit/int next_srv,
                           activity/- monitor_updates)
   let max_conns = 3000 # FUDGE maximum number of connections per backend
+  # FIXME currently we're not using max_conns
 
+  channel config : cfg/cfg
+    cfg ! # Initialise a vector of 0s.
+      repeat 1 instance forever
+        let update = monitor_updates?
+          case update.activity of
+            client_inc ->
+              let config = cfg?
+                let config' = # FIXME config but where config'[update.backend] = config[update.backend] + 1
+                  cfg ! config'
+            client_dec -> # FIXME as with previous case, but decrementing.
+        next_srv? # We don't need to let-bind with the unity value.
+          let config = cfg?
+            next srv !
+                # Go through the list of servers and pick the one with the least load.
+                fold b, current_best in config, MASSIVE_NUMBER: #FIXME need a special symbol for this
+                  if b < current_best then b else current_best
+              cfg ! config # Recycle the state.
 ```
 
 ## Bringing the pieces together
@@ -334,6 +359,10 @@ That is, the channel intialisation semantics is slightly different than what was
 intended earlier.
 Moreover, the repetition occurs for different `client` channels, not the same
 one.
+(Perhaps this would make channel semantics more consistent between "input"- and
+"output"-style channels, since currently I'm assuming that output channels are
+opened on demand, but that the input channel is already open when the Main
+process starts.)
 
 Rather than using a crude `?` annotation to indicate this, could instead
 iterate over an unbounded number of input channels -- we discover what they are
@@ -343,10 +372,18 @@ channel-addressing reasons? Also, we cannot evaluate `|client|` over such an
 array of channels, because the value is not an integer.
 
 ```
-proc Main : (http_request/http_response client?,  #FIXME not ? annotation
+proc Main : (http_request/http_response client?,  #FIXME note ? annotation.
              [http_reply/http_request] backends)
   channel monitor_update : activity/activity
-  channel next_srv : int/int
+  channel next_srv : unit | int # NOTE we don't want to specify the "direction"
+                                # of this local channel since it will point
+                                # from one process instance to another.
+                                # (In fact, the channel will exist between
+                                # all load balancers and the load monitor, as
+                                # will the channel called monitor_update, but
+                                # monitor_update will carry the same type in
+                                # both directions, so it doesn't really matter
+                                # which direction it's oriented in.
     Http_load_monitor (next_srv, monitor_updates)
       repeat 30000 instances forever
         # FIXME note the ? annotation below.

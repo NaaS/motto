@@ -340,7 +340,12 @@ proc Http_load_monitor : (unit/int next_srv,
           case update.activity of
             client_inc ->
               let config = cfg?
-                let config' = # FIXME config but where config'[update.backend] = config[update.backend] + 1
+                let config' =
+                    # This is the config list but where config'[update.backend] = config[update.backend] + 1
+                    map_i i, load in config:
+                      if i = update.backend:
+                          load + 1
+                        else: load
                   cfg ! config'
             client_dec -> # FIXME as with previous case, but decrementing.
         next_srv? # We don't need to let-bind with the unity value.

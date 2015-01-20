@@ -143,9 +143,35 @@ administered by the proxy.
 
 
 ## Other protocols
-[Snapt](www.snapt.net) can also load balance "SMTP, RDP, SQL and more".
 In addition to HTTP and HTTPS,
 [Nginx](http://nginx.com/resources/admin-guide/load-balancer/) supports
 "FastCGI, SCGI, uWSGI and memcached".
+[Snapt](www.snapt.net) can also load balance "SMTP, RDP, SQL and more".
 
 
+# Sketch of an improved HLB use-case
+These are the processes in this setup:
+
+1. the *load monitor*, which tracks one or more metrics related to each backend
+   server --- for instance, the number of active connections on each
+   individual backend server.
+
+2. the *load balancer*, which consults the load monitor to find a minimally
+   loaded server when a new connection comes in, and then sends the
+   connection on to that backend. It registers this with the monitor, which
+   updates its load estimate. When the connection terminates, the monitor is
+   informed about this too.
+
+The processes have different durations: the load balancer processes lives for as
+long as the client's connection lives, while the monitor connection needs
+to be persistent.
+
+The processes are connected via a channel of some description (this is
+abstracted in the language, and can be a TCP connection, or some other
+reliable ordered medium, such as a pipe). The precise details of the
+channel do not matter -- this resonates with the I/O abstraction work that
+Anil and mort had proposed, based on
+[Fable](http://anil.recoil.org/papers/drafts/2012-resolve-draft1.pdf).
+
+In this design, we don't need to replicate the load balancer, but rather the
+load monitor, to improve availability.

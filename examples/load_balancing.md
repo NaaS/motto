@@ -294,6 +294,10 @@ proc Http_load_balancer : (http_request/http_reply client,
         # instead, it should be a queue that's backed by a process -- the load monitor.
         let backend_id = next_srv?
           let backend = backends[backend_id]
+            # NOTE technically we require a unity value following client_inc,
+            #      but since we don't have HO functions we can safely insert
+            #      such values in this context (i.e., when specifying which arm
+            #      of a variant to use) i think.
             monitor_updates ! {backend := backend, activity := client_inc}
               backend ! input
                 let response = backend?
@@ -312,8 +316,11 @@ proc Http_load_balancer : (http_request/http_reply client,
 The *load monitor* does not process the data exchanged between the client or
 backend; that is the task of the *load balancer* process.
 
-
+We continuously listen for monitor_updates
+use this to update our scheduling, continuously
 ```
+# Symmetric to what load balancer does, the load monitor only emits to next_srv
+#  and only reads from monitor_updates
 proc Http_load_monitor : (-/int next_srv,
                           activity/- monitor_updates)
   let max_conns = 3000 # FUDGE maximum number of connections per backend
@@ -326,12 +333,15 @@ This is strictly a program in our language, since `client` must not yet have bee
 That is, the channel intialisation semantics is slightly different than what was
 intended earlier.
 Moreover, the repetition occurs for different `client` channels, not the same
-one. Rather than using a crude `?` annotation to indicate this, could instead
+one.
+
+Rather than using a crude `?` annotation to indicate this, could instead
 iterate over an unbounded number of input channels -- we discover what they are
 as they are created. Channels may close, but they may not reopen. The identity
 of each channel (i.e., the offset in the iteration) should not matter for
 channel-addressing reasons? Also, we cannot evaluate `|client|` over such an
 array of channels, because the value is not an integer.
+
 ```
 proc Main : (http_request/http_response client?,  #FIXME not ? annotation
              [http_reply/http_request] backends)

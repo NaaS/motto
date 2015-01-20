@@ -211,7 +211,7 @@ We now look at the *load balancer* process, which does the following:
 
 Slightly more formally:
 ```
-proc http_load_balancer : (http_request/http_reply client,
+proc Http_load_balancer : (http_request/http_reply client,
                            int/- next_srv,
                            [http_reply/http_request] backends)
   let input = client?
@@ -255,7 +255,7 @@ with a client.
 #      is closed.
 # NOTE this code doesn't do any application-level processing, so it can be
 #      heavily optimised during compilation.
-proc to_and_fro : (http_request/http_reply client, http_reply/http_request backend)
+proc To_and_fro : (http_request/http_reply client, http_reply/http_request backend)
   repeat 1 instance forever
     backend ! client?
       client ! backend?
@@ -271,7 +271,7 @@ type activity : record
     client_inc : unit
     client_dec : unit
 
-proc http_load_balancer : (http_request/http_reply client,
+proc Http_load_balancer : (http_request/http_reply client,
                            int/- next_srv,
                            -/activity monitor_updates,
                            [http_reply/http_request] backends)
@@ -284,7 +284,7 @@ proc http_load_balancer : (http_request/http_reply client,
         let backend = server[input.cookie["backend"]]
           monitor_updates ! {backend := backend, activity := client_inc}
             backend ! input
-              to_and_fro(client, backend)
+              To_and_fro(client, backend)
             on_close(client) || on_close(backend)
               monitor_updates ! {backend := backend, activity := client_dec}
                 exit
@@ -302,9 +302,44 @@ proc http_load_balancer : (http_request/http_reply client,
                     # FIXME could encode backend_expiry
                     # FIXME set backend_expiry
                       client ! response
-                        to_and_fro(client, backend)
+                        To_and_fro(client, backend)
           on_close(client) || on_close(backend)
             monitor_updates ! {backend := backend, activity := client_dec}
               exit
+```
+
+## Load monitor
+The *load monitor* does not process the data exchanged between the client or
+backend; that is the task of the *load balancer* process.
+
+
+```
+proc Http_load_monitor : (-/int next_srv,
+                          activity/- monitor_updates)
+  let max_conns = 3000 # FUDGE maximum number of connections per backend
+
+```
+
+## Bringing the pieces together
+We connect the balancer and monitor together below.
+This is strictly a program in our language, since `client` must not yet have been fixed.
+That is, the channel intialisation semantics is slightly different than what was
+intended earlier.
+Moreover, the repetition occurs for different `client` channels, not the same
+one. Rather than using a crude `?` annotation to indicate this, could instead
+iterate over an unbounded number of input channels -- we discover what they are
+as they are created. Channels may close, but they may not reopen. The identity
+of each channel (i.e., the offset in the iteration) should not matter for
+channel-addressing reasons? Also, we cannot evaluate `|client|` over such an
+array of channels, because the value is not an integer.
+```
+proc Main : (http_request/http_response client?,  #FIXME not ? annotation
+             [http_reply/http_request] backends)
+  channel monitor_update : activity/activity
+  channel next_srv : int/int
+    Http_load_monitor (next_srv, monitor_updates)
+      repeat 30000 instances forever
+        # FIXME note the ? annotation below.
+        Http_load_balancer (client?, next_srv, monitor_updates,  backends)
 ```
 

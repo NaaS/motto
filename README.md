@@ -1,20 +1,17 @@
-Implementation of the [crisp](https://github.com/NaaS/admin/wiki/crisp) language idea.
+Implementation of the [crisp](https://github.com/NaaS/admin/wiki/crisp) language idea,
+but simplified as described in
+[Flick](https://github.com/NaaS/system/tree/master/crisp/flick).
 
 To compile: `./build.sh`
 
 To run: `ocamlrun crisp_test.byte`
 
 ## TODO
-* Which features can be skipped for initial implementation?
-  Ideas: dependent types, variants.
 * Parser+AST
 * Passes (not necessarily in this order):
   * Type checking+inference, to detect malformed expressions.
-  * Isolation analysis, to detect dead code (forming a loop that's disjoint from
-    the rest of the graph), and warn about channels over which nothing is ever
-    transferred.
-  * Termination condition checks (the main process must have termination
-    conditions associated with at least one channel?).
+  * Dead code
+  * Busy waiting (e.g., AllReady-style behaviour)
   * Inlining processes as much as possible, removing redundancies, then breaking
     up into N processes based on some optimisation criterion.
 * Translate into C+libNAAS

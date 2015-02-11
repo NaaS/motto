@@ -12,6 +12,9 @@ To run: `ocamlrun crisp_test.byte`
   * Type checking+inference, to detect malformed expressions.
   * Dead code
   * Busy waiting (e.g., AllReady-style behaviour)
-  * Inlining processes as much as possible, removing redundancies, then breaking
-    up into N processes based on some optimisation criterion.
+  * Code motion
+    * Out of loops (to avoid wasting computing effort)
+    * Up into a "section" (for additional parallelisation where possible)
+  * Heuristically inlining functions.
+  * Breaking up into N processes based on some optimisation criterion.
 * Translate into C+libNAAS

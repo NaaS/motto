@@ -53,6 +53,7 @@ let test_indentation indentation lexbuf =
   difficult to measure indentation when mixed with spaces..*)
 let ws = ' '+
 let comment = '#'[^'\n']*
+let integer = ['0'-'9']+
 
 (*NOTE currently only Unix-style newline is supported, because it's simpler.*)
 let nl = '\n'
@@ -81,10 +82,65 @@ rule main = parse
   | "}" {RIGHT_C_BRACKET}
   | "," {COMMA}
   | "=>" {ARR_RIGHT}
+  | "->" {AR_RIGHT}
   | "-" {DASH}
   | "<>" {UNITY}
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
   | nl {test_indentation Crisp_syntax.min_indentation lexbuf}
   | ws {main lexbuf}
   | eof {EOF}
+  | "ipv4_address" {TYPE_IPv4ADDRESS}
+  | integer as oct1 '.' integer as oct2 '.'integer as oct3 '.'integer as oct4
+      {IPv4 (int_of_string(oct1), int_of_string(oct2), int_of_string(oct3),
+             int_of_string(oct4))}
+  | integer as num {INTEGER (int_of_string(num))}
+  | "." {PERIOD}
+  | "if" {IF}
+  | "else" {ELSE}
+  | "local" {LOCAL}
+  | "global" {GLOBAL}
+  | ":=" {ASSIGN}
+  | "!" {BANG}
+  | "?" {QUES}
+  | "??" {QUESQUES}
+  | ";" {SEMICOLON}
+  | "=" {EQUALS}
+(*NOTE since functions are effectful, could replace proc with fun, and signal
+  the entry point via some name -- e.g., main -- but then arbitrary functions
+  would be able to register listeners for events.*)
+  | "fun" {FUN}
+  | "let" {LET}
+  | "for" {FOR}
+  | "from" {FROM}
+  | "until" {UNTIL}
+  | "in" {IN}
+(*
+FIXME syntax for map and reduce? experimented with for..join but doesnt look
+   right.
+  | "map" {MAP}
+  | "reduce" {REDUCE}
 
+"join" has meaning
+
+137   join x with acc in l starting at []:$
+
+
+105 join v with acc starting at True:
+  v and acc # "and" is a keyword
+
+  | "gather" {SECTION}
+  | "from" {FROM}
+(*  | "of" {OF}*)
+*)
+
+  | "%" {PERCENT}
+  | "+" {PLUS}
+  | "-" {MINUS}
+  | ">" {GT}
+  | "<" {LT}
+  | "and" {AND}
+  | "or" {OR}
+  | "not" {NOT}
+  | "true" {TRUE}
+  | "false" {FALSE}
+(*FIXME string primitives*)

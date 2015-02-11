@@ -139,10 +139,36 @@ let process_type_to_string (ProcessType (dvars, chans)) =
   in deps ^ "(" ^ inter ", " (List.map channel_to_string chans) ^ ")"
 ;;
 
+(*
+type bound_variable_name = string
+let bound_variable_name_to_string name = name
+type parameter = type_value * bound_variable_name
+let parameter_to_string (ty, name) =
+type_value_to_string false false 0 ty ^ " " ^ bound_variable_name_to_string name
+*)
+type function_domtype = FunDomType of channel list * type_value list
+let function_domtype_to_string (FunDomType (chans, params)) =
+  "(" ^ inter ", " (List.map channel_to_string chans) ^
+(*    inter ", " (List.map parameter_to_string params) ^*)
+    inter ", " (List.map (type_value_to_string false false 0) params) ^
+    ")"
+;;
+type function_rettype = FunRetType of type_value list
+let function_rettype_to_string (FunRetType tys) =
+  "(" ^ inter ", " (List.map (type_value_to_string false false 0) tys) ^ ")"
+;;
+type function_type = FunType of function_domtype * function_rettype
+let function_type_to_string (FunType (fd, fr)) =
+  function_domtype_to_string fd ^ " " ^ function_rettype_to_string fr
+;;
+
 type bool_exp =
   | True
   | False
   | Bool_Val of value_name
+  | And of bool_exp * bool_exp
+  | Or of bool_exp * bool_exp
+  | Not of bool_exp
 
 type integer = int (*FIXME precision*)
 
@@ -174,6 +200,8 @@ type rec_exp =
 type du_exp =
   | Inj of co_carts
 
+(*FIXME this defn is from Matron -- need to remove some parts (e.g., yield) and
+        rename it to "expression" to better fit Flick.*)
 (*FIXME should restrict sub-expressions to specific classes (e.g., bool_exp), or
 be liberal instead? i.e., allow them to be function_body?*)
 type function_body =
@@ -208,7 +236,7 @@ type co_decl =
    co_body : carry_on_body}
 type fn_decl =
   {fn_name : function_name;
-   fn_params : type_value list;
+   fn_params : function_type;
    fn_body : function_body}
 
 type process_name = string

@@ -11,20 +11,22 @@
 (*TODO add (first-order) functions?*)
 
 (*Native value interpretations*)
-(*
 %token <int> INTEGER (*FIXME is OCaml's "int" of the precision we want to support?*)
+%token <int * int * int * int> IPv4
+(*
 %token <string> STRING
-%token <bool> BOOLEAN
 *)
 (*FIXME include float?*)
 (*FIXME include char?*)
 
 (*Punctuation*)
 %token COLON
-(*%token SEMICOLON
-%token BANG
-%token QUESTION
 %token PERIOD
+%token SEMICOLON
+%token BANG
+%token QUES
+%token QUESQUES
+(*
 %token COLONCOLON*)
 %token LEFT_R_BRACKET
 %token RIGHT_R_BRACKET
@@ -39,19 +41,19 @@
 %token DASH
 (*%token AT
 %token PIPE
-%token PLUS
 %token UNDERSCORE
 %token ASTERIX
 %token HASH
-%token EQUALS
+*)
 %token GT
 %token LT
-*)
+%token EQUALS
 %token SLASH
 %token EOF
 %token COMMA
 %token NL
 %token ARR_RIGHT
+%token AR_RIGHT
 
 (*Since we're relying on the offside rule for scoping, code blocks aren't
   explicitly delimited as in e.g., Algol-68-style languages.*)
@@ -68,20 +70,26 @@
 (*Reserved words*)
 %token PROC
 %token UNITY
-(*
+%token FUN
 %token IF
 %token ELSE
+%token PERCENT
+%token PLUS
+%token MINUS
+(*
 %token IN
 %token DEF
 %token CARRY_ON
 %token YIELD
 %token CASE
 %token OF
+%token IMPORT
+*)
 %token AND
 %token NOT
 %token OR
-%token IMPORT
-*)
+%token TRUE
+%token FALSE
 %token TYPE
 %token TYPE_INTEGER
 %token TYPE_BOOLEAN
@@ -90,6 +98,18 @@
 %token TYPE_VARIANT
 %token TYPE_UNIT
 %token TYPE_LIST
+%token TYPE_IPv4ADDRESS
+
+%token LOCAL
+%token GLOBAL
+%token ASSIGN
+%token LET
+%token FOR
+%token FROM
+%token UNTIL
+%token IN
+
+
 
 (*Names*)
 (*
@@ -99,6 +119,10 @@
 %token <string> VARIABLE
 *)
 %token <string> IDENTIFIER
+
+%right OR
+%right AND
+%nonassoc NOT
 
 %start <Crisp_syntax.program> program
 %%
@@ -216,12 +240,24 @@ channels:
   | chan = channel; COMMA; chans = channels {chan :: chans}
   | chan = channel {[chan]}
 
+(*There must be at least one parameter*)
+(*FIXME should restrict this to single-line type defs*)
+parameters:
+  | p = type_line; COMMA; ps = parameters {p :: ps}
+  | p = type_line {[p]}
+
+(*A list of single-line type defs -- used in the return types of functions*)
+singleline_type_list:
+  | td = single_line_type_def; COMMA; ps = singleline_type_list {td None :: ps}
+  | td = single_line_type_def {[td None]}
+
 dep_var: id = IDENTIFIER {id}
 
 dep_vars:
   | dvar = dep_var; COMMA; dvars = dep_vars {dvar :: dvars}
   | dvar = dep_var {[dvar]}
 
+(*FIXME allow processes to accept parameters*)
 (*NOTE that an independent_process_type may contain free variables -- this is
   picked up during type-checking, not during parsing.*)
 independent_process_type: LEFT_R_BRACKET; chans = channels; RIGHT_R_BRACKET
@@ -233,10 +269,22 @@ process_type:
   | chans = independent_process_type {Crisp_syntax.ProcessType ([], chans)}
   | dpt = dependent_process_type {dpt}
 
+(*FIXME remove identifiers from return type*)
+(*NOTE a function cannot mention channels in its return type.*)
+function_return_type: LEFT_R_BRACKET; ps = singleline_type_list; RIGHT_R_BRACKET
+  {Crisp_syntax.FunRetType ps}
+function_domain_type:
+  | LEFT_R_BRACKET; chans = channels; ps = parameters; RIGHT_R_BRACKET
+      {Crisp_syntax.FunDomType (chans, ps)}
+  | LEFT_R_BRACKET; ps = parameters; RIGHT_R_BRACKET
+      {Crisp_syntax.FunDomType ([], ps)}
+function_type: fd = function_domain_type; AR_RIGHT; fr = function_return_type
+  {Crisp_syntax.FunType (fd, fr)}
+
+(*FIXME this has been modified from Crisp to Flick*)
 (*TODO describe expression forms*)
 guard:
   | UNITY {Crisp_syntax.Unity}
-
 block:
   | g = guard; INDENT; pb = process_body; UNDENT {Crisp_syntax.Block (g, pb)}
   | g = guard {Crisp_syntax.Block (g, [])}
@@ -247,10 +295,76 @@ process_body:
   | b = block; NL; p = process_body {b :: p}
   | b = block {[b]}
 
+
+bool_exp:
+  | TRUE {Crisp_syntax.True}
+  | FALSE {Crisp_syntax.False}
+  | b1 = bool_exp; AND; b2 = bool_exp
+    {Crisp_syntax.And (b1, b2)}
+  | b1 = bool_exp; OR; b2 = bool_exp
+    {Crisp_syntax.Or (b1, b2)}
+  | NOT; b = bool_exp
+    {Crisp_syntax.Not b}
+  | name = IDENTIFIER
+    {Crisp_syntax.Bool_Val name}
+
+(*TODO
+arith_exp:
++
+-
+/
+%
+
+list_exp:
+
+tuple_exp:
+
+record_exp:
+
+ipv4address_exp:
+
+variant_exp:
+
+string_exp:
+*)
+
+expression:
+(*FIXME this is in the category of guards. Move to expressions.
+  | UNITY {Crisp_syntax.Unity}
+*)
+  | be = bool_exp {Crisp_syntax.BExp be}
+(*TODO
+  let ident = e
+if then else
+assignment
+variable; dereference -- this is inferred at a later pass, after type inference
+functiona application
+tuple
+record
+list
+*)
+
+(*FIXME process_body should be like function body except that:
+  - functions cannot listen for events.
+  - functions cannot specify local state -- they use that of the process.
+*)
 process_decl: PROC; name = IDENTIFIER; COLON; pt = process_type; INDENT;
   pb = process_body; UNDENT
   {Crisp_syntax.Process (name, pt, pb)}
 
+(*NOTE a process_body is nested between an INDENT and an UNDENT*)
+(*NOTE we cannot have empty processes*)
+function_body:
+  | e = expression; NL; f = function_body {Crisp_syntax.Seq (e, f)}
+  | e = expression {e}
+
+function_decl: FUN; name = IDENTIFIER; COLON; ft = function_type; INDENT;
+  fb = function_body; UNDENT
+    {Crisp_syntax.Function {Crisp_syntax.fn_name = name;
+                            Crisp_syntax.fn_params = ft;
+                            Crisp_syntax.fn_body = fb}}
+
 toplevel_decl:
   | ty_decl = type_decl {Crisp_syntax.Type ty_decl}
   | process = process_decl {process}
+  | funxion = function_decl {funxion}

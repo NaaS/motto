@@ -317,6 +317,7 @@ process_body:
 
 
 bool_exp:
+  | LEFT_R_BRACKET; b = bool_exp; RIGHT_R_BRACKET {b}
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
   | b1 = bool_exp; AND; b2 = bool_exp

@@ -161,6 +161,19 @@ type bool_exp =
   | And of bool_exp * bool_exp
   | Or of bool_exp * bool_exp
   | Not of bool_exp
+(*FIXME bracketing sucks*)
+let rec bool_exp_to_string indent = function
+  | True -> indn indent ^ "True"
+  | False -> indn indent ^ "False"
+  | Bool_Val value_name -> indn indent ^ value_name
+  | And (b1, b2) ->
+    indn indent ^ "((" ^ bool_exp_to_string 0 b1 ^ ") and (" ^
+    bool_exp_to_string 0 b2 ^ "))"
+  | Or (b1, b2) ->
+    indn indent ^ "((" ^ bool_exp_to_string 0 b1 ^ ") or (" ^
+    bool_exp_to_string 0 b2 ^ "))"
+  | Not b' ->
+    indn indent ^ "(not " ^ bool_exp_to_string 0 b' ^ ")"
 
 type integer = int (*FIXME precision*)
 
@@ -217,10 +230,7 @@ let function_body_to_string indent = function
   (*FIXME incomplete*)
   | Unity ->
     indn indent ^ "<>"
-  | BExp True ->
-    indn indent ^ "True"
-  | BExp False ->
-    indn indent ^ "False"
+  | BExp b -> bool_exp_to_string indent b
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"
 

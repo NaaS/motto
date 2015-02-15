@@ -241,16 +241,18 @@ channels:
   | chan = channel; COMMA; chans = channels {chan :: chans}
   | chan = channel {[chan]}
 
-(*There must be at least one parameter*)
+(*The parameter list may be empty*)
 (*FIXME should restrict this to single-line type defs*)
 parameters:
   | p = type_line; COMMA; ps = parameters {p :: ps}
-  | p = type_line {[p]}
+  | p = type_line; {[p]}
+  | {[]}
 
 (*A list of single-line type defs -- used in the return types of functions*)
 singleline_type_list:
   | td = single_line_type_def; COMMA; ps = singleline_type_list {td None :: ps}
   | td = single_line_type_def {[td None]}
+  | {[]}
 
 dep_var: id = IDENTIFIER {id}
 
@@ -270,7 +272,8 @@ process_type:
   | chans = independent_process_type {Crisp_syntax.ProcessType ([], chans)}
   | dpt = dependent_process_type {dpt}
 
-(*FIXME remove identifiers from return type*)
+(*NOTE the return type doesn't mention expression-level identifiers, which is
+  why i'm using "singleline_type_list" there rather than "parameters"*)
 (*NOTE a function cannot mention channels in its return type.*)
 function_return_type: LEFT_R_BRACKET; ps = singleline_type_list; RIGHT_R_BRACKET
   {Crisp_syntax.FunRetType ps}

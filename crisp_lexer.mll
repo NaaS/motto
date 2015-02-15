@@ -85,7 +85,6 @@ rule main = parse
   | "->" {AR_RIGHT}
   | "-" {DASH}
   | "<>" {UNITY}
-  | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
   | nl {test_indentation Crisp_syntax.min_indentation lexbuf}
   | ws {main lexbuf}
   | eof {EOF}
@@ -141,6 +140,7 @@ FIXME syntax for map and reduce? experimented with for..join but doesnt look
   | "and" {AND}
   | "or" {OR}
   | "not" {NOT}
-  | "true" {TRUE}
-  | "false" {FALSE}
+  | "True" {TRUE}
+  | "False" {FALSE}
+  | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
 (*FIXME string primitives*)

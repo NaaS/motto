@@ -159,7 +159,7 @@ let function_rettype_to_string (FunRetType tys) =
 ;;
 type function_type = FunType of function_domtype * function_rettype
 let function_type_to_string (FunType (fd, fr)) =
-  function_domtype_to_string fd ^ " " ^ function_rettype_to_string fr
+  function_domtype_to_string fd ^ " -> " ^ function_rettype_to_string fr
 ;;
 
 type bool_exp =
@@ -220,6 +220,12 @@ type function_body =
   | Iterate of function_body * function_body * function_body
   | LocalDef of typing * function_body (*def value_name : type = function_body*)
   | Update of value_name * function_body (*value_name := function_body*)
+let function_body_to_string indent = function
+  (*FIXME incomplete*)
+  | BExp True ->
+    indn indent ^ "True" ^ "\n"
+    (*FIXME for remainder of this could emulate how blocks are printed*)
+  | _ -> failwith "Unsupported"
 
 (*TODO: should be similar to function_body, but also allows calls to carry_ons*)
 type carry_on_body = unit
@@ -267,6 +273,9 @@ let toplevel_decl_to_string = function
   | Process (process_name, process_type, process_body) ->
     "proc " ^ process_name ^ " : " ^ process_type_to_string process_type ^
      "\n" ^ process_body_to_string indentation process_body
+  | Function fn_decl ->
+    "fun " ^ fn_decl.fn_name ^ " : " ^ function_type_to_string fn_decl.fn_params ^
+     "\n" ^ function_body_to_string indentation fn_decl.fn_body
   | _ -> failwith "Unsupported"
 
 type program = toplevel_decl list

@@ -282,19 +282,6 @@ function_domain_type:
 function_type: fd = function_domain_type; AR_RIGHT; fr = function_return_type
   {Crisp_syntax.FunType (fd, fr)}
 
-(*FIXME this has been modified from Crisp to Flick
-guard:
-  | UNITY {Crisp_syntax.Unity}
-block:
-  | g = guard; INDENT; pb = process_body; UNDENT {Crisp_syntax.Block (g, pb)}
-  | g = guard {Crisp_syntax.Block (g, [])}
-
-(*NOTE we cannot have empty process sub-bodies*)
-process_subbody:
-  | b = block; NL; p = process_subbody {b :: p}
-  | b = block {[b]}
-*)
-
 (*FIXME instead of "expression" could allow nesting an expression in an INDENT
   and UNDENT*)
 

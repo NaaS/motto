@@ -252,23 +252,6 @@ type fn_decl =
 
 type process_name = string
 
-(*
-type guard =
-  | Unity
-let guard_to_string = function
-  | Unity -> "<>"
-type block = Block of guard * block list
-let rec block_to_string indent = function
-  Block (g, bs) ->
-    indn indent ^ guard_to_string g ^ "\n" ^
-      mk_block (indent + indentation) block_to_string bs
-
-type process_body = block list
-let process_body_to_string indent pb =
-  List.map (block_to_string indent) pb
-  |> inter "\n"
-*)
-
 type state_decl =
   | LocalState of label * type_value option * function_body
   | GlobalState of label * type_value option * function_body

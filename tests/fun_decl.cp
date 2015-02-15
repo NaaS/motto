@@ -1,4 +1,4 @@
 
 
-fun F : (x : integer) -> (integer)
+fun F : (x : integer) -> (boolean)
   True

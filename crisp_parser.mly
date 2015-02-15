@@ -285,9 +285,6 @@ function_domain_type:
 function_type: fd = function_domain_type; AR_RIGHT; fr = function_return_type
   {Crisp_syntax.FunType (fd, fr)}
 
-(*FIXME instead of "expression" could allow nesting an expression in an INDENT
-  and UNDENT*)
-
 state_decl :
   | LOCAL; var = IDENTIFIER; COLON; ty = single_line_type_def; ASSIGN; e = expression
     {Crisp_syntax.LocalState (var, Some (ty None), e)}
@@ -302,8 +299,6 @@ states_decl :
   | st = state_decl; NL; sts = states_decl {st :: sts}
   | {[]}
 
-(*FIXME here too might want to allow expression to be sandwiched between INDENT
-and UNDENT*)
 excepts_decl :
   | NL; EXCEPT; ex_id = IDENTIFIER; COLON; e = expression; excs = excepts_decl
     {(ex_id, e) :: excs}
@@ -350,6 +345,8 @@ string_exp:
 *)
 
 expression:
+  (*The INDENT-UNDENT combo is a form of bracketing*)
+  | INDENT; e = expression; UNDENT {e}
   | UNITY {Crisp_syntax.Unity}
   | be = bool_exp {Crisp_syntax.BExp be}
 (*TODO

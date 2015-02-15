@@ -275,7 +275,7 @@ process_type:
 function_return_type: LEFT_R_BRACKET; ps = singleline_type_list; RIGHT_R_BRACKET
   {Crisp_syntax.FunRetType ps}
 function_domain_type:
-  | LEFT_R_BRACKET; chans = channels; ps = parameters; RIGHT_R_BRACKET
+  | LEFT_R_BRACKET; chans = channels; SEMICOLON; ps = parameters; RIGHT_R_BRACKET
       {Crisp_syntax.FunDomType (chans, ps)}
   | LEFT_R_BRACKET; ps = parameters; RIGHT_R_BRACKET
       {Crisp_syntax.FunDomType ([], ps)}

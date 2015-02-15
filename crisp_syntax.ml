@@ -141,7 +141,11 @@ let process_type_to_string (ProcessType (dvars, chans)) =
 
 type function_domtype = FunDomType of channel list * type_value list
 let function_domtype_to_string (FunDomType (chans, params)) =
-  "(" ^ inter ", " (List.map channel_to_string chans) ^ "; " ^
+  let chan_params =
+    if List.length chans > 0 then
+      inter ", " (List.map channel_to_string chans) ^ "; "
+    else "" in
+  "(" ^ chan_params ^
     inter ", " (List.map (type_value_to_string default_use_mixfix_lists false 0) params) ^
     ")"
 ;;

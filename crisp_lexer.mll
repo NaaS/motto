@@ -113,6 +113,7 @@ rule main = parse
   | "from" {FROM}
   | "until" {UNTIL}
   | "in" {IN}
+  | "except" {EXCEPT}
 (*
 FIXME syntax for map and reduce? experimented with for..join but doesnt look
    right.

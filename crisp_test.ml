@@ -236,6 +236,7 @@ let string_of_token = function
   | SEMICOLON -> "SEMICOLON"
   | QUESQUES -> "QUESQUES"
   | QUES -> "QUES"
+  | EXCEPT -> "EXCEPT"
 ;;
 
 let test filepath =

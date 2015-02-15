@@ -205,6 +205,7 @@ type du_exp =
 (*FIXME should restrict sub-expressions to specific classes (e.g., bool_exp), or
 be liberal instead? i.e., allow them to be function_body?*)
 type function_body =
+  | Unity
   | BExp of bool_exp
   | AExp of arith_exp
   | StExp of str_exp
@@ -222,8 +223,12 @@ type function_body =
   | Update of value_name * function_body (*value_name := function_body*)
 let function_body_to_string indent = function
   (*FIXME incomplete*)
+  | Unity ->
+    indn indent ^ "<>"
   | BExp True ->
-    indn indent ^ "True" ^ "\n"
+    indn indent ^ "True"
+  | BExp False ->
+    indn indent ^ "False"
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"
 
@@ -247,6 +252,7 @@ type fn_decl =
 
 type process_name = string
 
+(*
 type guard =
   | Unity
 let guard_to_string = function
@@ -261,6 +267,41 @@ type process_body = block list
 let process_body_to_string indent pb =
   List.map (block_to_string indent) pb
   |> inter "\n"
+*)
+
+type state_decl =
+  | LocalState of label * type_value option * function_body
+  | GlobalState of label * type_value option * function_body
+let state_decl_to_string indent state_decl =
+  let decl_state (kind, label, type_value_opt, expression) =
+    let ty_s =
+      match type_value_opt with
+      | None -> ""
+      | Some ty ->
+        " : " ^ type_value_to_string true false 0 ty
+    in indn indent ^ kind ^ " " ^ label ^ ty_s ^ " := " ^
+       function_body_to_string 0 expression
+  in match state_decl with
+  | LocalState (label, type_value_opt, expression) ->
+    decl_state ("local", label, type_value_opt, expression)
+  | GlobalState (label, type_value_opt, expression) ->
+    decl_state ("global", label, type_value_opt, expression)
+
+type excepts_decl = label * function_body
+let excepts_decl_to_string indent (label, e) =
+  indn indent ^ "except " ^ label ^ " : " ^ function_body_to_string 0 e
+
+type process_body =
+    ProcessBody of state_decl list * function_body * excepts_decl list
+let process_body_to_string indent (ProcessBody (st_decls, e, exc_decls)) =
+  let st_decls_s =
+    List.map (state_decl_to_string indent) st_decls
+    |> inter "\n" in
+  let e_s = function_body_to_string indent e in
+  let exc_decls_s =
+    List.map (excepts_decl_to_string indent) exc_decls
+    |> inter "\n" in
+  st_decls_s ^ e_s ^ exc_decls_s
 
 (*Top-level declarations. We cannot define types or functions within functions*)
 type toplevel_decl =

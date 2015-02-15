@@ -108,6 +108,7 @@
 %token FROM
 %token UNTIL
 %token IN
+%token EXCEPT
 
 
 
@@ -281,19 +282,48 @@ function_domain_type:
 function_type: fd = function_domain_type; AR_RIGHT; fr = function_return_type
   {Crisp_syntax.FunType (fd, fr)}
 
-(*FIXME this has been modified from Crisp to Flick*)
-(*TODO describe expression forms*)
+(*FIXME this has been modified from Crisp to Flick
 guard:
   | UNITY {Crisp_syntax.Unity}
 block:
   | g = guard; INDENT; pb = process_body; UNDENT {Crisp_syntax.Block (g, pb)}
   | g = guard {Crisp_syntax.Block (g, [])}
 
-(*NOTE a process_body is nested between an INDENT and an UNDENT*)
-(*NOTE we cannot have empty processes*)
-process_body:
-  | b = block; NL; p = process_body {b :: p}
+(*NOTE we cannot have empty process sub-bodies*)
+process_subbody:
+  | b = block; NL; p = process_subbody {b :: p}
   | b = block {[b]}
+*)
+
+(*FIXME instead of "expression" could allow nesting an expression in an INDENT
+  and UNDENT*)
+
+state_decl :
+  | LOCAL; var = IDENTIFIER; COLON; ty = single_line_type_def; ASSIGN; e = expression
+    {Crisp_syntax.LocalState (var, Some (ty None), e)}
+  | LOCAL; var = IDENTIFIER; ASSIGN; e = expression
+    {Crisp_syntax.LocalState (var, None, e)}
+  | GLOBAL; var = IDENTIFIER; COLON; ty = single_line_type_def; ASSIGN; e = expression
+    {Crisp_syntax.GlobalState (var, Some (ty None), e)}
+  | GLOBAL; var = IDENTIFIER; ASSIGN; e = expression
+    {Crisp_syntax.GlobalState (var, None, e)}
+
+states_decl :
+  | st = state_decl; NL; sts = states_decl {st :: sts}
+  | {[]}
+
+(*FIXME here too might want to allow expression to be sandwiched between INDENT
+and UNDENT*)
+excepts_decl :
+  | NL; EXCEPT; ex_id = IDENTIFIER; COLON; e = expression; excs = excepts_decl
+    {(ex_id, e) :: excs}
+  | {[]}
+
+(*NOTE a process_body is nested between an INDENT and an UNDENT*)
+(*NOTE going from Flick to Crisp involves replacing "expression" with "block"*)
+process_body:
+  sts = states_decl; e = expression; excs = excepts_decl
+  {Crisp_syntax.ProcessBody (sts, e, excs)}
 
 
 bool_exp:
@@ -329,9 +359,7 @@ string_exp:
 *)
 
 expression:
-(*FIXME this is in the category of guards. Move to expressions.
   | UNITY {Crisp_syntax.Unity}
-*)
   | be = bool_exp {Crisp_syntax.BExp be}
 (*TODO
   let ident = e

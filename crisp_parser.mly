@@ -325,21 +325,6 @@ process_body:
   sts = states_decl; e = expression; excs = excepts_decl
   {Crisp_syntax.ProcessBody (sts, e, excs)}
 
-
-(*TODO
-list_exp:
-
-tuple_exp:
-
-record_exp:
-
-ipv4address_exp:
-
-variant_exp:
-
-string_exp:
-*)
-
 expression:
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
@@ -394,13 +379,8 @@ expression:
   | ABS; a = expression
     {Crisp_syntax.Abs a}
 
-(*TODO
-arith_exp:
-  | "%" {PERCENT}
-  | "+" {PLUS}
-  | "-" {MINUS}
-  SLASH
 
+(*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
@@ -408,6 +388,9 @@ functiona application
 tuple
 record
 list
+ipv4address_exp:
+variant_exp:
+string_exp:
 *)
 
 (*FIXME process_body should be like function body except that:

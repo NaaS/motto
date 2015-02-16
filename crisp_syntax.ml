@@ -160,12 +160,6 @@ let function_type_to_string (FunType (fd, fr)) =
 
 type integer = int (*FIXME precision*)
 
-(*FIXME incomplete -- should the other features, e.g., concat, substring, etc,
-  be implemented in a library?*)
-type str_exp =
-  | Str of string
-(*  | To_Str of expression*)
-
 type carts =
   {value_type : type_value;
    label : label;
@@ -210,7 +204,11 @@ type expression =
   | Quotient of expression * expression
   | Abs of expression
 
-  | StExp of str_exp
+(*FIXME includ concat, substring, etc
+  | Str of string
+  | To_Str of expression
+*)
+
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
   (*NOTE the syntax is pretty powerfuli -- it might not be a loss if we

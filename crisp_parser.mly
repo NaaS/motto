@@ -121,6 +121,7 @@
 *)
 %token <string> IDENTIFIER
 
+(*%right SEMICOLON*)
 %right OR
 %right AND
 %nonassoc NOT
@@ -312,19 +313,6 @@ process_body:
   {Crisp_syntax.ProcessBody (sts, e, excs)}
 
 
-bool_exp:
-  | LEFT_R_BRACKET; b = bool_exp; RIGHT_R_BRACKET {b}
-  | TRUE {Crisp_syntax.True}
-  | FALSE {Crisp_syntax.False}
-  | b1 = bool_exp; AND; b2 = bool_exp
-    {Crisp_syntax.And (b1, b2)}
-  | b1 = bool_exp; OR; b2 = bool_exp
-    {Crisp_syntax.Or (b1, b2)}
-  | NOT; b = bool_exp
-    {Crisp_syntax.Not b}
-  | name = IDENTIFIER
-    {Crisp_syntax.Bool_Val name}
-
 (*TODO
 arith_exp:
 +
@@ -346,13 +334,27 @@ string_exp:
 *)
 
 expression:
+  | LEFT_R_BRACKET; e = expression; RIGHT_R_BRACKET {e}
+  | TRUE {Crisp_syntax.True}
+  | FALSE {Crisp_syntax.False}
+  | b1 = expression; AND; b2 = expression
+    {Crisp_syntax.And (b1, b2)}
+  | b1 = expression; OR; b2 = expression
+    {Crisp_syntax.Or (b1, b2)}
+  | NOT; b = expression
+    {Crisp_syntax.Not b}
+
   (*The INDENT-UNDENT combo is a form of bracketing*)
   | INDENT; e = expression; UNDENT {e}
   | UNITY {Crisp_syntax.Unity}
-  | be = bool_exp {Crisp_syntax.BExp be}
+  | v = IDENTIFIER {Crisp_syntax.Variable v}
 (*TODO
+  Not enabling the following line for the time being -- it's an invititation to
+   pack code weirdly.
+  | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
+  | IF; be = bool_exp; COLON; e1 = expression; ELSE; COLON; e2 = expression
+    {Crisp_syntax.ITE (be, e1, e2)}
   let ident = e
-if then else
 assignment
 variable; dereference -- this is inferred at a later pass, after type inference
 functiona application

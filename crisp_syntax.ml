@@ -158,27 +158,6 @@ let function_type_to_string (FunType (fd, fr)) =
   function_domtype_to_string fd ^ " -> " ^ function_rettype_to_string fr
 ;;
 
-type bool_exp =
-  | True
-  | False
-  | Bool_Val of value_name
-  | And of bool_exp * bool_exp
-  | Or of bool_exp * bool_exp
-  | Not of bool_exp
-(*FIXME bracketing sucks*)
-let rec bool_exp_to_string indent = function
-  | True -> indn indent ^ "True"
-  | False -> indn indent ^ "False"
-  | Bool_Val value_name -> indn indent ^ value_name
-  | And (b1, b2) ->
-    indn indent ^ "((" ^ bool_exp_to_string 0 b1 ^ ") and (" ^
-    bool_exp_to_string 0 b2 ^ "))"
-  | Or (b1, b2) ->
-    indn indent ^ "((" ^ bool_exp_to_string 0 b1 ^ ") or (" ^
-    bool_exp_to_string 0 b2 ^ "))"
-  | Not b' ->
-    indn indent ^ "(not " ^ bool_exp_to_string 0 b' ^ ")"
-
 type integer = int (*FIXME precision*)
 
 (*FIXME no division, nor coercions into floats yet*)
@@ -209,11 +188,17 @@ type rec_exp =
 type du_exp =
   | Inj of co_carts
 
-(*FIXME should restrict sub-expressions to specific classes (e.g., bool_exp), or
-be liberal instead? i.e., allow them to be expression?*)
 type expression =
   | Unity
-  | BExp of bool_exp
+  | Variable of label
+
+  (*Boolean expressions*)
+  | True
+  | False
+  | And of expression * expression
+  | Or of expression * expression
+  | Not of expression
+
   | AExp of arith_exp
   | StExp of str_exp
   | RecExp of rec_exp
@@ -223,15 +208,30 @@ type expression =
     expressions.*)
   | Function_Call of function_name * expression list
   | Seq of expression * expression
-  | ITE of bool_exp * expression * expression
+  | ITE of expression * expression * expression
   | Iterate of expression * expression * expression
   | LocalDef of typing * expression (*def value_name : type = expression*)
   | Update of value_name * expression (*value_name := expression*)
-let expression_to_string indent = function
+let rec expression_to_string indent = function
   (*FIXME incomplete*)
   | Unity ->
     indn indent ^ "<>"
-  | BExp b -> bool_exp_to_string indent b
+  | Variable value_name -> indn indent ^ value_name
+  | Seq (e1, e2) ->
+    expression_to_string indent e1 ^ "\n" ^
+    expression_to_string indent e2
+
+  | True -> indn indent ^ "True"
+  | False -> indn indent ^ "False"
+  | And (b1, b2) ->
+    indn indent ^ "((" ^ expression_to_string 0 b1 ^ ") and (" ^
+    expression_to_string 0 b2 ^ "))"
+  | Or (b1, b2) ->
+    indn indent ^ "((" ^ expression_to_string 0 b1 ^ ") or (" ^
+    expression_to_string 0 b2 ^ "))"
+  | Not b' ->
+    indn indent ^ "(not " ^ expression_to_string 0 b' ^ ")"
+
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"
 

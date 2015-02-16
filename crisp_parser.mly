@@ -351,6 +351,9 @@ expression:
   | INDENT; e = expression; UNDENT {e}
   | UNITY {Crisp_syntax.Unity}
   | v = IDENTIFIER {Crisp_syntax.Variable v}
+  | IF; be = expression; COLON; e1 = expression; NL; ELSE; COLON; e2 = expression
+    %prec ite
+    {Crisp_syntax.ITE (be, e1, e2)}
   | IF; be = expression; COLON; e1 = expression; ELSE; COLON; e2 = expression
     %prec ite
     {Crisp_syntax.ITE (be, e1, e2)}

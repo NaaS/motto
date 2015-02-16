@@ -398,7 +398,6 @@ functiona application
 tuple
 record
 list
-ipv4address_exp:
 variant_exp:
 string_exp:
 *)

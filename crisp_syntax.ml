@@ -204,7 +204,7 @@ type expression =
   | Quotient of expression * expression
   | Abs of expression
 
-(*FIXME includ concat, substring, etc
+(*FIXME include concat, substring, etc
   | Str of string
   | To_Str of expression
 *)

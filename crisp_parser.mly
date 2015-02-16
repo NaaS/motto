@@ -399,7 +399,6 @@ tuple
 record
 list
 variant_exp:
-string_exp:
 *)
 
 (*FIXME process_body should be like function body except that:

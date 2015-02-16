@@ -350,6 +350,8 @@ expression:
   (*The INDENT-UNDENT combo is a form of bracketing*)
   | INDENT; e = expression; UNDENT {e}
   | UNITY {Crisp_syntax.Unity}
+  (*NOTE we determine whether this is a bound variable or a dereference
+         during an early pass.*)
   | v = IDENTIFIER {Crisp_syntax.Variable v}
   | IF; be = expression; COLON; e1 = expression; NL; ELSE; COLON; e2 = expression
     %prec ite
@@ -363,7 +365,6 @@ expression:
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
   let ident = e
 assignment
-variable; dereference -- this is inferred at a later pass, after type inference
 functiona application
 tuple
 record

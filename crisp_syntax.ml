@@ -209,8 +209,6 @@ type rec_exp =
 type du_exp =
   | Inj of co_carts
 
-(*FIXME this defn is from Matron -- need to remove some parts (e.g., yield) and
-        rename it to "expression" to better fit Flick.*)
 (*FIXME should restrict sub-expressions to specific classes (e.g., bool_exp), or
 be liberal instead? i.e., allow them to be function_body?*)
 type function_body =
@@ -225,7 +223,6 @@ type function_body =
     expressions.*)
   | Function_Call of function_name * function_body list
   | Seq of function_body * function_body
-  | Yield
   | ITE of bool_exp * function_body * function_body
   | Iterate of function_body * function_body * function_body
   | LocalDef of typing * function_body (*def value_name : type = function_body*)
@@ -238,19 +235,11 @@ let function_body_to_string indent = function
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"
 
-(*TODO: should be similar to function_body, but also allows calls to carry_ons*)
-type carry_on_body = unit
-
 type ty_decl =
   {type_name : type_name;
    type_value : type_value}
 let ty_decl_to_string {type_name; type_value} =
   type_name ^ ": " ^ type_value_to_string default_use_mixfix_lists true min_indentation type_value
-type co_decl =
-  {decorator : decorator option;
-   co_name : function_name;
-   co_params : type_value list;
-   co_body : carry_on_body}
 type fn_decl =
   {fn_name : function_name;
    fn_params : function_type;
@@ -295,7 +284,6 @@ let process_body_to_string indent (ProcessBody (st_decls, e, exc_decls)) =
 (*Top-level declarations. We cannot define types or functions within functions*)
 type toplevel_decl =
   | Type of ty_decl
-  | Carry_On of co_decl
   | Function of fn_decl
   | Process of process_name * process_type * process_body
 let toplevel_decl_to_string = function

@@ -130,13 +130,6 @@ let string_of_token = function
 
   (*Punctuation*)
   | COLON -> "COLON"
-(*
-  | SEMICOLON -> "SEMICOLON"
-  | BANG -> "BANG"
-  | QUESTION -> "QUESTION"
-  | PERIOD -> "PERIOD"
-  | COLONCOLON -> "COLONCOLON"
-*)
   | LEFT_R_BRACKET -> "LEFT_R_BRACKET"
   | RIGHT_R_BRACKET -> "RIGHT_R_BRACKET"
   | LEFT_S_BRACKET -> "LEFT_S_BRACKET"
@@ -167,14 +160,6 @@ let string_of_token = function
   | UNDENT -> "UNDENT"
 
   (*Reserved words*)
-(*
-  | IF -> "IF"
-  | ELSE -> "ELSE"
-  | IN -> "IN"
-  | DEF -> "DEF"
-  | CARRY_ON -> "CARRY_ON"
-  | YIELD -> "YIELD"
-*)
   | TYPE -> "TYPE"
   | TYPE_INTEGER -> "TYPE_INTEGER"
   | TYPE_BOOLEAN -> "TYPE_BOOLEAN"
@@ -186,9 +171,6 @@ let string_of_token = function
 (*
   | CASE -> "CASE"
   | OF -> "OF"
-  | AND -> "AND"
-  | NOT -> "NOT"
-  | OR -> "OR"
   | IMPORT -> "IMPORT"
 
   (*Names*)
@@ -244,6 +226,11 @@ let string_of_token = function
   | IPv4 _ -> "IPv4 _"
   | ADDRESS_TO_INT -> "ADDRESS_TO_INT"
   | INT_TO_ADDRESS -> "INT_TO_ADDRESS"
+
+  | COLONCOLON -> "COLONCOLON"
+  | LEFT_RIGHT_S_BRACKETS -> "LEFT_RIGHT_S_BRACKETS"
+  | AT -> "AT"
+
 ;;
 
 let test filepath =

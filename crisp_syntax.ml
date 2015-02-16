@@ -220,6 +220,10 @@ type expression =
   - 4-to-6
 *)
 
+  | EmptyList
+  | ConsList of expression * expression
+  | AppendList of expression * expression
+
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
   (*NOTE the syntax is pretty powerfuli -- it might not be a loss if we
@@ -310,6 +314,16 @@ let rec expression_to_string indent = function
     indn indent ^ "address_to_int (" ^ expression_to_string 0 e ^ ")"
   | Int_to_address e ->
     indn indent ^ "int_to_address (" ^ expression_to_string 0 e ^ ")"
+
+  | EmptyList ->
+    indn indent ^ "[]"
+  | ConsList (x, xs) ->
+    indn indent ^ "((" ^ expression_to_string 0 x ^ ") :: (" ^
+    expression_to_string 0 xs ^ "))"
+  | AppendList (xs, ys) ->
+    indn indent ^ "((" ^ expression_to_string 0 xs ^ ") @ (" ^
+    expression_to_string 0 ys ^ "))"
+
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

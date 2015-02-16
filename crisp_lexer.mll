@@ -76,6 +76,9 @@ rule main = parse
   | "/" {SLASH}
   | "[" {LEFT_S_BRACKET}
   | "]" {RIGHT_S_BRACKET}
+  | "[]" {LEFT_RIGHT_S_BRACKETS}
+  | "::" {COLONCOLON}
+  | "@" {AT}
   | "(" {LEFT_R_BRACKET}
   | ")" {RIGHT_R_BRACKET}
   | "{" {LEFT_C_BRACKET}

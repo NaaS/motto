@@ -26,8 +26,10 @@
 %token BANG
 %token QUES
 %token QUESQUES
-(*
-%token COLONCOLON*)
+
+%token COLONCOLON
+%token LEFT_RIGHT_S_BRACKETS
+%token AT
 %token LEFT_R_BRACKET
 %token RIGHT_R_BRACKET
 %token LEFT_S_BRACKET
@@ -133,6 +135,7 @@
 %right AND
 %nonassoc NOT
 %nonassoc EQUALS
+%right AT
 %nonassoc GT LT
 %nonassoc MOD ABS
 %nonassoc DASH
@@ -141,6 +144,7 @@
 %right ASTERISK
 %nonassoc ADDRESS_TO_INT
 %nonassoc INT_TO_ADDRESS
+%right COLONCOLON
 
 %start <Crisp_syntax.program> program
 %%
@@ -389,6 +393,13 @@ expression:
   | INT_TO_ADDRESS; e = expression
     {Crisp_syntax.Int_to_address e}
 
+  | LEFT_RIGHT_S_BRACKETS
+    {Crisp_syntax.EmptyList}
+  | x = expression; COLONCOLON; xs = expression
+    {Crisp_syntax.ConsList (x, xs)}
+  | xs = expression; AT; ys = expression
+    {Crisp_syntax.AppendList (xs, ys)}
+(*FIXME add infix list notation*)
 
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
@@ -397,7 +408,6 @@ expression:
 functiona application
 tuple
 record
-list
 variant_exp:
 *)
 

@@ -240,6 +240,10 @@ let string_of_token = function
   | ASTERISK -> "ASTERISK"
   | MOD -> "MOD"
   | ABS -> "ABS"
+
+  | IPv4 _ -> "IPv4 _"
+  | ADDRESS_TO_INT -> "ADDRESS_TO_INT"
+  | INT_TO_ADDRESS -> "INT_TO_ADDRESS"
 ;;
 
 let test filepath =

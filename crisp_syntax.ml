@@ -209,6 +209,17 @@ type expression =
   | To_Str of expression
 *)
 
+  (*Native representation of an IPv4 address*)
+  | IPv4_address of (int * int * int * int)
+  (*Integer to IP address*)
+  | Int_to_address of expression
+  (*IP address to integer*)
+  | Address_to_int of expression
+(*Other ideas:
+  - Projecting an octet from an IP address, and updating
+  - 4-to-6
+*)
+
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
   (*NOTE the syntax is pretty powerfuli -- it might not be a loss if we
@@ -291,6 +302,14 @@ let rec expression_to_string indent = function
     expression_to_string 0 a2 ^ "))"
   | Abs a ->
     indn indent ^ "abs (" ^ expression_to_string 0 a ^ ")"
+
+  | IPv4_address (o1, o2, o3, o4) ->
+    indn indent ^ string_of_int o1 ^ "." ^ string_of_int o2 ^ "." ^
+    string_of_int o3 ^ "." ^ string_of_int o4
+  | Address_to_int e ->
+    indn indent ^ "address_to_int (" ^ expression_to_string 0 e ^ ")"
+  | Int_to_address e ->
+    indn indent ^ "int_to_address (" ^ expression_to_string 0 e ^ ")"
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

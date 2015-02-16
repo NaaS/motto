@@ -92,7 +92,7 @@ rule main = parse
   | ws {main lexbuf}
   | eof {EOF}
   | "ipv4_address" {TYPE_IPv4ADDRESS}
-  | integer as oct1 '.' integer as oct2 '.'integer as oct3 '.'integer as oct4
+  | (integer as oct1) '.' (integer as oct2) '.'(integer as oct3) '.' (integer as oct4)
       {IPv4 (int_of_string(oct1), int_of_string(oct2), int_of_string(oct3),
              int_of_string(oct4))}
   | integer as num {INTEGER (int_of_string(num))}
@@ -150,6 +150,9 @@ FIXME syntax for map and reduce? experimented with for..join but doesnt look
   | "not" {NOT}
   | "True" {TRUE}
   | "False" {FALSE}
+
+  | "address_to_int" {ADDRESS_TO_INT}
+  | "int_to_address" {INT_TO_ADDRESS}
 
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
 (*FIXME string primitives*)

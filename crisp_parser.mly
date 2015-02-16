@@ -111,7 +111,8 @@
 %token UNTIL
 %token IN
 %token EXCEPT
-
+%token ADDRESS_TO_INT
+%token INT_TO_ADDRESS
 
 
 (*Names*)
@@ -138,6 +139,8 @@
 %right PLUS
 %nonassoc SLASH
 %right ASTERISK
+%nonassoc ADDRESS_TO_INT
+%nonassoc INT_TO_ADDRESS
 
 %start <Crisp_syntax.program> program
 %%
@@ -378,6 +381,13 @@ expression:
     {Crisp_syntax.Mod (a1, a2)}
   | ABS; a = expression
     {Crisp_syntax.Abs a}
+
+  | address = IPv4
+    {Crisp_syntax.IPv4_address address}
+  | ADDRESS_TO_INT; e = expression
+    {Crisp_syntax.Address_to_int e}
+  | INT_TO_ADDRESS; e = expression
+    {Crisp_syntax.Int_to_address e}
 
 
 (*TODO

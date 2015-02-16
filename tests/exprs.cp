@@ -19,4 +19,13 @@ fun F : () -> ()
     False or x
 #
   x
+#
+  x := True
+  x := True or False
+#
+  if x:
+    x := False
+  else:
+    x := True
+#
   <>

@@ -237,6 +237,11 @@ let rec expression_to_string indent = function
     expression_to_string (indent + indentation) e1 ^ "\n" ^
     indn indent ^ "else:\n" ^
     expression_to_string (indent + indentation) e2
+  | Update (value_name, expression) ->
+    (*NOTE for proper pretty-printing we can use width-senstitive generation of
+           code blocks, as is standard. Currently this approach is crude, to get
+           going.*)
+    indn indent ^ value_name ^ " := " ^ expression_to_string 0 expression
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

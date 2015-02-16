@@ -125,6 +125,7 @@
        are implicit in line-breaks;*)
 %nonassoc ite
 (*%right SEMICOLON*)
+%right ASSIGN
 %right OR
 %right AND
 %nonassoc NOT
@@ -359,12 +360,14 @@ expression:
   | IF; be = expression; COLON; e1 = expression; ELSE; COLON; e2 = expression
     %prec ite
     {Crisp_syntax.ITE (be, e1, e2)}
+  | v = IDENTIFIER; ASSIGN; e = expression
+    {Crisp_syntax.Update (v, e)}
+
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
   let ident = e
-assignment
 functiona application
 tuple
 record

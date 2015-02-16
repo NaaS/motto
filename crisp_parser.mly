@@ -339,7 +339,6 @@ string_exp:
 *)
 
 expression:
-  | LEFT_R_BRACKET; e = expression; RIGHT_R_BRACKET {e}
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
   | b1 = expression; AND; b2 = expression
@@ -349,6 +348,7 @@ expression:
   | NOT; b = expression
     {Crisp_syntax.Not b}
 
+  | LEFT_R_BRACKET; e = expression; RIGHT_R_BRACKET {e}
   (*The INDENT-UNDENT combo is a form of bracketing*)
   | INDENT; e = expression; UNDENT {e}
   | UNITY {Crisp_syntax.Unity}
@@ -368,6 +368,7 @@ expression:
     {Crisp_syntax.LocalDef ((v, None), e)}
   | LET; v = IDENTIFIER; COLON; ty = single_line_type_def; EQUALS; e = expression
     {Crisp_syntax.LocalDef ((v, Some (ty None)), e)}
+
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.

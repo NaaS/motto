@@ -28,4 +28,6 @@ fun F : () -> ()
   else:
     x := True
 #
+  let x = True
+  let y : boolean = False or (x and not y)
   <>

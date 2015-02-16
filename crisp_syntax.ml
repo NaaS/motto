@@ -96,7 +96,7 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
   | Empty -> "-"
 ;;
 
-type typing = value_name * type_value
+type typing = value_name * type_value option
 
 (*NOTE Currently only this kind of decorator parameter is supported: type*)
 type decorator_param =
@@ -245,6 +245,14 @@ let rec expression_to_string indent = function
            going.*)
     indn indent ^ value_name ^ " := " ^ expression_to_string 0 expression
 
+  | LocalDef ((v, ty_opt), e) ->
+    let ty_s =
+      match ty_opt with
+      | None -> ""
+      | Some ty -> " : " ^
+        type_value_to_string default_use_mixfix_lists false 0 ty in
+    indn indent ^ "let " ^ v ^ ty_s ^ " =\n" ^
+    expression_to_string (indent + indentation) e
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"
 

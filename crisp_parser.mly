@@ -124,6 +124,7 @@
 (*NOTE currently semicolons (i.e., sequential composition)
        are implicit in line-breaks;*)
 %nonassoc ite
+%nonassoc EQUALS
 (*%right SEMICOLON*)
 %right ASSIGN
 %right OR
@@ -363,11 +364,14 @@ expression:
   | v = IDENTIFIER; ASSIGN; e = expression
     {Crisp_syntax.Update (v, e)}
 
+  | LET; v = IDENTIFIER; EQUALS; e = expression
+    {Crisp_syntax.LocalDef ((v, None), e)}
+  | LET; v = IDENTIFIER; COLON; ty = single_line_type_def; EQUALS; e = expression
+    {Crisp_syntax.LocalDef ((v, Some (ty None)), e)}
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
-  let ident = e
 functiona application
 tuple
 record

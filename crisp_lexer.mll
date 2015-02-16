@@ -85,6 +85,9 @@ rule main = parse
   | "->" {AR_RIGHT}
   | "-" {DASH}
   | "<>" {UNITY}
+(*FIXME current bug: if we have a blank line between two lines in an expression,
+  then that will be lexed as ...,UNDENT,NL,INDENT,... instead of just NL.
+*)
   | nl {test_indentation Crisp_syntax.min_indentation lexbuf}
   | ws {main lexbuf}
   | eof {EOF}

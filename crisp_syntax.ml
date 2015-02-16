@@ -160,17 +160,11 @@ let function_type_to_string (FunType (fd, fr)) =
 
 type integer = int (*FIXME precision*)
 
-(*FIXME no division, nor coercions into floats yet*)
-type arith_exp =
-  | Int of integer
-  | Plus of integer * integer
-  | Minus of integer * integer
-  | Times of integer * integer
-
 (*FIXME incomplete -- should the other features, e.g., concat, substring, etc,
   be implemented in a library?*)
 type str_exp =
   | Str of string
+(*  | To_Str of expression*)
 
 type carts =
   {value_type : type_value;
@@ -199,11 +193,22 @@ type expression =
   | Or of expression * expression
   | Not of expression
 
+  (*Definable over arbitrary types of expressions*)
   | Equals of expression * expression
+
+  (*Definable over arithmetic expressions*)
   | GreaterThan of expression * expression
   | LessThan of expression * expression
 
-  | AExp of arith_exp
+  (*Arithmetic expressions*)
+  (*FIXME no floats or unary minus yet*)
+  | Int of integer
+  | Plus of expression * expression
+  | Minus of expression * expression
+  | Times of expression * expression
+  | Mod of expression * expression
+  | Quotient of expression * expression
+  | Abs of expression
 
   | StExp of str_exp
   | RecExp of rec_exp
@@ -269,6 +274,25 @@ let rec expression_to_string indent = function
   | LessThan (a1, a2) ->
     indn indent ^ "((" ^ expression_to_string 0 a1 ^ ") < (" ^
     expression_to_string 0 a2 ^ "))"
+
+  | Int n -> indn indent ^ string_of_int n
+  | Plus (a1, a2) ->
+    indn indent ^ "((" ^ expression_to_string 0 a1 ^ ") + (" ^
+    expression_to_string 0 a2 ^ "))"
+  | Minus (a1, a2) ->
+    indn indent ^ "((" ^ expression_to_string 0 a1 ^ ") - (" ^
+    expression_to_string 0 a2 ^ "))"
+  | Times (a1, a2) ->
+    indn indent ^ "((" ^ expression_to_string 0 a1 ^ ") * (" ^
+    expression_to_string 0 a2 ^ "))"
+  | Mod (a1, a2) ->
+    indn indent ^ "((" ^ expression_to_string 0 a1 ^ ") mod (" ^
+    expression_to_string 0 a2 ^ "))"
+  | Quotient (a1, a2) ->
+    indn indent ^ "((" ^ expression_to_string 0 a1 ^ ") / (" ^
+    expression_to_string 0 a2 ^ "))"
+  | Abs a ->
+    indn indent ^ "abs (" ^ expression_to_string 0 a ^ ")"
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

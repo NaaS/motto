@@ -208,10 +208,9 @@ let string_of_token = function
   | TRUE -> "TRUE"
   | PLUS -> "PLUS"
   | PERIOD -> "PERIOD"
-  | PERCENT -> "PERCENT"
+(*  | PERCENT -> "PERCENT"*)
   | OR -> "OR"
   | NOT -> "NOT"
-  | MINUS -> "MINUS"
   | LT -> "LT"
   | LOCAL -> "LOCAL"
   | LET -> "LET"
@@ -237,6 +236,10 @@ let string_of_token = function
   | QUESQUES -> "QUESQUES"
   | QUES -> "QUES"
   | EXCEPT -> "EXCEPT"
+
+  | ASTERISK -> "ASTERISK"
+  | MOD -> "MOD"
+  | ABS -> "ABS"
 ;;
 
 let test filepath =

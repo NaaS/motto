@@ -136,15 +136,20 @@ FIXME syntax for map and reduce? experimented with for..join but doesnt look
 (*  | "of" {OF}*)
 *)
 
-  | "%" {PERCENT}
+(*  | "%" {PERCENT}*)
   | "+" {PLUS}
-  | "-" {MINUS}
+  | "*" {ASTERISK}
+  | "mod" {MOD}
+  | "abs" {ABS}
+
   | ">" {GT}
   | "<" {LT}
+
   | "and" {AND}
   | "or" {OR}
   | "not" {NOT}
   | "True" {TRUE}
   | "False" {FALSE}
+
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
 (*FIXME string primitives*)

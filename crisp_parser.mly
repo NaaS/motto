@@ -73,9 +73,11 @@
 %token FUN
 %token IF
 %token ELSE
-%token PERCENT
+(*%token PERCENT*)
 %token PLUS
-%token MINUS
+%token ASTERISK
+%token MOD
+%token ABS
 (*
 %token IN
 %token DEF
@@ -124,13 +126,18 @@
 (*NOTE currently semicolons (i.e., sequential composition)
        are implicit in line-breaks;*)
 %nonassoc ite
-%nonassoc EQUALS
-%nonassoc GT LT
 (*%right SEMICOLON*)
 %right ASSIGN
 %right OR
 %right AND
 %nonassoc NOT
+%nonassoc EQUALS
+%nonassoc GT LT
+%nonassoc MOD ABS
+%nonassoc DASH
+%right PLUS
+%nonassoc SLASH
+%right ASTERISK
 
 %start <Crisp_syntax.program> program
 %%
@@ -371,6 +378,21 @@ expression:
     {Crisp_syntax.GreaterThan (a1, a2)}
   | a1 = expression; LT; a2 = expression
     {Crisp_syntax.LessThan (a1, a2)}
+
+  | n = INTEGER
+    {Crisp_syntax.Int n}
+  | a1 = expression; PLUS; a2 = expression
+    {Crisp_syntax.Plus (a1, a2)}
+  | a1 = expression; DASH; a2 = expression
+    {Crisp_syntax.Minus (a1, a2)}
+  | a1 = expression; ASTERISK; a2 = expression
+    {Crisp_syntax.Times (a1, a2)}
+  | a1 = expression; SLASH; a2 = expression
+    {Crisp_syntax.Quotient (a1, a2)}
+  | a1 = expression; MOD; a2 = expression
+    {Crisp_syntax.Mod (a1, a2)}
+  | ABS; a = expression
+    {Crisp_syntax.Abs a}
 
 (*TODO
 arith_exp:

@@ -249,15 +249,19 @@ let test filepath =
 
 print_endline "*crisp* *crisp*";
 
-let testdir = "tests" in
-let dh = Unix.opendir testdir in
-try
-  while true do
-    let file = Unix.readdir dh in
-    (*FIXME naive*)
-    if file <> "." && file <> ".." then test (testdir ^ "/" ^ file)
-    else ()
+if Array.length Sys.argv = 1 then
+  let testdir = "tests" in
+  let dh = Unix.opendir testdir in
+  try
+    while true do
+      let file = Unix.readdir dh in
+      (*FIXME naive*)
+      if file <> "." && file <> ".." then test (testdir ^ "/" ^ file)
+      else ()
+    done
+  with End_of_file ->
+    Unix.closedir dh;
+else
+  for i = 1 to Array.length Sys.argv - 1 do
+    test Sys.argv.(i)
   done
-with End_of_file ->
-  Unix.closedir dh;
-

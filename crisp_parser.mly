@@ -173,6 +173,7 @@ type_lines:
   | tl = type_line; NL; rest = type_lines { tl :: rest }
   | tl = type_line; UNDENT { [tl] }
 
+(*FIXME include Tuple type*)
 single_line_type_def:
   | bt = base_type
     {fun (name : Crisp_syntax.label option) -> bt name}

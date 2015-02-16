@@ -123,6 +123,7 @@
 
 (*NOTE currently semicolons (i.e., sequential composition)
        are implicit in line-breaks;*)
+%nonassoc ite
 (*%right SEMICOLON*)
 %right OR
 %right AND
@@ -350,12 +351,13 @@ expression:
   | INDENT; e = expression; UNDENT {e}
   | UNITY {Crisp_syntax.Unity}
   | v = IDENTIFIER {Crisp_syntax.Variable v}
+  | IF; be = expression; COLON; e1 = expression; ELSE; COLON; e2 = expression
+    %prec ite
+    {Crisp_syntax.ITE (be, e1, e2)}
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
-  | IF; be = bool_exp; COLON; e1 = expression; ELSE; COLON; e2 = expression
-    {Crisp_syntax.ITE (be, e1, e2)}
   let ident = e
 assignment
 variable; dereference -- this is inferred at a later pass, after type inference

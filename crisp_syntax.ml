@@ -231,6 +231,12 @@ let rec expression_to_string indent = function
     expression_to_string 0 b2 ^ "))"
   | Not b' ->
     indn indent ^ "(not " ^ expression_to_string 0 b' ^ ")"
+  | ITE (be, e1, e2) ->
+    indn indent ^ "if " ^
+    expression_to_string 0 be ^ ":\n" ^
+    expression_to_string (indent + indentation) e1 ^ "\n" ^
+    indn indent ^ "else:\n" ^
+    expression_to_string (indent + indentation) e2
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

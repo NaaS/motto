@@ -121,6 +121,8 @@
 *)
 %token <string> IDENTIFIER
 
+(*NOTE currently semicolons (i.e., sequential composition)
+       are implicit in line-breaks;*)
 (*%right SEMICOLON*)
 %right OR
 %right AND

@@ -125,6 +125,7 @@
        are implicit in line-breaks;*)
 %nonassoc ite
 %nonassoc EQUALS
+%nonassoc GT LT
 (*%right SEMICOLON*)
 %right ASSIGN
 %right OR
@@ -319,12 +320,6 @@ process_body:
 
 
 (*TODO
-arith_exp:
-+
--
-/
-%
-
 list_exp:
 
 tuple_exp:
@@ -369,7 +364,21 @@ expression:
   | LET; v = IDENTIFIER; COLON; ty = single_line_type_def; EQUALS; e = expression
     {Crisp_syntax.LocalDef ((v, Some (ty None)), e)}
 
+  | e1 = expression; EQUALS; e2 = expression
+    {Crisp_syntax.Equals (e1, e2)}
+
+  | a1 = expression; GT; a2 = expression
+    {Crisp_syntax.GreaterThan (a1, a2)}
+  | a1 = expression; LT; a2 = expression
+    {Crisp_syntax.LessThan (a1, a2)}
+
 (*TODO
+arith_exp:
+  | "%" {PERCENT}
+  | "+" {PLUS}
+  | "-" {MINUS}
+  SLASH
+
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}

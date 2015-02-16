@@ -199,7 +199,12 @@ type expression =
   | Or of expression * expression
   | Not of expression
 
+  | Equals of expression * expression
+  | GreaterThan of expression * expression
+  | LessThan of expression * expression
+
   | AExp of arith_exp
+
   | StExp of str_exp
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
@@ -253,6 +258,18 @@ let rec expression_to_string indent = function
         type_value_to_string default_use_mixfix_lists false 0 ty in
     indn indent ^ "let " ^ v ^ ty_s ^ " =\n" ^
     expression_to_string (indent + indentation) e
+
+  | Equals (e1, e2) ->
+    indn indent ^ "((" ^ expression_to_string 0 e1 ^ ") = (" ^
+    expression_to_string 0 e2 ^ "))"
+
+  | GreaterThan (a1, a2) ->
+    indn indent ^ "((" ^ expression_to_string 0 a1 ^ ") > (" ^
+    expression_to_string 0 a2 ^ "))"
+  | LessThan (a1, a2) ->
+    indn indent ^ "((" ^ expression_to_string 0 a1 ^ ") < (" ^
+    expression_to_string 0 a2 ^ "))"
+
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"
 

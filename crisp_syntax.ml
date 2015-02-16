@@ -210,8 +210,8 @@ type du_exp =
   | Inj of co_carts
 
 (*FIXME should restrict sub-expressions to specific classes (e.g., bool_exp), or
-be liberal instead? i.e., allow them to be function_body?*)
-type function_body =
+be liberal instead? i.e., allow them to be expression?*)
+type expression =
   | Unity
   | BExp of bool_exp
   | AExp of arith_exp
@@ -221,13 +221,13 @@ type function_body =
   (*NOTE the syntax is pretty powerfuli -- it might not be a loss if we
     restricted function arguments (cf Function_Call) to be values, rather than
     expressions.*)
-  | Function_Call of function_name * function_body list
-  | Seq of function_body * function_body
-  | ITE of bool_exp * function_body * function_body
-  | Iterate of function_body * function_body * function_body
-  | LocalDef of typing * function_body (*def value_name : type = function_body*)
-  | Update of value_name * function_body (*value_name := function_body*)
-let function_body_to_string indent = function
+  | Function_Call of function_name * expression list
+  | Seq of expression * expression
+  | ITE of bool_exp * expression * expression
+  | Iterate of expression * expression * expression
+  | LocalDef of typing * expression (*def value_name : type = expression*)
+  | Update of value_name * expression (*value_name := expression*)
+let expression_to_string indent = function
   (*FIXME incomplete*)
   | Unity ->
     indn indent ^ "<>"
@@ -243,13 +243,13 @@ let ty_decl_to_string {type_name; type_value} =
 type fn_decl =
   {fn_name : function_name;
    fn_params : function_type;
-   fn_body : function_body}
+   fn_body : expression}
 
 type process_name = string
 
 type state_decl =
-  | LocalState of label * type_value option * function_body
-  | GlobalState of label * type_value option * function_body
+  | LocalState of label * type_value option * expression
+  | GlobalState of label * type_value option * expression
 let state_decl_to_string indent state_decl =
   let decl_state (kind, label, type_value_opt, expression) =
     let ty_s =
@@ -258,24 +258,24 @@ let state_decl_to_string indent state_decl =
       | Some ty ->
         " : " ^ type_value_to_string true false 0 ty
     in indn indent ^ kind ^ " " ^ label ^ ty_s ^ " := " ^
-       function_body_to_string 0 expression
+       expression_to_string 0 expression
   in match state_decl with
   | LocalState (label, type_value_opt, expression) ->
     decl_state ("local", label, type_value_opt, expression)
   | GlobalState (label, type_value_opt, expression) ->
     decl_state ("global", label, type_value_opt, expression)
 
-type excepts_decl = label * function_body
+type excepts_decl = label * expression
 let excepts_decl_to_string indent (label, e) =
-  indn indent ^ "except " ^ label ^ " : " ^ function_body_to_string 0 e
+  indn indent ^ "except " ^ label ^ " : " ^ expression_to_string 0 e
 
 type process_body =
-    ProcessBody of state_decl list * function_body * excepts_decl list
+    ProcessBody of state_decl list * expression * excepts_decl list
 let process_body_to_string indent (ProcessBody (st_decls, e, exc_decls)) =
   let st_decls_s =
     List.map (state_decl_to_string indent) st_decls
     |> inter "\n" in
-  let e_s = function_body_to_string indent e in
+  let e_s = expression_to_string indent e in
   let exc_decls_s =
     List.map (excepts_decl_to_string indent) exc_decls
     |> inter "\n" in
@@ -293,7 +293,7 @@ let toplevel_decl_to_string = function
      "\n" ^ process_body_to_string indentation process_body
   | Function fn_decl ->
     "fun " ^ fn_decl.fn_name ^ " : " ^ function_type_to_string fn_decl.fn_params ^
-     "\n" ^ function_body_to_string indentation fn_decl.fn_body
+     "\n" ^ expression_to_string indentation fn_decl.fn_body
   | _ -> failwith "Unsupported"
 
 type program = toplevel_decl list

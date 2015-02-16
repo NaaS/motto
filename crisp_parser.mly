@@ -137,6 +137,7 @@
 %nonassoc EQUALS
 %right AT
 %nonassoc GT LT
+%right COLONCOLON
 %nonassoc MOD ABS
 %nonassoc DASH
 %right PLUS
@@ -144,7 +145,6 @@
 %right ASTERISK
 %nonassoc ADDRESS_TO_INT
 %nonassoc INT_TO_ADDRESS
-%right COLONCOLON
 
 %start <Crisp_syntax.program> program
 %%
@@ -332,6 +332,12 @@ process_body:
   sts = states_decl; e = expression; excs = excepts_decl
   {Crisp_syntax.ProcessBody (sts, e, excs)}
 
+expression_list:
+  | x = expression; COMMA; xs = expression_list
+    {Crisp_syntax.ConsList (x, xs)}
+  | x = expression {Crisp_syntax.ConsList (x, Crisp_syntax.EmptyList)}
+  | {Crisp_syntax.EmptyList}
+
 expression:
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
@@ -399,7 +405,8 @@ expression:
     {Crisp_syntax.ConsList (x, xs)}
   | xs = expression; AT; ys = expression
     {Crisp_syntax.AppendList (xs, ys)}
-(*FIXME add infix list notation*)
+  | LEFT_S_BRACKET; l = expression_list; RIGHT_S_BRACKET;
+    {l}
 
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to

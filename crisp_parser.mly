@@ -372,6 +372,14 @@ function_arguments:
   | RIGHT_R_BRACKET
     {[]}
 
+remainder_of_record:
+  | COMMA; l = IDENTIFIER; EQUALS; e = expression; r = remainder_of_record
+    {(l, e) :: r}
+  | COMMA; NL; l = IDENTIFIER; EQUALS; e = expression; r = remainder_of_record
+    {(l, e) :: r}
+  | RIGHT_C_BRACKET
+    {[]}
+
 expression:
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
@@ -456,6 +464,11 @@ expression:
   | f_name = IDENTIFIER; LEFT_R_BRACKET; args = function_arguments
     {Crisp_syntax.Function_Call (f_name, args)}
 
+  (*NOTE could try to get INDENT-UNDENT combo usable from here*)
+  | LEFT_C_BRACKET;
+    l = IDENTIFIER; EQUALS; e = expression;
+    r = remainder_of_record;
+    {Crisp_syntax.Record ((l, e) :: r)}
 
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to

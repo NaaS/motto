@@ -176,6 +176,7 @@ let function_type_to_string (FunType (fd, fr)) =
 
 type integer = int (*FIXME precision*)
 
+(*
 type carts =
   {value_type : type_value;
    label : label;
@@ -191,6 +192,7 @@ type rec_exp =
 
 type du_exp =
   | Inj of co_carts
+*)
 
 type expression =
   | Unity
@@ -252,11 +254,12 @@ type expression =
 
   | Function_Call of function_name * expression list
 
+  | Record of (label * expression) list
+
+(*
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
-  (*NOTE the syntax is pretty powerfuli -- it might not be a loss if we
-    restricted function arguments (cf Function_Call) to be values, rather than
-    expressions.*)
+*)
   | Iterate of expression * expression * expression
 let rec expression_to_string indent = function
   (*FIXME incomplete*)
@@ -358,6 +361,12 @@ let rec expression_to_string indent = function
   | Function_Call (f, es) ->
     indn indent ^ f ^ " (" ^
     inter ", " (List.map (expression_to_string 0) es) ^ ")"
+
+  | Record entries ->
+    let entry_to_string (l, e) =
+      l ^ " = " ^ expression_to_string 0 e in
+    indn indent ^ "{" ^
+    inter ", " (List.map entry_to_string entries) ^ "}"
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

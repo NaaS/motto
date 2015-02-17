@@ -262,6 +262,12 @@ type expression =
     language, therefore it doesn't require special syntax.*)
   | CaseOf of expression * (expression * expression) list
 
+  (*The first parameter could be generalised to an expression,
+    but I don't think we need that expressiveness at the moment.
+    Also, the second parameter could be specialised to a natural
+    number -- we might go for that for the moment.*)
+  | IndexableProjection of label * expression
+
 (*
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
@@ -387,6 +393,9 @@ let rec expression_to_string indent = function
       indn indent ^ "switch " ^ expression_to_string 0 e ^ ":\n" ^
       mk_block (indent + indentation) match_to_string  matches
 
+  | IndexableProjection (v, idx) ->
+    indn indent ^ v ^ "[" ^
+      expression_to_string 0 idx ^ "]"
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

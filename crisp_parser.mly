@@ -497,6 +497,9 @@ expression:
     r = remainder_of_cases
     {Crisp_syntax.CaseOf (e, ((guard, body) :: r))}
 
+  | ident = IDENTIFIER; LEFT_S_BRACKET; e = expression; RIGHT_S_BRACKET
+    {Crisp_syntax.IndexableProjection (ident, e)}
+
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.

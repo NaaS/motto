@@ -80,15 +80,6 @@
 %token ASTERISK
 %token MOD
 %token ABS
-(*
-%token IN
-%token DEF
-%token CARRY_ON
-%token YIELD
-%token CASE
-%token OF
-%token IMPORT
-*)
 %token AND
 %token NOT
 %token OR
@@ -109,9 +100,6 @@
 %token GLOBAL
 %token ASSIGN
 %token LET
-%token FOR
-%token FROM
-%token UNTIL
 %token IN
 %token EXCEPT
 %token ADDRESS_TO_INT
@@ -119,6 +107,10 @@
 %token WITH
 %token SWITCH
 
+%token PERIODPERIOD
+%token FOR
+%token INITIALLY
+%token MAP
 
 (*Names*)
 (*
@@ -131,6 +123,8 @@
 
 (*NOTE currently semicolons (i.e., sequential composition)
        are implicit in line-breaks;*)
+%nonassoc iteration
+%nonassoc map
 %nonassoc ite
 %nonassoc tuple
 (*%right SEMICOLON*)
@@ -152,6 +146,7 @@
 %nonassoc INT_TO_ADDRESS
 %left WITH
 %left PERIOD
+%nonassoc PERIODPERIOD
 
 %start <Crisp_syntax.program> program
 %%
@@ -500,12 +495,24 @@ expression:
   | ident = IDENTIFIER; LEFT_S_BRACKET; e = expression; RIGHT_S_BRACKET
     {Crisp_syntax.IndexableProjection (ident, e)}
 
+  | e1 = expression; PERIODPERIOD; e2 = expression
+    {Crisp_syntax.IntegerRange (e1, e2)}
+  | FOR; v = IDENTIFIER; IN; l = expression; NL;
+    INITIALLY; acc = IDENTIFIER; EQUALS; acc_init = expression;
+    COLON; body = expression
+    {Crisp_syntax.Iterate (v, l, Some (acc, acc_init), body)}
+  | FOR; v = IDENTIFIER; IN; l = expression; COLON; body = expression
+    %prec iteration
+    {Crisp_syntax.Iterate (v, l, None, body)}
+  | MAP; v = IDENTIFIER; IN; l = expression; COLON; body = expression
+    %prec map
+    {Crisp_syntax.Map (v, l, body)}
+
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
 
-loops
 type annotations: consist of records adjacent to type specs
 *)
 

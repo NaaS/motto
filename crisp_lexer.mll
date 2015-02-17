@@ -116,29 +116,13 @@ rule main = parse
   would be able to register listeners for events.*)
   | "fun" {FUN}
   | "let" {LET}
-  | "for" {FOR}
-  | "from" {FROM}
-  | "until" {UNTIL}
   | "in" {IN}
   | "except" {EXCEPT}
-(*
-FIXME syntax for map and reduce? experimented with for..join but doesnt look
-   right.
+
+  | ".." {PERIODPERIOD}
+  | "for" {FOR}
+  | "initially" {INITIALLY}
   | "map" {MAP}
-  | "reduce" {REDUCE}
-
-"join" has meaning
-
-137   join x with acc in l starting at []:$
-
-
-105 join v with acc starting at True:
-  v and acc # "and" is a keyword
-
-  | "gather" {SECTION}
-  | "from" {FROM}
-(*  | "of" {OF}*)
-*)
 
 (*  | "%" {PERCENT}*)
   | "+" {PLUS}

@@ -272,7 +272,11 @@ type expression =
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
 *)
-  | Iterate of expression * expression * expression
+
+  | IntegerRange of expression * expression
+  | Map of label * expression * expression
+  | Iterate of label * expression * (label * expression) option * expression
+
 let rec expression_to_string indent = function
   (*FIXME incomplete*)
   | Unity ->
@@ -396,6 +400,24 @@ let rec expression_to_string indent = function
   | IndexableProjection (v, idx) ->
     indn indent ^ v ^ "[" ^
       expression_to_string 0 idx ^ "]"
+
+  | IntegerRange (e1, e2) ->
+    expression_to_string indent e1 ^ ".." ^
+     expression_to_string indent e2
+  | Map (v, l, body) ->
+    indn indent ^ "map " ^ v ^ " in " ^
+      expression_to_string 0 l ^ ":\n" ^
+      expression_to_string (indent + indentation) body
+  | Iterate (v, l, acc, body) ->
+    let acc_s = match acc with
+      | None -> ""
+      | Some (acc_v, acc_e) ->
+        indn (indent + indentation) ^ "initially " ^ acc_v ^
+          " = " ^ expression_to_string 0 acc_e ^ "\n"
+    in
+      indn indent ^ "for " ^ v ^ " in " ^
+        expression_to_string 0 l ^ ":\n" ^ acc_s ^
+        expression_to_string (indent + 2 * indentation) body
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

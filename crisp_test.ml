@@ -203,8 +203,6 @@ let string_of_token = function
   | GT -> "GT"
   | GLOBAL -> "GLOBAL"
   | FUN -> "FUN"
-  | FROM -> "FROM"
-  | FOR -> "FOR"
   | FALSE -> "FALSE"
   | EQUALS -> "EQUALS"
   | ELSE -> "ELSE"
@@ -213,7 +211,6 @@ let string_of_token = function
   | AND -> "AND"
 
   | BANG -> "BANG"
-  | UNTIL -> "UNTIL"
   | SEMICOLON -> "SEMICOLON"
   | QUESQUES -> "QUESQUES"
   | QUES -> "QUES"
@@ -234,6 +231,10 @@ let string_of_token = function
   | WITH -> "WITH"
   | SWITCH -> "SWITCH"
 
+  | PERIODPERIOD -> "PERIODPERIOD"
+  | FOR -> "FOR"
+  | INITIALLY -> "INITIALLY"
+  | MAP -> "MAP"
 ;;
 
 let test filepath =

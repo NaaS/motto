@@ -242,17 +242,18 @@ type expression =
 
   | TupleValue of expression list
 
+  | Function_Call of function_name * expression list
+  | Seq of expression * expression
+  | ITE of expression * expression * expression
+  | LocalDef of typing * expression (*def value_name : type = expression*)
+  | Update of value_name * expression (*value_name := expression*)
+
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
   (*NOTE the syntax is pretty powerfuli -- it might not be a loss if we
     restricted function arguments (cf Function_Call) to be values, rather than
     expressions.*)
-  | Function_Call of function_name * expression list
-  | Seq of expression * expression
-  | ITE of expression * expression * expression
   | Iterate of expression * expression * expression
-  | LocalDef of typing * expression (*def value_name : type = expression*)
-  | Update of value_name * expression (*value_name := expression*)
 let rec expression_to_string indent = function
   (*FIXME incomplete*)
   | Unity ->

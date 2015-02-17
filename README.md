@@ -10,6 +10,8 @@ To run: `ocamlrun crisp_test.byte`
 * Parser+AST
 * Passes (not necessarily in this order):
   * Type checking+inference, to detect malformed expressions.
+  * Warning on incomplete matches
+  * Warning on missing exception handlers
   * Dead code
   * Busy waiting (e.g., AllReady-style behaviour)
   * Code motion

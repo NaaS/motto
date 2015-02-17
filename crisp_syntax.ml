@@ -331,8 +331,8 @@ let rec expression_to_string indent = function
     expression_to_string 0 ys ^ "))"
 
   | Tuple xs ->
-    indn indent ^ "<(" ^
-      inter ", " (List.map (expression_to_string 0) xs) ^ ")>"
+    indn indent ^ "<" ^
+      inter ", " (List.map (expression_to_string 0) xs) ^ ">"
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

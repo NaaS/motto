@@ -224,6 +224,8 @@ type expression =
   | ConsList of expression * expression
   | AppendList of expression * expression
 
+  | Tuple of expression list
+
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
   (*NOTE the syntax is pretty powerfuli -- it might not be a loss if we
@@ -320,12 +322,14 @@ let rec expression_to_string indent = function
   | ConsList (x, xs) ->
     indn indent ^ "((" ^ expression_to_string 0 x ^ ") :: (" ^
     expression_to_string 0 xs ^ "))"
-    (*FIXME could use nicer pretty-printing here too: showing lists instead of
-            const blocks*)
+  (*FIXME could use nicer pretty-printing*)
   | AppendList (xs, ys) ->
     indn indent ^ "((" ^ expression_to_string 0 xs ^ ") @ (" ^
     expression_to_string 0 ys ^ "))"
 
+  | Tuple xs ->
+    indn indent ^ "<(" ^
+      inter ", " (List.map (expression_to_string 0) xs) ^ ")>"
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

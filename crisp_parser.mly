@@ -129,6 +129,7 @@
 (*NOTE currently semicolons (i.e., sequential composition)
        are implicit in line-breaks;*)
 %nonassoc ite
+%nonassoc tuple
 (*%right SEMICOLON*)
 %right ASSIGN
 %right OR
@@ -138,6 +139,7 @@
 %right AT
 %nonassoc GT LT
 %right COLONCOLON
+(*%right COMMA*)
 %nonassoc MOD ABS
 %nonassoc DASH
 %right PLUS
@@ -338,6 +340,18 @@ expression_list:
   | x = expression {Crisp_syntax.ConsList (x, Crisp_syntax.EmptyList)}
   | {Crisp_syntax.EmptyList}
 
+expression_tuple:
+  | x = expression; COMMA; xs = expression_tuple
+    {x :: xs}
+(*
+  | x = expression
+    {[x]}
+  | {[]}
+*)
+  | x = expression; GT
+    %prec tuple
+    {[x]}
+
 expression:
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
@@ -373,6 +387,7 @@ expression:
     {Crisp_syntax.Equals (e1, e2)}
 
   | a1 = expression; GT; a2 = expression
+    %prec GT
     {Crisp_syntax.GreaterThan (a1, a2)}
   | a1 = expression; LT; a2 = expression
     {Crisp_syntax.LessThan (a1, a2)}
@@ -408,12 +423,21 @@ expression:
   | LEFT_S_BRACKET; l = expression_list; RIGHT_S_BRACKET;
     {l}
 
+  | LT; GT
+    {Crisp_syntax.Tuple []}
+(*  | LT; t = expression_tuple; GT
+    {Crisp_syntax.Tuple t}*)
+(*  | LT; t = expression_tuple; e = expression; GT
+    %prec tuple
+    {Crisp_syntax.Tuple t}*)
+  | LT; t = expression_tuple
+    {Crisp_syntax.Tuple t}
+
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
 functiona application
-tuple
 record
 variant_exp:
 *)

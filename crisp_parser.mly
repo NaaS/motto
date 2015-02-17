@@ -464,7 +464,16 @@ expression:
   | f_name = IDENTIFIER; LEFT_R_BRACKET; args = function_arguments
     {Crisp_syntax.Function_Call (f_name, args)}
 
-  (*NOTE could try to get INDENT-UNDENT combo usable from here*)
+  (*NOTE could try to get INDENT-UNDENT combo usable from here,
+         to have records encoded as:
+         { bla = ...
+           bla2 = ...
+           ... }
+         and
+         { bla = ...
+           bla2 = ...
+           ...
+         } *)
   | LEFT_C_BRACKET;
     l = IDENTIFIER; EQUALS; e = expression;
     r = remainder_of_record;

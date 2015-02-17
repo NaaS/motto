@@ -248,6 +248,9 @@ type expression =
   | LocalDef of typing * expression (*def value_name : type = expression*)
   | Update of value_name * expression (*value_name := expression*)
 
+  (*This work for both tuples and records.*)
+  | Projection of expression * label
+
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
   (*NOTE the syntax is pretty powerfuli -- it might not be a loss if we
@@ -347,6 +350,9 @@ let rec expression_to_string indent = function
   | TupleValue xs ->
     indn indent ^ "<" ^
       inter ", " (List.map (expression_to_string 0) xs) ^ ">"
+
+  | Projection (e, l) ->
+    indn indent ^ expression_to_string 0 e ^ "." ^ l
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

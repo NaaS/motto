@@ -148,6 +148,7 @@
 %right ASTERISK
 %nonassoc ADDRESS_TO_INT
 %nonassoc INT_TO_ADDRESS
+%left PERIOD
 
 %start <Crisp_syntax.program> program
 %%
@@ -439,14 +440,20 @@ expression:
   | LT; t = expression_tuple
     {Crisp_syntax.TupleValue t}
 
+  | e = expression; PERIOD; l = INTEGER
+    {Crisp_syntax.Projection (e, string_of_int l)}
+  | e = expression; PERIOD; l = IDENTIFIER
+    {Crisp_syntax.Projection (e, l)}
+
+
+
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
 
 function application
-record: form, project, update
-tuples: project (use record-like syntax)
+record: form, update
 variant_exp: form, case..of
 loops
 type annotations: consist of records adjacent to type specs

@@ -230,6 +230,7 @@ let string_of_token = function
   | COLONCOLON -> "COLONCOLON"
   | LEFT_RIGHT_S_BRACKETS -> "LEFT_RIGHT_S_BRACKETS"
   | AT -> "AT"
+  | TYPE_TUPLE -> "TYPE_TUPLE"
 
 ;;
 

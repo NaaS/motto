@@ -71,6 +71,7 @@ rule main = parse
   | "variant" {TYPE_VARIANT}
   | "unit" {TYPE_UNIT}
   | "list" {TYPE_LIST}
+  | "tuple" {TYPE_TUPLE}
   | ":" {COLON}
   | "proc" {PROC}
   | "/" {SLASH}

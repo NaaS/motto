@@ -56,6 +56,13 @@ type type_value =
   | List of label option * type_value * dependency_index option
   | Empty
   | IPv4Address of label option
+  | Tuple of label option * type_value list
+;;
+
+let inter (mid : string) (ss : string list) =
+  List.fold_right (fun x s ->
+    if s = "" then x
+    else x ^ mid ^ s) ss ""
 ;;
 
 let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
@@ -66,6 +73,7 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
     | Integer _
     | Boolean _
     | Unit _
+    | Tuple _
     | List _ -> true
     | _ -> false
   in match ty_value with
@@ -86,7 +94,9 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
   | Unit label ->
       opt_string (indn indent) label " : " ^ "unit" ^ endline
   | List (label, ty, dep_idx_opt) ->
-    if mixfix_lists && use_mixfix_list_syntax_for ty then
+    if mixfix_lists && use_mixfix_list_syntax_for ty(*FIXME possible bug: i
+                                                      think this should be
+                                                      ty_value not ty*) then
       opt_string (indn indent) label " : " ^ "[" ^
        type_value_to_string mixfix_lists false indent ty ^
          "]" ^ opt_string "{" dep_idx_opt "}" ^ endline
@@ -97,6 +107,15 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
   | Empty -> "-"
   | IPv4Address label ->
       opt_string (indn indent) label " : " ^ "ipv4_address" ^ endline
+  | Tuple (label, tys) ->
+    if use_mixfix_list_syntax_for ty_value then
+      opt_string (indn indent) label " : " ^ "<" ^
+       inter " * " (List.map (type_value_to_string mixfix_lists false 0) tys) ^
+        ">"
+    else
+      opt_string (indn indent) label " : " ^ "tuple (" ^
+       inter ", " (List.map (type_value_to_string mixfix_lists false 0) tys) ^
+        ")"
 ;;
 
 type typing = value_name * type_value option
@@ -126,12 +145,6 @@ type channel_name = string
 type channel = Channel of channel_type * channel_name
 let channel_to_string (Channel (channel_type, channel_name)) =
   channel_type_to_string channel_type ^ " " ^ channel_name
-
-let inter (mid : string) (ss : string list) =
-  List.fold_right (fun x s ->
-    if s = "" then x
-    else x ^ mid ^ s) ss ""
-;;
 
 type process_type = ProcessType of dependency_index list * channel list
 let process_type_to_string (ProcessType (dvars, chans)) =
@@ -227,7 +240,7 @@ type expression =
   | ConsList of expression * expression
   | AppendList of expression * expression
 
-  | Tuple of expression list
+  | TupleValue of expression list
 
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
@@ -330,7 +343,7 @@ let rec expression_to_string indent = function
     indn indent ^ "((" ^ expression_to_string 0 xs ^ ") @ (" ^
     expression_to_string 0 ys ^ "))"
 
-  | Tuple xs ->
+  | TupleValue xs ->
     indn indent ^ "<" ^
       inter ", " (List.map (expression_to_string 0) xs) ^ ">"
 

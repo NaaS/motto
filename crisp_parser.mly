@@ -103,6 +103,7 @@
 %token TYPE_UNIT
 %token TYPE_LIST
 %token TYPE_IPv4ADDRESS
+%token TYPE_TUPLE
 
 %token LOCAL
 %token GLOBAL
@@ -197,7 +198,6 @@ type_lines:
   | tl = type_line; NL; rest = type_lines { tl :: rest }
   | tl = type_line; UNDENT { [tl] }
 
-(*FIXME include Tuple type*)
 single_line_type_def:
   | bt = base_type
     {fun (name : Crisp_syntax.label option) -> bt name}
@@ -215,6 +215,15 @@ single_line_type_def:
   | LEFT_S_BRACKET; td = type_def; RIGHT_S_BRACKET; LEFT_C_BRACKET; dv = dep_var; RIGHT_C_BRACKET
     {fun (name : Crisp_syntax.label option) ->
        Crisp_syntax.List (name, td None, Some dv)}
+  | TYPE_TUPLE; LEFT_R_BRACKET; tl = singleline_type_list; RIGHT_R_BRACKET
+    {fun (name : Crisp_syntax.label option) ->
+       Crisp_syntax.Tuple (name, tl)}
+  | LT; tl = singleline_type_list_ast; GT
+    {fun (name : Crisp_syntax.label option) ->
+       Crisp_syntax.Tuple (name, tl)}
+  | UNITY
+    {fun (name : Crisp_syntax.label option) ->
+       Crisp_syntax.Tuple (name, [])}
 
 type_def:
   | sltd = single_line_type_def
@@ -276,6 +285,12 @@ parameters:
 (*A list of single-line type defs -- used in the return types of functions*)
 singleline_type_list:
   | td = single_line_type_def; COMMA; ps = singleline_type_list {td None :: ps}
+  | td = single_line_type_def {[td None]}
+  | {[]}
+(*Exactly like singleline_type_list except that entries are separated by
+  ASTERISKs*)
+singleline_type_list_ast:
+  | td = single_line_type_def; ASTERISK; ps = singleline_type_list_ast {td None :: ps}
   | td = single_line_type_def {[td None]}
   | {[]}
 
@@ -420,9 +435,9 @@ expression:
     {l}
 
   | LT; GT
-    {Crisp_syntax.Tuple []}
+    {Crisp_syntax.TupleValue []}
   | LT; t = expression_tuple
-    {Crisp_syntax.Tuple t}
+    {Crisp_syntax.TupleValue t}
 
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to

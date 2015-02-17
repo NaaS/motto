@@ -5,10 +5,7 @@
    Target parser-generator: menhir 20140422
 *)
 
-(*FIXME add terminator indicators for strings and lists, and gap indicators for
-  lists. this should also allow us to encode lists of lists etc.*)
 (*TODO add type variables?*)
-(*TODO add (first-order) functions?*)
 
 (*Native value interpretations*)
 %token <int> INTEGER (*FIXME is OCaml's "int" of the precision we want to support?*)
@@ -36,17 +33,7 @@
 %token RIGHT_S_BRACKET
 %token LEFT_C_BRACKET
 %token RIGHT_C_BRACKET
-(*
-%token LEFT_A_BRACKET
-%token RIGHT_A_BRACKET
-*)
 %token DASH
-(*%token AT
-%token PIPE
-%token UNDERSCORE
-%token ASTERIX
-%token HASH
-*)
 %token GT
 %token LT
 %token EQUALS
@@ -125,7 +112,6 @@
        are implicit in line-breaks;*)
 %nonassoc ite
 %nonassoc tuple
-(*%right SEMICOLON*)
 %right ASSIGN
 %right OR
 %right AND
@@ -134,7 +120,6 @@
 %right AT
 %nonassoc GT LT
 %right COLONCOLON
-(*%right COMMA*)
 %nonassoc MOD ABS
 %nonassoc DASH
 %right PLUS

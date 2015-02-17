@@ -124,7 +124,6 @@ rule main = parse
   | "initially" {INITIALLY}
   | "map" {MAP}
 
-(*  | "%" {PERCENT}*)
   | "+" {PLUS}
   | "*" {ASTERISK}
   | "mod" {MOD}

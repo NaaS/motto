@@ -136,25 +136,11 @@ let string_of_token = function
   | RIGHT_S_BRACKET -> "RIGHT_S_BRACKET"
   | LEFT_C_BRACKET -> "LEFT_C_BRACKET"
   | RIGHT_C_BRACKET -> "RIGHT_C_BRACKET"
-(*
-  | LEFT_A_BRACKET -> "LEFT_A_BRACKET"
-  | RIGHT_A_BRACKET -> "RIGHT_A_BRACKET"
-  | AT -> "AT"
-  | PIPE -> "PIPE"
-  | PLUS -> "PLUS"
-  | UNDERSCORE -> "UNDERSCORE"
-*)
   | DASH -> "DASH"
-(*
-  | ASTERIX -> "ASTERIX"
-  | SLASH -> "SLASH"
-  | HASH -> "HASH"
-*)
   | EOF -> "EOF"
   | COMMA -> "COMMA"
   | NL -> "NL"
 
-(*  | INDENTN x -> "INDENTN(" ^ string_of_int x ^ ")"*)
   | UNDENTN x -> "UNDENTN(" ^ string_of_int x ^ ")"
   | INDENT -> "INDENT"
   | UNDENT -> "UNDENT"
@@ -169,10 +155,6 @@ let string_of_token = function
   | TYPE_UNIT -> "TYPE_UNIT"
   | TYPE_LIST -> "TYPE_LIST"
 (*
-  | CASE -> "CASE"
-  | OF -> "OF"
-  | IMPORT -> "IMPORT"
-
   (*Names*)
   | UPPER_ALPHA x -> "UPPER_ALPHA(" ^ x ^ ")"
   | LOWER_ALPHA x -> "LOWER_ALPHA(" ^ x ^ ")"
@@ -190,7 +172,6 @@ let string_of_token = function
   | TRUE -> "TRUE"
   | PLUS -> "PLUS"
   | PERIOD -> "PERIOD"
-(*  | PERCENT -> "PERCENT"*)
   | OR -> "OR"
   | NOT -> "NOT"
   | LT -> "LT"

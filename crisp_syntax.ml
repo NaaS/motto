@@ -176,24 +176,6 @@ let function_type_to_string (FunType (fd, fr)) =
 
 type integer = int (*FIXME precision*)
 
-(*
-type carts =
-  {value_type : type_value;
-   label : label;
-   cart_value : univ_type}
-
-type co_carts =
-  { du_type : type_value;
-    du_value : carts}
-
-type rec_exp =
-  | Rec of carts list
-  | Rec_Projection of (*rec_label*) label * (*rec_val*) value_name
-
-type du_exp =
-  | Inj of co_carts
-*)
-
 type expression =
   | Unity
   | Variable of label
@@ -267,11 +249,6 @@ type expression =
     Also, the second parameter could be specialised to a natural
     number -- we might go for that for the moment.*)
   | IndexableProjection of label * expression
-
-(*
-  | RecExp of rec_exp
-  | VariantExp of du_exp (*FIXME make naming more consistent*)
-*)
 
   | IntegerRange of expression * expression
   | Map of label * expression * expression

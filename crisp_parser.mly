@@ -443,9 +443,13 @@ expression:
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
-functiona application
-record
-variant_exp:
+
+function application
+record: form, project, update
+tuples: project (use record-like syntax)
+variant_exp: form, case..of
+loops
+type annotations: consist of records adjacent to type specs
 *)
 
 (*FIXME process_body should be like function body except that:

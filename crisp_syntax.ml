@@ -257,6 +257,11 @@ type expression =
   | Record of (label * expression) list
   | RecordUpdate of (expression * (label * expression))
 
+  (*Case elimination on variants; formation of variant
+    instances will look like function application in the
+    language, therefore it doesn't require special syntax.*)
+  | CaseOf of expression * (expression * expression) list
+
 (*
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
@@ -368,12 +373,19 @@ let rec expression_to_string indent = function
       l ^ " = " ^ expression_to_string 0 e in
     indn indent ^ "{" ^
     inter ", " (List.map entry_to_string entries) ^ "}"
-
   | RecordUpdate (r, ((l, e) as entry)) ->
     let entry_to_string (l, e) =
       l ^ " = " ^ expression_to_string 0 e in
     indn indent ^ expression_to_string 0 r ^ " with " ^
     entry_to_string entry
+
+  | CaseOf (e, matches) ->
+    let match_to_string indent (guard, body) =
+      indn indent ^ expression_to_string 0 guard ^ ":\n" ^
+      indn (indent + indentation) ^ expression_to_string 0 body ^ "\n"
+    in
+      indn indent ^ "switch " ^ expression_to_string 0 e ^ ":\n" ^
+      mk_block (indent + indentation) match_to_string  matches
 
 
     (*FIXME for remainder of this could emulate how blocks are printed*)

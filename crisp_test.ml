@@ -232,6 +232,7 @@ let string_of_token = function
   | AT -> "AT"
   | TYPE_TUPLE -> "TYPE_TUPLE"
   | WITH -> "WITH"
+  | SWITCH -> "SWITCH"
 
 ;;
 

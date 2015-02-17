@@ -117,6 +117,7 @@
 %token ADDRESS_TO_INT
 %token INT_TO_ADDRESS
 %token WITH
+%token SWITCH
 
 
 (*Names*)
@@ -382,6 +383,13 @@ remainder_of_record:
   | RIGHT_C_BRACKET
     {[]}
 
+remainder_of_cases:
+  | NL; guard = expression; COLON; body = expression;
+    r = remainder_of_cases
+    {(guard, body) :: r}
+  | UNDENT
+    {[]}
+
 expression:
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
@@ -484,12 +492,16 @@ expression:
   | r = expression; WITH; l = IDENTIFIER; EQUALS; e = expression
     {Crisp_syntax.RecordUpdate (r, (l, e))}
 
+  | SWITCH; e = expression; COLON; INDENT;
+    guard = expression; COLON; body = expression;
+    r = remainder_of_cases
+    {Crisp_syntax.CaseOf (e, ((guard, body) :: r))}
+
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
 
-variant_exp: form, case..of
 loops
 type annotations: consist of records adjacent to type specs
 *)

@@ -160,5 +160,7 @@ FIXME syntax for map and reduce? experimented with for..join but doesnt look
 
   | "with" {WITH}
 
+  | "switch" {SWITCH}
+
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
 (*FIXME string primitives*)

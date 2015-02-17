@@ -251,8 +251,10 @@ type expression =
   | IndexableProjection of label * expression
 
   | IntegerRange of expression * expression
-  | Map of label * expression * expression
-  | Iterate of label * expression * (label * expression) option * expression
+  | Map of label * expression * expression * bool
+  | Iterate of label * expression *
+               (label * expression) option *
+               expression * bool
 
 let rec expression_to_string indent = function
   (*FIXME incomplete*)
@@ -381,18 +383,20 @@ let rec expression_to_string indent = function
   | IntegerRange (e1, e2) ->
     expression_to_string indent e1 ^ ".." ^
      expression_to_string indent e2
-  | Map (v, l, body) ->
-    indn indent ^ "map " ^ v ^ " in " ^
+  | Map (v, l, body, unordered) ->
+    let unordered_s = if unordered then "unordered " else "" in
+    indn indent ^ "map " ^ v ^ " in " ^ unordered_s ^
       expression_to_string 0 l ^ ":\n" ^
       expression_to_string (indent + indentation) body
-  | Iterate (v, l, acc, body) ->
+  | Iterate (v, l, acc, body, unordered) ->
+    let unordered_s = if unordered then "unordered " else "" in
     let acc_s = match acc with
       | None -> ":\n"
       | Some (acc_v, acc_e) -> "\n" ^
         indn indent ^ "initially " ^ acc_v ^
           " = " ^ expression_to_string 0 acc_e ^ ":\n"
     in
-      indn indent ^ "for " ^ v ^ " in " ^
+      indn indent ^ "for " ^ v ^ " in " ^ unordered_s ^
         expression_to_string 0 l ^ acc_s ^
         expression_to_string (indent + indentation) body
 

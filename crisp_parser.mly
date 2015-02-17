@@ -98,6 +98,7 @@
 %token FOR
 %token INITIALLY
 %token MAP
+%token UNORDERED
 
 (*Names*)
 (*
@@ -483,13 +484,23 @@ expression:
   | FOR; v = IDENTIFIER; IN; l = expression; NL;
     INITIALLY; acc = IDENTIFIER; EQUALS; acc_init = expression;
     COLON; INDENT; body = function_body; UNDENT
-    {Crisp_syntax.Iterate (v, l, Some (acc, acc_init), body)}
+    {Crisp_syntax.Iterate (v, l, Some (acc, acc_init), body, false)}
   | FOR; v = IDENTIFIER; IN; l = expression; COLON;
     INDENT; body = function_body; UNDENT
-    {Crisp_syntax.Iterate (v, l, None, body)}
+    {Crisp_syntax.Iterate (v, l, None, body, false)}
   | MAP; v = IDENTIFIER; IN; l = expression; COLON;
     INDENT; body = function_body; UNDENT
-    {Crisp_syntax.Map (v, l, body)}
+    {Crisp_syntax.Map (v, l, body, false)}
+  | FOR; v = IDENTIFIER; IN; UNORDERED; l = expression; NL;
+    INITIALLY; acc = IDENTIFIER; EQUALS; acc_init = expression;
+    COLON; INDENT; body = function_body; UNDENT
+    {Crisp_syntax.Iterate (v, l, Some (acc, acc_init), body, true)}
+  | FOR; v = IDENTIFIER; IN; UNORDERED; l = expression; COLON;
+    INDENT; body = function_body; UNDENT
+    {Crisp_syntax.Iterate (v, l, None, body, true)}
+  | MAP; v = IDENTIFIER; IN; UNORDERED; l = expression; COLON;
+    INDENT; body = function_body; UNDENT
+    {Crisp_syntax.Map (v, l, body, true)}
 
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to

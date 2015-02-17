@@ -123,6 +123,7 @@ rule main = parse
   | "for" {FOR}
   | "initially" {INITIALLY}
   | "map" {MAP}
+  | "unordered" {UNORDERED}
 
   | "+" {PLUS}
   | "*" {ASTERISK}

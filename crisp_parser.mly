@@ -508,6 +508,10 @@ expression:
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
 
 type annotations: consist of records adjacent to type specs
+matcher syntax
+  including a catch-all/wildcard symbol
+  for tuples -- e.g., for use in "let" bindings
+
 *)
 
 (*FIXME process_body should be like function body except that:

@@ -320,6 +320,8 @@ let rec expression_to_string indent = function
   | ConsList (x, xs) ->
     indn indent ^ "((" ^ expression_to_string 0 x ^ ") :: (" ^
     expression_to_string 0 xs ^ "))"
+    (*FIXME could use nicer pretty-printing here too: showing lists instead of
+            const blocks*)
   | AppendList (xs, ys) ->
     indn indent ^ "((" ^ expression_to_string 0 xs ^ ") @ (" ^
     expression_to_string 0 ys ^ "))"

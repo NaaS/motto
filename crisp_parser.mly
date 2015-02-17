@@ -475,7 +475,7 @@ expression:
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
 
-record: form, update
+record: update
 variant_exp: form, case..of
 loops
 type annotations: consist of records adjacent to type specs

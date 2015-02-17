@@ -242,7 +242,6 @@ type expression =
 
   | TupleValue of expression list
 
-  | Function_Call of function_name * expression list
   | Seq of expression * expression
   | ITE of expression * expression * expression
   | LocalDef of typing * expression (*def value_name : type = expression*)
@@ -250,6 +249,8 @@ type expression =
 
   (*This work for both tuples and records.*)
   | Projection of expression * label
+
+  | Function_Call of function_name * expression list
 
   | RecExp of rec_exp
   | VariantExp of du_exp (*FIXME make naming more consistent*)
@@ -353,6 +354,10 @@ let rec expression_to_string indent = function
 
   | Projection (e, l) ->
     indn indent ^ expression_to_string 0 e ^ "." ^ l
+
+  | Function_Call (f, es) ->
+    indn indent ^ f ^ " (" ^
+    inter ", " (List.map (expression_to_string 0) es) ^ ")"
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

@@ -364,6 +364,14 @@ expression_tuple:
     %prec tuple
     {[x]}
 
+function_arguments:
+  | x = expression; COMMA; xs = function_arguments
+    {x :: xs}
+  | x = expression; RIGHT_R_BRACKET
+    {[x]}
+  | RIGHT_R_BRACKET
+    {[]}
+
 expression:
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
@@ -445,6 +453,8 @@ expression:
   | e = expression; PERIOD; l = IDENTIFIER
     {Crisp_syntax.Projection (e, l)}
 
+  | f_name = IDENTIFIER; LEFT_R_BRACKET; args = function_arguments
+    {Crisp_syntax.Function_Call (f_name, args)}
 
 
 (*TODO
@@ -452,7 +462,6 @@ expression:
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
 
-function application
 record: form, update
 variant_exp: form, case..of
 loops

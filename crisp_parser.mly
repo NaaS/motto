@@ -166,6 +166,7 @@ base_type:
   | TYPE_INTEGER {fun name -> Crisp_syntax.Integer name}
   | TYPE_BOOLEAN {fun name -> Crisp_syntax.Boolean name}
   | TYPE_UNIT {fun name -> Crisp_syntax.Unit name}
+  | TYPE_IPv4ADDRESS {fun name -> Crisp_syntax.IPv4Address name}
 
 (*FIXME need to include termination conditions for lists and string*)
 (*FIXME include byte-order annotations*)

@@ -55,6 +55,7 @@ type type_value =
   | Unit of label option
   | List of label option * type_value * dependency_index option
   | Empty
+  | IPv4Address of label option
 ;;
 
 let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
@@ -94,6 +95,8 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
        opt_string "{" dep_idx_opt "}" ^ " " ^
         type_value_to_string mixfix_lists ending_newline indent ty
   | Empty -> "-"
+  | IPv4Address label ->
+      opt_string (indn indent) label " : " ^ "ipv4_address" ^ endline
 ;;
 
 type typing = value_name * type_value option

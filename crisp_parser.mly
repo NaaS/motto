@@ -116,6 +116,7 @@
 %token EXCEPT
 %token ADDRESS_TO_INT
 %token INT_TO_ADDRESS
+%token WITH
 
 
 (*Names*)
@@ -148,6 +149,7 @@
 %right ASTERISK
 %nonassoc ADDRESS_TO_INT
 %nonassoc INT_TO_ADDRESS
+%left WITH
 %left PERIOD
 
 %start <Crisp_syntax.program> program
@@ -479,12 +481,14 @@ expression:
     r = remainder_of_record;
     {Crisp_syntax.Record ((l, e) :: r)}
 
+  | r = expression; WITH; l = IDENTIFIER; EQUALS; e = expression
+    {Crisp_syntax.RecordUpdate (r, (l, e))}
+
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
 
-record: update
 variant_exp: form, case..of
 loops
 type annotations: consist of records adjacent to type specs

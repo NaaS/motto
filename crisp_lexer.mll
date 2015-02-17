@@ -158,5 +158,7 @@ FIXME syntax for map and reduce? experimented with for..join but doesnt look
   | "address_to_int" {ADDRESS_TO_INT}
   | "int_to_address" {INT_TO_ADDRESS}
 
+  | "with" {WITH}
+
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
 (*FIXME string primitives*)

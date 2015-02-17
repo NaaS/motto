@@ -255,6 +255,7 @@ type expression =
   | Function_Call of function_name * expression list
 
   | Record of (label * expression) list
+  | RecordUpdate of (expression * (label * expression))
 
 (*
   | RecExp of rec_exp
@@ -367,6 +368,13 @@ let rec expression_to_string indent = function
       l ^ " = " ^ expression_to_string 0 e in
     indn indent ^ "{" ^
     inter ", " (List.map entry_to_string entries) ^ "}"
+
+  | RecordUpdate (r, ((l, e) as entry)) ->
+    let entry_to_string (l, e) =
+      l ^ " = " ^ expression_to_string 0 e in
+    indn indent ^ expression_to_string 0 r ^ " with " ^
+    entry_to_string entry
+
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

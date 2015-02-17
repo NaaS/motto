@@ -4,8 +4,10 @@ fun F : () -> ()
   map x in [1,2,3]:
     x + 1
 #
-  map x in [1,2,3]: x * 2
-  map x in 1..3: x - 2
+  map x in [1,2,3]:
+    x * 2
+  map x in 1..3:
+    x - 2
 #
   for x in (2 .. (y + 4)) :
     <>
@@ -15,9 +17,9 @@ fun F : () -> ()
     <>
     x + acc
 #
-#  for x in l[4]:
-#    initially y = 0
-#      if x > y:
-#        x
-#      else:
-#        y
+  for x in l[4]
+  initially y = 0:
+    if x > y:
+      x
+    else:
+      y

@@ -410,14 +410,14 @@ let rec expression_to_string indent = function
       expression_to_string (indent + indentation) body
   | Iterate (v, l, acc, body) ->
     let acc_s = match acc with
-      | None -> ""
-      | Some (acc_v, acc_e) ->
-        indn (indent + indentation) ^ "initially " ^ acc_v ^
-          " = " ^ expression_to_string 0 acc_e ^ "\n"
+      | None -> ":\n"
+      | Some (acc_v, acc_e) -> "\n" ^
+        indn indent ^ "initially " ^ acc_v ^
+          " = " ^ expression_to_string 0 acc_e ^ ":\n"
     in
       indn indent ^ "for " ^ v ^ " in " ^
-        expression_to_string 0 l ^ ":\n" ^ acc_s ^
-        expression_to_string (indent + 2 * indentation) body
+        expression_to_string 0 l ^ acc_s ^
+        expression_to_string (indent + indentation) body
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

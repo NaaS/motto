@@ -123,8 +123,6 @@
 
 (*NOTE currently semicolons (i.e., sequential composition)
        are implicit in line-breaks;*)
-%nonassoc iteration
-%nonassoc map
 %nonassoc ite
 %nonassoc tuple
 (*%right SEMICOLON*)
@@ -499,13 +497,13 @@ expression:
     {Crisp_syntax.IntegerRange (e1, e2)}
   | FOR; v = IDENTIFIER; IN; l = expression; NL;
     INITIALLY; acc = IDENTIFIER; EQUALS; acc_init = expression;
-    COLON; body = expression
+    COLON; INDENT; body = function_body; UNDENT
     {Crisp_syntax.Iterate (v, l, Some (acc, acc_init), body)}
-  | FOR; v = IDENTIFIER; IN; l = expression; COLON; body = expression
-    %prec iteration
+  | FOR; v = IDENTIFIER; IN; l = expression; COLON;
+    INDENT; body = function_body; UNDENT
     {Crisp_syntax.Iterate (v, l, None, body)}
-  | MAP; v = IDENTIFIER; IN; l = expression; COLON; body = expression
-    %prec map
+  | MAP; v = IDENTIFIER; IN; l = expression; COLON;
+    INDENT; body = function_body; UNDENT
     {Crisp_syntax.Map (v, l, body)}
 
 (*TODO

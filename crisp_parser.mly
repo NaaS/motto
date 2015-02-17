@@ -20,9 +20,6 @@
 %token COLON
 %token PERIOD
 %token SEMICOLON
-%token BANG
-%token QUES
-%token QUESQUES
 
 %token COLONCOLON
 %token LEFT_RIGHT_S_BRACKETS

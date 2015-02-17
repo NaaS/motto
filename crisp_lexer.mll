@@ -106,9 +106,6 @@ rule main = parse
   | "local" {LOCAL}
   | "global" {GLOBAL}
   | ":=" {ASSIGN}
-  | "!" {BANG}
-  | "?" {QUES}
-  | "??" {QUESQUES}
   | ";" {SEMICOLON}
   | "=" {EQUALS}
 (*NOTE since functions are effectful, could replace proc with fun, and signal

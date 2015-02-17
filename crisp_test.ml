@@ -191,10 +191,7 @@ let string_of_token = function
   | AR_RIGHT -> "AR_RIGHT"
   | AND -> "AND"
 
-  | BANG -> "BANG"
   | SEMICOLON -> "SEMICOLON"
-  | QUESQUES -> "QUESQUES"
-  | QUES -> "QUES"
   | EXCEPT -> "EXCEPT"
 
   | ASTERISK -> "ASTERISK"

@@ -343,11 +343,6 @@ expression_list:
 expression_tuple:
   | x = expression; COMMA; xs = expression_tuple
     {x :: xs}
-(*
-  | x = expression
-    {[x]}
-  | {[]}
-*)
   | x = expression; GT
     %prec tuple
     {[x]}
@@ -425,11 +420,6 @@ expression:
 
   | LT; GT
     {Crisp_syntax.Tuple []}
-(*  | LT; t = expression_tuple; GT
-    {Crisp_syntax.Tuple t}*)
-(*  | LT; t = expression_tuple; e = expression; GT
-    %prec tuple
-    {Crisp_syntax.Tuple t}*)
   | LT; t = expression_tuple
     {Crisp_syntax.Tuple t}
 

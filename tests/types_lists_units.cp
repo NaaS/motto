@@ -1,6 +1,6 @@
 
 type bla : list record
-  a : unit
+  a : <>
   b : boolean
   c : variant
     d : integer

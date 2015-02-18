@@ -58,7 +58,6 @@ type type_value =
   | Boolean of label option * type_annotation
   | Record of label option * type_value list (*FIXME type annotation?*)
   | Disjoint_Union of label option * type_value list (*FIXME type annotation?*)
-  | Unit of label option
   | List of label option * type_value *
             dependency_index option * type_annotation
   | Empty
@@ -81,7 +80,6 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
     | String _
     | Integer _
     | Boolean _
-    | Unit _
     | Tuple _
     | List _ -> true
     | _ -> false in
@@ -113,8 +111,6 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
   | Disjoint_Union (label, tys) ->
       opt_string (indn indent) label " : " ^ "variant" ^ "\n" ^
       mk_block (indent + indentation) (type_value_to_string mixfix_lists ending_newline) tys
-  | Unit label ->
-      opt_string (indn indent) label " : " ^ "unit" ^ endline
   | List (label, ty, dep_idx_opt, ann) ->
     let s =
       if mixfix_lists && use_mixfix_list_syntax_for ty(*FIXME possible bug: i
@@ -128,18 +124,18 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
          opt_string "{" dep_idx_opt "}" ^ " " ^
         type_value_to_string mixfix_lists ending_newline indent ty
     in s ^ ann_string indent indentation ann ^ endline
-  | Empty -> "-"
+  | Empty -> "-" ^ endline
   | IPv4Address label ->
       opt_string (indn indent) label " : " ^ "ipv4_address" ^ endline
   | Tuple (label, tys) ->
     if use_mixfix_list_syntax_for ty_value then
       opt_string (indn indent) label " : " ^ "<" ^
        inter " * " (List.map (type_value_to_string mixfix_lists false 0) tys) ^
-        ">"
+        ">" ^ endline
     else
       opt_string (indn indent) label " : " ^ "tuple (" ^
        inter ", " (List.map (type_value_to_string mixfix_lists false 0) tys) ^
-        ")"
+        ")" ^ endline
 ;;
 
 type typing = value_name * type_value option
@@ -201,7 +197,6 @@ let function_type_to_string (FunType (fd, fr)) =
 type integer = int (*FIXME precision*)
 
 type expression =
-  | Unity
   | Variable of label
 
   (*Boolean expressions*)
@@ -281,9 +276,6 @@ type expression =
                expression * bool
 
 let rec expression_to_string indent = function
-  (*FIXME incomplete*)
-  | Unity ->
-    indn indent ^ "<>"
   | Variable value_name -> indn indent ^ value_name
   | Seq (e1, e2) ->
     expression_to_string indent e1 ^ "\n" ^

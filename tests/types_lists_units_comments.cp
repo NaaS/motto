@@ -2,7 +2,7 @@
 # More complex type structures, including lists.
 
 type bla : list record
-  a : unit
+  a : <>
   b : boolean
   c : variant
     d : integer

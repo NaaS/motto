@@ -69,7 +69,6 @@ rule main = parse
   | "boolean" {TYPE_BOOLEAN}
   | "record" {TYPE_RECORD}
   | "variant" {TYPE_VARIANT}
-  | "unit" {TYPE_UNIT}
   | "list" {TYPE_LIST}
   | "tuple" {TYPE_TUPLE}
   | ":" {COLON}
@@ -88,7 +87,6 @@ rule main = parse
   | "=>" {ARR_RIGHT}
   | "->" {AR_RIGHT}
   | "-" {DASH}
-  | "<>" {UNITY}
 (*FIXME current bug: if we have a blank line between two lines in an expression,
   then that will be lexed as ...,UNDENT,NL,INDENT,... instead of just NL.
 *)

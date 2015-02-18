@@ -55,7 +55,6 @@
 
 (*Reserved words*)
 %token PROC
-%token UNITY
 %token FUN
 %token IF
 %token ELSE
@@ -75,7 +74,6 @@
 %token TYPE_STRING
 %token TYPE_RECORD
 %token TYPE_VARIANT
-%token TYPE_UNIT
 %token TYPE_LIST
 %token TYPE_IPv4ADDRESS
 %token TYPE_TUPLE
@@ -146,10 +144,6 @@ base_type:
   | TYPE_STRING {fun name ann -> Crisp_syntax.String (name, ann)}
   | TYPE_INTEGER {fun name ann -> Crisp_syntax.Integer (name, ann)}
   | TYPE_BOOLEAN {fun name ann -> Crisp_syntax.Boolean (name, ann)}
-  | TYPE_UNIT
-    {fun name ann ->
-      if ann <> [] then failwith "unit type shouldn't be annotated"
-      else Crisp_syntax.Unit name}
   | TYPE_IPv4ADDRESS
     {fun name ann ->
       if ann <> [] then failwith "ipv4_address type shouldn't be annotated"
@@ -236,9 +230,6 @@ single_line_type_def:
     {fun (name : Crisp_syntax.label option) ann ->
        if ann <> [] then failwith "user-defined type shouldn't be annotated"
        else Crisp_syntax.Tuple (name, tl)}
-  | UNITY
-    {fun (name : Crisp_syntax.label option) ann ->
-       Crisp_syntax.Tuple (name, [])}
 
 type_def:
   | sltd = single_line_type_def
@@ -420,7 +411,6 @@ expression:
   | LEFT_R_BRACKET; e = expression; RIGHT_R_BRACKET {e}
   (*The INDENT-UNDENT combo is a form of bracketing*)
   | INDENT; e = expression; UNDENT {e}
-  | UNITY {Crisp_syntax.Unity}
   (*NOTE we determine whether this is a bound variable or a dereference
          during an early pass.*)
   | v = IDENTIFIER {Crisp_syntax.Variable v}

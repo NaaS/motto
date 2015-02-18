@@ -152,7 +152,6 @@ let string_of_token = function
   | TYPE_STRING -> "TYPE_STRING"
   | TYPE_RECORD -> "TYPE_RECORD"
   | TYPE_VARIANT -> "TYPE_VARIANT"
-  | TYPE_UNIT -> "TYPE_UNIT"
   | TYPE_LIST -> "TYPE_LIST"
 (*
   (*Names*)
@@ -166,7 +165,6 @@ let string_of_token = function
   | PROC -> "PROC"
   | SLASH -> "SLASH"
   | ARR_RIGHT -> "ARR_RIGHT"
-  | UNITY -> "UNITY"
 
   | TYPE_IPv4ADDRESS -> "TYPE_IPv4ADDRESS"
   | TRUE -> "TRUE"

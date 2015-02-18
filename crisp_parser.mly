@@ -143,11 +143,17 @@ program:
   | e = toplevel_decl; p = program {e :: p}
 
 base_type:
-  | TYPE_STRING {fun name -> Crisp_syntax.String name}
-  | TYPE_INTEGER {fun name -> Crisp_syntax.Integer name}
-  | TYPE_BOOLEAN {fun name -> Crisp_syntax.Boolean name}
-  | TYPE_UNIT {fun name -> Crisp_syntax.Unit name}
-  | TYPE_IPv4ADDRESS {fun name -> Crisp_syntax.IPv4Address name}
+  | TYPE_STRING {fun name ann -> Crisp_syntax.String (name, ann)}
+  | TYPE_INTEGER {fun name ann -> Crisp_syntax.Integer (name, ann)}
+  | TYPE_BOOLEAN {fun name ann -> Crisp_syntax.Boolean (name, ann)}
+  | TYPE_UNIT
+    {fun name ann ->
+      if ann <> [] then failwith "unit type shouldn't be annotated"
+      else Crisp_syntax.Unit name}
+  | TYPE_IPv4ADDRESS
+    {fun name ann ->
+      if ann <> [] then failwith "ipv4_address type shouldn't be annotated"
+      else Crisp_syntax.IPv4Address name}
 
 (*FIXME need to include termination conditions for lists and string*)
 (*FIXME include byte-order annotations*)
@@ -171,8 +177,29 @@ base_type:
      l5 : integer
 *)
 
+remainder_of_annotation:
+  | COMMA; name = IDENTIFIER; EQUALS; value = IDENTIFIER;
+    r = remainder_of_annotation
+    {(name, value) :: r}
+  | COMMA; NL; name = IDENTIFIER; EQUALS; value = IDENTIFIER;
+    r = remainder_of_annotation
+    {(name, value) :: r}
+  | RIGHT_C_BRACKET
+    {[]}
+
+(*FIXME would be nice if the body of the annotation occurred
+        to the right of, not underneath, the curly brackets.*)
+type_annotation:
+  | LEFT_C_BRACKET; name = IDENTIFIER; EQUALS; value = IDENTIFIER;
+    r = remainder_of_annotation
+    {(name, value) :: r}
+
 type_line:
-  | value_name = IDENTIFIER; COLON; td = type_def {td (Some value_name)}
+  | value_name = IDENTIFIER; COLON; td = type_def;
+    INDENT; ann = type_annotation; UNDENT
+    {td (Some value_name) ann}
+  | value_name = IDENTIFIER; COLON; td = type_def
+    {td (Some value_name) []}
 
 type_lines:
   | tl = type_line; NL; rest = type_lines { tl :: rest }
@@ -180,52 +207,64 @@ type_lines:
 
 single_line_type_def:
   | bt = base_type
-    {fun (name : Crisp_syntax.label option) -> bt name}
+    {fun (name : Crisp_syntax.label option) ann -> bt name ann}
   | TYPE_LIST; LEFT_C_BRACKET; dv = dep_var; RIGHT_C_BRACKET; td = type_def
-    {fun (name : Crisp_syntax.label option) ->
-       Crisp_syntax.List (name, td None, Some dv)}
+    {fun (name : Crisp_syntax.label option) ann ->
+       Crisp_syntax.List (name, td None [](*FIXME what annotation for listed value?*),
+                          Some dv, ann)}
   | TYPE_LIST; td = type_def
-    {fun (name : Crisp_syntax.label option) ->
-       Crisp_syntax.List (name, td None, None)}
+    {fun (name : Crisp_syntax.label option) ann ->
+       Crisp_syntax.List (name, td None [](*FIXME what annotation for listed value?*),
+                          None, ann)}
   | TYPE; type_name = IDENTIFIER
-    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.UserDefinedType (name, type_name)}
+    {fun (name : Crisp_syntax.label option) ann ->
+       if ann <> [] then failwith "user-defined type shouldn't be annotated"
+       else Crisp_syntax.UserDefinedType (name, type_name)}
   | LEFT_S_BRACKET; td = type_def; RIGHT_S_BRACKET
-    {fun (name : Crisp_syntax.label option) ->
-       Crisp_syntax.List (name, td None, None)}
+    {fun (name : Crisp_syntax.label option) ann ->
+       Crisp_syntax.List (name, td None [](*FIXME what annotation for listed value?*),
+                          None, ann)}
   | LEFT_S_BRACKET; td = type_def; RIGHT_S_BRACKET; LEFT_C_BRACKET; dv = dep_var; RIGHT_C_BRACKET
-    {fun (name : Crisp_syntax.label option) ->
-       Crisp_syntax.List (name, td None, Some dv)}
+    {fun (name : Crisp_syntax.label option) ann ->
+       Crisp_syntax.List (name, td None [](*FIXME what annotation for listed value?*),
+                          Some dv, ann)}
   | TYPE_TUPLE; LEFT_R_BRACKET; tl = singleline_type_list; RIGHT_R_BRACKET
-    {fun (name : Crisp_syntax.label option) ->
-       Crisp_syntax.Tuple (name, tl)}
+    {fun (name : Crisp_syntax.label option) ann ->
+       if ann <> [] then failwith "user-defined type shouldn't be annotated"
+       else Crisp_syntax.Tuple (name, tl)}
   | LT; tl = singleline_type_list_ast; GT
-    {fun (name : Crisp_syntax.label option) ->
-       Crisp_syntax.Tuple (name, tl)}
+    {fun (name : Crisp_syntax.label option) ann ->
+       if ann <> [] then failwith "user-defined type shouldn't be annotated"
+       else Crisp_syntax.Tuple (name, tl)}
   | UNITY
-    {fun (name : Crisp_syntax.label option) ->
+    {fun (name : Crisp_syntax.label option) ann ->
        Crisp_syntax.Tuple (name, [])}
 
 type_def:
   | sltd = single_line_type_def
     {sltd}
   | TYPE_RECORD; INDENT; tl = type_lines
-    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Record (name, List.rev tl)}
+    {fun (name : Crisp_syntax.label option) ann ->
+     if ann <> [] then failwith "record type shouldn't be annotated"
+     else Crisp_syntax.Record (name, List.rev tl)}
   | TYPE_VARIANT; INDENT; tl = type_lines
-    {fun (name : Crisp_syntax.label option) -> Crisp_syntax.Disjoint_Union (name, List.rev tl)}
+    {fun (name : Crisp_syntax.label option) ann ->
+     if ann <> [] then failwith "variant type shouldn't be annotated"
+     else Crisp_syntax.Disjoint_Union (name, List.rev tl)}
 
 type_decl:
   | TYPE; type_name = IDENTIFIER; COLON; td = type_def
     { {Crisp_syntax.type_name = type_name;
-       Crisp_syntax.type_value = td None} }
+       Crisp_syntax.type_value = td None [](*FIXME include annotation?*)} }
 
 channel_type_kind1:
   | from_type = single_line_type_def; SLASH; to_type = single_line_type_def
-      {Crisp_syntax.ChannelSingle (from_type None, to_type None)}
+      {Crisp_syntax.ChannelSingle (from_type None [], to_type None [])}
   (*NOTE We cannot represents channels of type -/- since they are useless.*)
   | DASH; SLASH; to_type = single_line_type_def
-      {Crisp_syntax.ChannelSingle (Crisp_syntax.Empty, to_type None)}
+      {Crisp_syntax.ChannelSingle (Crisp_syntax.Empty, to_type None [])}
   | from_type = single_line_type_def; SLASH; DASH
-      {Crisp_syntax.ChannelSingle (from_type None, Crisp_syntax.Empty)}
+      {Crisp_syntax.ChannelSingle (from_type None [], Crisp_syntax.Empty)}
   (*NOTE we cannot use the empty type anywhere other than in channels,
     since there isn't any point.*)
 
@@ -264,14 +303,16 @@ parameters:
 
 (*A list of single-line type defs -- used in the return types of functions*)
 singleline_type_list:
-  | td = single_line_type_def; COMMA; ps = singleline_type_list {td None :: ps}
-  | td = single_line_type_def {[td None]}
+  | td = single_line_type_def; COMMA; ps = singleline_type_list
+    {td None [] :: ps}
+  | td = single_line_type_def {[td None []]}
   | {[]}
 (*Exactly like singleline_type_list except that entries are separated by
   ASTERISKs*)
 singleline_type_list_ast:
-  | td = single_line_type_def; ASTERISK; ps = singleline_type_list_ast {td None :: ps}
-  | td = single_line_type_def {[td None]}
+  | td = single_line_type_def; ASTERISK; ps = singleline_type_list_ast
+    {td None [] :: ps}
+  | td = single_line_type_def {[td None []]}
   | {[]}
 
 dep_var: id = IDENTIFIER {id}
@@ -307,11 +348,11 @@ function_type: fd = function_domain_type; AR_RIGHT; fr = function_return_type
 
 state_decl :
   | LOCAL; var = IDENTIFIER; COLON; ty = single_line_type_def; ASSIGN; e = expression
-    {Crisp_syntax.LocalState (var, Some (ty None), e)}
+    {Crisp_syntax.LocalState (var, Some (ty None []), e)}
   | LOCAL; var = IDENTIFIER; ASSIGN; e = expression
     {Crisp_syntax.LocalState (var, None, e)}
   | GLOBAL; var = IDENTIFIER; COLON; ty = single_line_type_def; ASSIGN; e = expression
-    {Crisp_syntax.GlobalState (var, Some (ty None), e)}
+    {Crisp_syntax.GlobalState (var, Some (ty None []), e)}
   | GLOBAL; var = IDENTIFIER; ASSIGN; e = expression
     {Crisp_syntax.GlobalState (var, None, e)}
 
@@ -395,7 +436,7 @@ expression:
   | LET; v = IDENTIFIER; EQUALS; e = expression
     {Crisp_syntax.LocalDef ((v, None), e)}
   | LET; v = IDENTIFIER; COLON; ty = single_line_type_def; EQUALS; e = expression
-    {Crisp_syntax.LocalDef ((v, Some (ty None)), e)}
+    {Crisp_syntax.LocalDef ((v, Some (ty None [])), e)}
 
   | e1 = expression; EQUALS; e2 = expression
     {Crisp_syntax.Equals (e1, e2)}

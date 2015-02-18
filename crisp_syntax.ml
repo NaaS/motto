@@ -42,20 +42,29 @@ let mk_block (indent : int) (f : int -> 'a -> string) (l : 'a list) : string =
 
 type dependency_index = string
 
+(*FIXME must allow the annotation to talk about a value that won't be used in
+        the program -- but that will be represented in the input (and whose
+        value is preserved in the output.)*)
+type type_annotation = (string * string) list
+
 (*Labels are used to implement labelled variants over disjoint unions.*)
 type type_value =
-  (*FIXME include delimiters for string and list*)
   (*A reference to a type defined earlier in the program*)
+  (*NOTE the type annotation of a user-defined type is implicit
+         in the annotations of its contents.*)
   | UserDefinedType of label option * type_name
-  | String of label option
-  | Integer of label option
-  | Boolean of label option
-  | Record of label option * type_value list
-  | Disjoint_Union of label option * type_value list
+  | String of label option * type_annotation
+  | Integer of label option * type_annotation
+  | Boolean of label option * type_annotation
+  | Record of label option * type_value list (*FIXME type annotation?*)
+  | Disjoint_Union of label option * type_value list (*FIXME type annotation?*)
   | Unit of label option
-  | List of label option * type_value * dependency_index option
+  | List of label option * type_value *
+            dependency_index option * type_annotation
   | Empty
   | IPv4Address of label option
+  (*We send records, not tuples, over the wire, so tuples
+    don't need type annotations.*)
   | Tuple of label option * type_value list
 ;;
 
@@ -75,16 +84,29 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
     | Unit _
     | Tuple _
     | List _ -> true
-    | _ -> false
+    | _ -> false in
+  let k_v_string indent (l, e) =
+    ",\n"(*FIXME use endline instead of \n?*) ^ indn indent ^ l ^ " = " ^ e in
+  let ann_string indent indentation ann =
+    match ann with
+    | [] -> ""
+    | (l, e) :: xs ->
+      let indent' = indent + indentation in
+      "\n"(*FIXME check that this agrees with endline*) ^ indn indent' ^
+      "{" ^ l ^ " = " ^ e ^
+      mk_block(*FIXME instruct mk_block to use endline?*) indent' k_v_string xs ^ "}"
   in match ty_value with
   | UserDefinedType (label, type_name) ->
       opt_string (indn indent) label " : " ^ "type " ^ type_name ^ endline
-  | String label ->
-      opt_string (indn indent) label " : " ^ "string" ^ endline
-  | Integer label ->
-      opt_string (indn indent) label " : " ^ "integer" ^ endline
-  | Boolean label ->
-      opt_string (indn indent) label " : " ^ "boolean" ^ endline
+  | String (label, ann) ->
+    opt_string (indn indent) label " : " ^ "string" ^
+    ann_string indent indentation ann ^ endline
+  | Integer (label, ann) ->
+    opt_string (indn indent) label " : " ^ "integer" ^
+    ann_string indent indentation ann ^ endline
+  | Boolean (label, ann) ->
+    opt_string (indn indent) label " : " ^ "boolean" ^
+    ann_string indent indentation ann ^ endline
   | Record (label, tys) ->
       opt_string (indn indent) label " : " ^ "record" ^ "\n" ^
       mk_block (indent + indentation) (type_value_to_string mixfix_lists ending_newline) tys
@@ -93,17 +115,19 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
       mk_block (indent + indentation) (type_value_to_string mixfix_lists ending_newline) tys
   | Unit label ->
       opt_string (indn indent) label " : " ^ "unit" ^ endline
-  | List (label, ty, dep_idx_opt) ->
-    if mixfix_lists && use_mixfix_list_syntax_for ty(*FIXME possible bug: i
-                                                      think this should be
-                                                      ty_value not ty*) then
-      opt_string (indn indent) label " : " ^ "[" ^
-       type_value_to_string mixfix_lists false indent ty ^
-         "]" ^ opt_string "{" dep_idx_opt "}" ^ endline
-    else
-      opt_string (indn indent) label " : " ^ "list" ^
-       opt_string "{" dep_idx_opt "}" ^ " " ^
+  | List (label, ty, dep_idx_opt, ann) ->
+    let s =
+      if mixfix_lists && use_mixfix_list_syntax_for ty(*FIXME possible bug: i
+                                                        think this should be
+                                                        ty_value not ty*) then
+        opt_string (indn indent) label " : " ^ "[" ^
+         type_value_to_string mixfix_lists false indent ty ^
+           "]" ^ opt_string "{" dep_idx_opt "}"
+      else
+        opt_string (indn indent) label " : " ^ "list" ^
+         opt_string "{" dep_idx_opt "}" ^ " " ^
         type_value_to_string mixfix_lists ending_newline indent ty
+    in s ^ ann_string indent indentation ann ^ endline
   | Empty -> "-"
   | IPv4Address label ->
       opt_string (indn indent) label " : " ^ "ipv4_address" ^ endline

@@ -212,6 +212,7 @@ let string_of_token = function
   | INITIALLY -> "INITIALLY"
   | MAP -> "MAP"
   | UNORDERED -> "UNORDERED"
+  | ARG_NAMING -> "ARG_NAMING"
 ;;
 
 let test filepath =

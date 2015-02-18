@@ -95,6 +95,8 @@
 %token MAP
 %token UNORDERED
 
+%token ARG_NAMING
+
 (*Names*)
 (*
 %token <string> UPPER_ALPHA
@@ -377,9 +379,13 @@ expression_tuple:
 
 function_arguments:
   | x = expression; COMMA; xs = function_arguments
-    {x :: xs}
+    {Crisp_syntax.Exp x :: xs}
   | x = expression; RIGHT_R_BRACKET
-    {[x]}
+    {[Crisp_syntax.Exp x]}
+  | l = IDENTIFIER; ARG_NAMING; e = expression; COMMA; xs = function_arguments
+    {Crisp_syntax.Named (l, e) :: xs}
+  | l = IDENTIFIER; ARG_NAMING; e = expression; RIGHT_R_BRACKET
+    {[Crisp_syntax.Named (l, e)]}
   | RIGHT_R_BRACKET
     {[]}
 

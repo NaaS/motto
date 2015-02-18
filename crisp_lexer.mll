@@ -141,5 +141,7 @@ rule main = parse
 
   | "switch" {SWITCH}
 
+  | "<-" {ARG_NAMING}
+
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
 (*FIXME string primitives*)

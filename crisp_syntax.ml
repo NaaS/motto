@@ -196,7 +196,11 @@ let function_type_to_string (FunType (fd, fr)) =
 
 type integer = int (*FIXME precision*)
 
-type expression =
+type fun_arg =
+  | Exp of expression
+  | Named of label * expression
+
+and expression =
   | Variable of label
 
   (*Boolean expressions*)
@@ -253,7 +257,7 @@ type expression =
   (*This work for both tuples and records.*)
   | Projection of expression * label
 
-  | Function_Call of function_name * expression list
+  | Function_Call of function_name * fun_arg list
 
   | Record of (label * expression) list
   | RecordUpdate of (expression * (label * expression))
@@ -370,8 +374,12 @@ let rec expression_to_string indent = function
     indn indent ^ expression_to_string 0 e ^ "." ^ l
 
   | Function_Call (f, es) ->
+    let fun_arg_to_string = function
+      | Exp e -> expression_to_string 0 e
+      | Named (l, e) -> l ^ " <- " ^ expression_to_string 0 e
+    in
     indn indent ^ f ^ " (" ^
-    inter ", " (List.map (expression_to_string 0) es) ^ ")"
+    inter ", " (List.map fun_arg_to_string es) ^ ")"
 
   | Record entries ->
     let entry_to_string (l, e) =

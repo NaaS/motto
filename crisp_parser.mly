@@ -545,10 +545,13 @@ expression:
    pack code weirdly.
   | e1 = expression; SEMICOLON; e2 = expression {Crisp_syntax.Seq (e1, e2)}
 
-type annotations: consist of records adjacent to type specs
-matcher syntax
+type annotations:
+  which types need annotations, and what are the options
+    for each type? should records be nested?
+matcher syntax -- needed for switch syntax
   including a catch-all/wildcard symbol
-  for tuples -- e.g., for use in "let" bindings
+(for the time being won't use this elsewhere --
+ e.g., for let-binding tuples)
 
 *)
 

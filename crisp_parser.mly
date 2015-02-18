@@ -543,6 +543,8 @@ matcher syntax -- needed for switch syntax
 (for the time being won't use this elsewhere --
  e.g., for let-binding tuples)
 
+  pass-by-reference to functions?
+  (this is already being done for channels, but not for values)
 *)
 
 (*FIXME process_body should be like function body except that:

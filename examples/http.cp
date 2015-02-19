@@ -18,5 +18,7 @@ type http_request: record
 # FIXME currently this isn't very nice
 type http_reply: record
   { max_size = 15000,
+  # FIXME this termination condition wasn't in the original example,
+  #       but we need a termination condition -- check what it should be.
   termination = "\r\n" }
   dummy : <>

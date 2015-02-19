@@ -1,3 +1,5 @@
+## Main type definition
+
 # Based on https://github.com/NaaS/system/blob/master/naasferatu/front-end/hadoop*.naas
 
 type hadoop_wc : record
@@ -15,13 +17,54 @@ type hadoop_wc : record
     endianness = big,
     size = 4 }
 
+
+## Main process
+
 # Remainder is based on https://github.com/NaaS/system/blob/master/crisp/flick/examples.fk
 
+# This is the process; the auxiliary functions are defined below.
+proc WordCount : ([type hadoop_wc/-] input, -/type hadoop_wc output)
+  if AllReady(input):
+    input.peek().sort_on_word().combine().consume(input) => output
+  else: <>
+
+
+## Support functions
+
+# Sum together the occurrences of the smallest word
+fun combine : (l : type indexed_wc) -> (<[integer] * type hadoop_wc>)
+  let initial_value =
+    let smallest_value = head (sorted)
+    <[smallest_value.1], smallest_value.2>
+
+  for p in tail (sorted)
+  initially acc = initial_value:
+    let idx = p.1
+    let wc' = p.2
+    if wc'.word = wc.word :
+      let wc'' = wc with count = wc.count + wc'.count
+      <idx :: idxs, wc''>
+    else: <idxs, wc>
+
+# We project out the word-count element in the tuple, and return it.
+# As a side-effect, we consume a value from each input channel which
+#  contributed to the result we produce.
+fun consume : ([type hadoop_wc/-] input; ans : <[integer] * type hadoop_wc>) -> (type hadoop_wc)
+  let idxs = l.1
+  let wc = l.2
+  for i in idxs:
+    read(input[i])
+  wc
+
+# Returns true if all channels are able to provide an input.
 # FIXME iron the semicolon out -- shouldnt be needed when have no parameters
 fun AllReady : ([type hadoop_wc/-] chans;) -> (boolean)
   for i in unordered chans
   initially acc = True:
     acc and not (peek(chans[i]) = None)
+
+
+## Sorting-related definitions.
 
 fun prepend_x_if_must : (acc : [<integer * type hadoop_wc>], b : boolean, x : <integer * type hadoop_wc>) -> ([<integer * type hadoop_wc>])
   if b: acc else: x :: acc
@@ -49,32 +92,3 @@ fun sort_on_word : (l : type indexed_wc) -> (type indexed_wc)
           else: <y :: ys, b, x>
       prepend_x_if_must (sub_sorted, x)
 
-proc WordCount : ([type hadoop_wc/-] input, -/type hadoop_wc output)
-  if AllReady(input):
-    input.peek().sort_on_word().combine().consume(input) => output
-  else: <>
-
-# Sum together the occurrences of the smallest word
-fun combine : (l : type indexed_wc) -> (<[integer] * type hadoop_wc>)
-  let initial_value =
-    let smallest_value = head (sorted)
-    <[smallest_value.1], smallest_value.2>
-
-  for p in tail (sorted)
-  initially acc = initial_value:
-    let idx = p.1
-    let wc' = p.2
-    if wc'.word = wc.word :
-      let wc'' = wc with count = wc.count + wc'.count
-      <idx :: idxs, wc''>
-    else: <idxs, wc>
-
-# We project out the word-count element in the tuple, and return it.
-# As a side-effect, we consume a value from each input channel which
-#  contributed to the result we produce.
-fun consume : ([type hadoop_wc/-] input; ans : <[integer] * type hadoop_wc>) -> (type hadoop_wc)
-  let idxs = l.1
-  let wc = l.2
-  for i in idxs:
-    read(input[i])
-  wc

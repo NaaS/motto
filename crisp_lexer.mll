@@ -143,5 +143,8 @@ rule main = parse
 
   | "<-" {ARG_NAMING}
 
+  | "<=" {ARR_LEFT}
+  | "<=>" {ARR_BOTH}
+
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
 (*FIXME string primitives*)

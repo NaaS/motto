@@ -286,6 +286,14 @@ and expression =
                (label * expression) option *
                expression * bool
 
+  (*Channel operations. Can be overloaded to, say, send values
+    on a channel, or to first obtain values from a channel then send it to
+    another.*)
+  | Send of expression * expression
+  | Receive of expression * expression
+  (*Send and receive between two channels*)
+  | Exchange of expression * expression
+
 let rec expression_to_string indent = function
   | Variable value_name -> indn indent ^ value_name
   | Seq (e1, e2) ->
@@ -436,6 +444,17 @@ let rec expression_to_string indent = function
       indn indent ^ "for " ^ v ^ " in " ^ unordered_s ^
         expression_to_string 0 l ^ acc_s ^
         expression_to_string (indent + indentation) body
+
+  | Send (e1, e2) ->
+    expression_to_string indent e1 ^ " => " ^
+     expression_to_string 0 e2
+  | Receive (e1, e2) ->
+    expression_to_string indent e1 ^ " <= " ^
+     expression_to_string 0 e2
+  | Exchange (e1, e2) ->
+    expression_to_string indent e1 ^ " <=> " ^
+     expression_to_string 0 e2
+
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

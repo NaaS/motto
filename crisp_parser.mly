@@ -97,6 +97,9 @@
 
 %token ARG_NAMING
 
+%token ARR_LEFT
+%token ARR_BOTH
+
 (*Names*)
 (*
 %token <string> UPPER_ALPHA
@@ -110,6 +113,9 @@
        are implicit in line-breaks;*)
 %right NL
 %nonassoc ite
+%nonassoc ARR_BOTH
+%right ARR_RIGHT
+%left ARR_LEFT
 %nonassoc tuple
 %right ASSIGN
 %right OR
@@ -550,6 +556,13 @@ expression:
   | e = expression; NL; f = expression
     %prec NL
     {Crisp_syntax.Seq (e, f)}
+
+  | e = expression; ARR_RIGHT; f = expression
+    {Crisp_syntax.Send (e, f)}
+  | e = expression; ARR_LEFT; f = expression
+    {Crisp_syntax.Receive (e, f)}
+  | e = expression; ARR_BOTH; f = expression
+    {Crisp_syntax.Exchange (e, f)}
 
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to

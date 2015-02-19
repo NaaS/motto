@@ -541,6 +541,12 @@ expression:
 
   | f_name = IDENTIFIER; LEFT_R_BRACKET; args = function_arguments
     {Crisp_syntax.Function_Call (f_name, args)}
+  (*"reverse" function application -- i.e., where the operand precedes
+    the operator, and the two are separated by a period.*)
+  | e = expression; PERIOD; f_name = IDENTIFIER; LEFT_R_BRACKET; args = function_arguments
+    {Crisp_syntax.Function_Call (f_name,
+      (*NOTE sticking this argument at the end.*)
+      List.rev (Crisp_syntax.Exp e :: List.rev args))}
 
   (*NOTE could try to get INDENT-UNDENT combo usable from here,
          to have records encoded as:

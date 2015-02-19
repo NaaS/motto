@@ -424,12 +424,19 @@ expression:
   (*NOTE we determine whether this is a bound variable or a dereference
          during an early pass.*)
   | v = IDENTIFIER {Crisp_syntax.Variable v}
+
   | IF; be = expression; COLON; e1 = expression; NL; ELSE; COLON; e2 = expression
     %prec ite
-    {Crisp_syntax.ITE (be, e1, e2)}
+    {Crisp_syntax.ITE (be, e1, Some e2)}
   | IF; be = expression; COLON; e1 = expression; ELSE; COLON; e2 = expression
     %prec ite
-    {Crisp_syntax.ITE (be, e1, e2)}
+    {Crisp_syntax.ITE (be, e1, Some e2)}
+(*
+  (*Single-handed if-statement*)
+  | IF; be = expression; COLON; e1 = expression
+    %prec ite_singlehanded
+    {Crisp_syntax.ITE (be, e1, None)}
+*)
   | v = IDENTIFIER; ASSIGN; e = expression
     {Crisp_syntax.Update (v, e)}
 
@@ -540,7 +547,9 @@ expression:
     INDENT; body = expression; UNDENT
     {Crisp_syntax.Map (v, l, body, true)}
 
-  | e = expression; NL; f = expression {Crisp_syntax.Seq (e, f)}
+  | e = expression; NL; f = expression
+    %prec NL
+    {Crisp_syntax.Seq (e, f)}
 
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to

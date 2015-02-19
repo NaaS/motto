@@ -257,7 +257,7 @@ and expression =
   | TupleValue of expression list
 
   | Seq of expression * expression
-  | ITE of expression * expression * expression
+  | ITE of expression * expression * expression option
   | LocalDef of typing * expression (*def value_name : type = expression*)
   | Update of value_name * expression (*value_name := expression*)
 
@@ -303,12 +303,18 @@ let rec expression_to_string indent = function
   | Not b' ->
     indn indent ^ "(not " ^ expression_to_string 0 b' ^ ")"
 
-  | ITE (be, e1, e2) ->
+  | ITE (be, e1, e2_opt) ->
+    let e2_s =
+      match e2_opt with
+      | None -> ""
+      | Some e2 ->
+        "\n" ^
+        indn indent ^ "else:\n" ^
+        expression_to_string (indent + indentation) e2 in
     indn indent ^ "if " ^
     expression_to_string 0 be ^ ":\n" ^
-    expression_to_string (indent + indentation) e1 ^ "\n" ^
-    indn indent ^ "else:\n" ^
-    expression_to_string (indent + indentation) e2
+    expression_to_string (indent + indentation) e1 ^
+    e2_s
 
   | Update (value_name, expression) ->
     (*NOTE for proper pretty-printing we can use width-senstitive generation of

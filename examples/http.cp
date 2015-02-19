@@ -15,6 +15,8 @@ type http_request: record
              #       an identifier.
     { size = "http_request.header.content_len" }
 #
-type http_reply: string
-#  { max_size = 15000,
-#  termination = "\r\n" }
+# FIXME currently this isn't very nice
+type http_reply: record
+  { max_size = 15000,
+  termination = "\r\n" }
+  dummy : <>

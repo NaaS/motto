@@ -61,7 +61,7 @@ type type_value =
   | String of label option * type_annotation
   | Integer of label option * type_annotation
   | Boolean of label option * type_annotation
-  | Record of label option * type_value list (*FIXME type annotation?*)
+  | RecordType of label option * type_value list * type_annotation
   | Disjoint_Union of label option * type_value list (*FIXME type annotation?*)
   | List of label option * type_value *
             dependency_index option * type_annotation
@@ -118,8 +118,9 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
   | Boolean (label, ann) ->
     opt_string (indn indent) label " : " ^ "boolean" ^
     ann_string indent indentation ann ^ endline
-  | Record (label, tys) ->
-      opt_string (indn indent) label " : " ^ "record" ^ "\n" ^
+  | RecordType (label, tys, ann) ->
+      opt_string (indn indent) label " : " ^ "record" ^
+      ann_string indent indentation ann ^  "\n" ^
       mk_block (indent + indentation) (type_value_to_string mixfix_lists ending_newline) tys
   | Disjoint_Union (label, tys) ->
       opt_string (indn indent) label " : " ^ "variant" ^ "\n" ^

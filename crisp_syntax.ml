@@ -44,8 +44,13 @@ type dependency_index = string
 
 (*FIXME must allow the annotation to talk about a value that won't be used in
         the program -- but that will be represented in the input (and whose
-        value is preserved in the output.)*)
-type type_annotation = (string * string) list
+        value is preserved in the output.)
+        Add dummy names in type specs -- such as in records.*)
+type type_annotation_kind =
+  | Ann_Str of string
+  | Ann_Int of int
+  | Ann_Ident of string
+type type_annotation = (string * type_annotation_kind) list
 
 (*Labels are used to implement labelled variants over disjoint unions.*)
 type type_value =
@@ -84,15 +89,23 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
     | List _ -> true
     | _ -> false in
   let k_v_string indent (l, e) =
-    ",\n"(*FIXME use endline instead of \n?*) ^ indn indent ^ l ^ " = " ^ e in
+    let e_s = match e with
+    | Ann_Str s -> "\"" ^ s ^ "\""
+    | Ann_Int i -> string_of_int i
+    | Ann_Ident s -> s in
+    indn indent ^ l ^ " = " ^ e_s in
   let ann_string indent indentation ann =
     match ann with
     | [] -> ""
-    | (l, e) :: xs ->
+    | k_v :: xs ->
       let indent' = indent + indentation in
+      let k_v_string' indent x =
+        ",\n"(*FIXME use endline instead of \n?*) ^
+        k_v_string indent x
+      in
       "\n"(*FIXME check that this agrees with endline*) ^ indn indent' ^
-      "{" ^ l ^ " = " ^ e ^
-      mk_block(*FIXME instruct mk_block to use endline?*) indent' k_v_string xs ^ "}"
+      "{" ^ k_v_string 0 k_v ^
+      mk_block(*FIXME instruct mk_block to use endline?*) indent' k_v_string' xs ^ "}"
   in match ty_value with
   | UserDefinedType (label, type_name) ->
       opt_string (indn indent) label " : " ^ "type " ^ type_name ^ endline

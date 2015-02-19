@@ -180,22 +180,29 @@ base_type:
      l5 : integer
 *)
 
+type_annotation_value:
+  | name = IDENTIFIER; EQUALS; str = STRING
+    {(name, Crisp_syntax.Ann_Str str)}
+  | name = IDENTIFIER; EQUALS; i = INTEGER
+    {(name, Crisp_syntax.Ann_Int i)}
+  | name = IDENTIFIER; EQUALS; value = IDENTIFIER
+    {(name, Crisp_syntax.Ann_Ident value)}
+
 remainder_of_annotation:
-  | COMMA; name = IDENTIFIER; EQUALS; value = IDENTIFIER;
+  | COMMA; tav = type_annotation_value; r = remainder_of_annotation
+    {tav :: r}
+  | COMMA; NL; tav = type_annotation_value;
     r = remainder_of_annotation
-    {(name, value) :: r}
-  | COMMA; NL; name = IDENTIFIER; EQUALS; value = IDENTIFIER;
-    r = remainder_of_annotation
-    {(name, value) :: r}
+    {tav :: r}
   | RIGHT_C_BRACKET
     {[]}
 
 (*FIXME would be nice if the body of the annotation occurred
         to the right of, not underneath, the curly brackets.*)
 type_annotation:
-  | LEFT_C_BRACKET; name = IDENTIFIER; EQUALS; value = IDENTIFIER;
+  | LEFT_C_BRACKET; tav = type_annotation_value;
     r = remainder_of_annotation
-    {(name, value) :: r}
+    {tav :: r}
 
 type_line:
   | value_name = IDENTIFIER; COLON; td = type_def;

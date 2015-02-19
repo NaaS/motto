@@ -148,7 +148,8 @@ rule main = parse
 
   | "include" {INCLUDE}
 
-  | '"' ([^'"''\\']* as str) '"' {STRING str}
+  (*FIXME need to check for escapes, particularly that of doublequotes*)
+  | '"' ([^'"']* as str) '"' {STRING str}
 
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
 

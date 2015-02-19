@@ -41,7 +41,7 @@
 
 (*Since we're relying on the offside rule for scoping, code blocks aren't
   explicitly delimited as in e.g., Algol-68-style languages.*)
-%token <int> UNDENTN
+%token <int * token list> UNDENTN
 (*The lexer will produce UNDENTN tokens, then a filter (sitting between
   the lexer and parser) will expand these into UNDENT tokens.*)
 %token INDENT

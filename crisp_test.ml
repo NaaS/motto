@@ -12,47 +12,89 @@ open Crisp_syntax
 
 (*NOTE this code depends on side-effects to expand tokens, to deal with the
   contraint that the lexer only emits one token at a time.*)
-let token_q : Crisp_parser.token Queue.t = Queue.create ()
+let token_q_expand : Crisp_parser.token Queue.t = Queue.create ()
+let token_q_filter : Crisp_parser.token Queue.t = Queue.create ()
 
-let expand_macro_tokens (lexer : Lexing.lexbuf -> Crisp_parser.token) (lexbuf : Lexing.lexbuf) : Crisp_parser.token =
-  let rec enqueue_token (i : int) (token : Crisp_parser.token) =
-    if i = 0 then ()
-    else
-      begin
-        Queue.enqueue token_q token;
-        enqueue_token (i - 1) token
-      end in
-  let expand_macro (times : int) (token : Crisp_parser.token)
-        (trailing_token_opt : Crisp_parser.token option) =
-      assert (times > -1); (*we can have UNINDENTN 0 times, in case we just had
-                             an \n*)
-      let insert_trailing_token () =
-          match trailing_token_opt with
-            | None -> ()
-            | Some tok -> Queue.enqueue token_q tok in
-      if times > 0 then
-        begin
-          enqueue_token (times - 1) token;
-          insert_trailing_token ();
-          token
-        end
-      else
-        Crisp_parser.NL (*if we have 0 undents then it still means that we had a
-                          newline.*)
-  in
+let enqueue_token token_q (i : int) (token : Crisp_parser.token) =
+  let cnt = ref i in
+  while !cnt > 0 do
+    Queue.enqueue token_q token;
+    cnt := !cnt - 1
+  done
+let token_stream_processor (token_q : Crisp_parser.token Queue.t)
+  (wrapper_lexer : Crisp_parser.token Queue.t ->
+   (Lexing.lexbuf -> Crisp_parser.token) ->
+   Lexing.lexbuf -> Crisp_parser.token)
+  (lexer : Lexing.lexbuf -> Crisp_parser.token)
+  (lexbuf : Lexing.lexbuf) : Crisp_parser.token =
   if Queue.is_empty token_q then
-    match lexer lexbuf with
-    | Crisp_parser.UNDENTN n ->
-        expand_macro n Crisp_parser.UNDENT
-         (Some Crisp_parser.NL) (*always have an NL following
-                                  (one or more) UNDENTs. This allows us to
-                                  parse nested records, for example, since
-                                  the contents of the containing record
-                                  must be separated by an NL.*)
-    | token -> token
+    wrapper_lexer token_q lexer lexbuf
   else
     Queue.dequeue_exn token_q
 
+(*turns NL,NL into NL
+  and NL,UNDENT into UNDENT*)
+let filter_redundant_newlines
+  (lexer : Lexing.lexbuf -> Crisp_parser.token)
+  (lexbuf : Lexing.lexbuf) : Crisp_parser.token =
+  let token_q = token_q_filter in
+  let wrapper_lexer token_q lexer lexbuf =
+    let munch_newlines () =
+      let token_r = ref (lexer lexbuf) in
+      while !token_r = Crisp_parser.NL do
+        token_r := lexer lexbuf
+      done;
+      !token_r in
+    match lexer lexbuf with
+    | Crisp_parser.NL as token ->
+      (*Continue munching tokens until we reach something that's not NL.
+        If that something is UNDENT, then forget all the NLs.
+        If it's not UNDENT, then emit a single NL.*)
+        let next_non_nl_token = munch_newlines () in
+        if next_non_nl_token = Crisp_parser.UNDENT then
+          Crisp_parser.UNDENT
+        else
+          begin
+            enqueue_token token_q 1 next_non_nl_token;
+            token
+          end
+      | token -> token
+  in token_stream_processor token_q wrapper_lexer lexer lexbuf
+
+let expand_macro_tokens
+  (lexer : Lexing.lexbuf -> Crisp_parser.token)
+  (lexbuf : Lexing.lexbuf) : Crisp_parser.token =
+  let token_q = token_q_expand in
+  let wrapper_lexer token_q lexer lexbuf =
+    let expand_macro (times : int) (token : Crisp_parser.token)
+          (trailing_tokens : Crisp_parser.token list) =
+        assert (times > -1); (*we can have UNINDENTN 0 times, in case we just had
+                               an \n*)
+        let insert_trailing_tokens () =
+          List.fold_right ~init:()
+            ~f:(fun tok _ -> Queue.enqueue token_q tok)
+             trailing_tokens in
+        if times > 0 then
+          begin
+            enqueue_token token_q (times - 1) token;
+            insert_trailing_tokens ();
+            token
+          end
+        else
+          Crisp_parser.NL (*if we have 0 undents then it still means that we had a
+                            newline.*)
+    in match lexer lexbuf with
+      | Crisp_parser.UNDENTN (n, follow_on_tokens) ->
+        let trailing_tokens =
+          if follow_on_tokens <> [] then
+            follow_on_tokens
+          (*always have an NL following (one or more) UNDENTs. This allows us to
+            parse nested records, for example, since the contents of the
+            containing record must be separated by an NL.*)
+          else [Crisp_parser.NL]
+        in expand_macro n Crisp_parser.UNDENT trailing_tokens
+      | token -> token
+  in token_stream_processor token_q wrapper_lexer lexer lexbuf
 
 let print_position outx lexbuf =
   let pos = lexbuf.lex_curr_p in
@@ -61,7 +103,11 @@ let print_position outx lexbuf =
 
 let parse_with_error lexbuf : Crisp_syntax.program =
   (*try Crisp_parser.program Crisp_lexer.main lexbuf with*)
-  try Crisp_parser.program (expand_macro_tokens Crisp_lexer.main) lexbuf with
+  (*try Crisp_parser.program (expand_macro_tokens Crisp_lexer.main) lexbuf with*)
+  try Crisp_parser.program
+        (Crisp_lexer.main
+         |> expand_macro_tokens
+         |> filter_redundant_newlines) lexbuf with
 (*
   | SyntaxError msg ->
     fprintf stderr "%a: %s\n" print_position lexbuf msg;
@@ -112,7 +158,11 @@ let lex_looper filename () =
   let results =
     let rec contents acc =
       (*let x = Crisp_lexer.main lexbuf in*)
-      let x = expand_macro_tokens Crisp_lexer.main lexbuf in
+      (*let x = expand_macro_tokens Crisp_lexer.main lexbuf in*)
+      let x =
+        (Crisp_lexer.main
+         |> expand_macro_tokens
+         |> filter_redundant_newlines) lexbuf in
       if x = Crisp_parser.EOF then List.rev (x :: acc)
       else contents (x :: acc)
     in contents [] in
@@ -141,7 +191,7 @@ let string_of_token = function
   | COMMA -> "COMMA"
   | NL -> "NL"
 
-  | UNDENTN x -> "UNDENTN(" ^ string_of_int x ^ ")"
+  | UNDENTN (x, _) -> "UNDENTN(" ^ string_of_int x ^ ")"
   | INDENT -> "INDENT"
   | UNDENT -> "UNDENT"
 

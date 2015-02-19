@@ -14,7 +14,7 @@ type http_request: record
              # FIXME probably best if i didn't use string for this -- treat as
              #       an identifier.
     { size = "http_request.header.content_len" }
-#
+
 # FIXME currently this isn't very nice
 type http_reply: record
   { max_size = 15000,

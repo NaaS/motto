@@ -7,7 +7,7 @@ let scope_stack : int Stack.t =
 ;;
 Stack.push Crisp_syntax.min_indentation scope_stack;;
 
-let test_indentation indentation lexbuf =
+let test_indentation indentation follow_on_tokens lexbuf =
   assert (not (Stack.is_empty scope_stack)); (*There should always be at least
                                                one element in the stack: 0*)
   let next_line () =
@@ -39,13 +39,19 @@ let test_indentation indentation lexbuf =
     else if indentation = prev then
       begin
         next_line ();
-        NL
+        if follow_on_tokens <> [] then
+          begin
+            assert (List.length follow_on_tokens = 1);
+            List.hd follow_on_tokens
+          end
+        else NL
       end
     else
       begin
         assert (indentation < prev);
         next_line ();
-        UNDENTN (undented_scopes Crisp_syntax.min_indentation)
+        UNDENTN (undented_scopes Crisp_syntax.min_indentation,
+                 follow_on_tokens)
       end
 }
 
@@ -60,10 +66,11 @@ let nl = '\n'
 
 rule main = parse
   | comment {main lexbuf}
-  | nl ' '* comment {main lexbuf}
-  | nl (ws as spaces)
-      {test_indentation (String.length spaces) lexbuf}
+  | nl+ ' '* comment {main lexbuf}
+  | nl+ (ws as spaces)
+      {test_indentation (String.length spaces) [] lexbuf}
   | "type" {TYPE}
+  | nl+"type" {test_indentation Crisp_syntax.min_indentation [TYPE] lexbuf}
   | "integer" {TYPE_INTEGER}
   | "string" {TYPE_STRING}
   | "boolean" {TYPE_BOOLEAN}
@@ -72,7 +79,7 @@ rule main = parse
   | "list" {TYPE_LIST}
   | "tuple" {TYPE_TUPLE}
   | ":" {COLON}
-  | "proc" {PROC}
+  | "proc" {test_indentation Crisp_syntax.min_indentation [PROC] lexbuf}
   | "/" {SLASH}
   | "[" {LEFT_S_BRACKET}
   | "]" {RIGHT_S_BRACKET}
@@ -87,12 +94,9 @@ rule main = parse
   | "=>" {ARR_RIGHT}
   | "->" {AR_RIGHT}
   | "-" {DASH}
-(*FIXME current bug: if we have a blank line between two lines in an expression,
-  then that will be lexed as ...,UNDENT,NL,INDENT,... instead of just NL.
-*)
-  | nl {test_indentation Crisp_syntax.min_indentation lexbuf}
+  | nl {NL}
   | ws {main lexbuf}
-  | eof {EOF}
+  | eof {test_indentation Crisp_syntax.min_indentation [EOF] lexbuf}
   | "ipv4_address" {TYPE_IPv4ADDRESS}
   | (integer as oct1) '.' (integer as oct2) '.'(integer as oct3) '.' (integer as oct4)
       {IPv4 (int_of_string(oct1), int_of_string(oct2), int_of_string(oct3),
@@ -109,7 +113,7 @@ rule main = parse
 (*NOTE since functions are effectful, could replace proc with fun, and signal
   the entry point via some name -- e.g., main -- but then arbitrary functions
   would be able to register listeners for events.*)
-  | "fun" {FUN}
+  | "fun" {test_indentation Crisp_syntax.min_indentation [FUN] lexbuf}
   | "let" {LET}
   | "in" {IN}
   | "except" {EXCEPT}

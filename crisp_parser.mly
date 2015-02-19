@@ -108,6 +108,7 @@
 
 (*NOTE currently semicolons (i.e., sequential composition)
        are implicit in line-breaks;*)
+%right NL
 %nonassoc ite
 %nonassoc tuple
 %right ASSIGN
@@ -520,24 +521,26 @@ expression:
     {Crisp_syntax.IntegerRange (e1, e2)}
   | FOR; v = IDENTIFIER; IN; l = expression; NL;
     INITIALLY; acc = IDENTIFIER; EQUALS; acc_init = expression;
-    COLON; INDENT; body = function_body; UNDENT
+    COLON; INDENT; body = expression; UNDENT
     {Crisp_syntax.Iterate (v, l, Some (acc, acc_init), body, false)}
   | FOR; v = IDENTIFIER; IN; l = expression; COLON;
-    INDENT; body = function_body; UNDENT
+    INDENT; body = expression; UNDENT
     {Crisp_syntax.Iterate (v, l, None, body, false)}
   | MAP; v = IDENTIFIER; IN; l = expression; COLON;
-    INDENT; body = function_body; UNDENT
+    INDENT; body = expression; UNDENT
     {Crisp_syntax.Map (v, l, body, false)}
   | FOR; v = IDENTIFIER; IN; UNORDERED; l = expression; NL;
     INITIALLY; acc = IDENTIFIER; EQUALS; acc_init = expression;
-    COLON; INDENT; body = function_body; UNDENT
+    COLON; INDENT; body = expression; UNDENT
     {Crisp_syntax.Iterate (v, l, Some (acc, acc_init), body, true)}
   | FOR; v = IDENTIFIER; IN; UNORDERED; l = expression; COLON;
-    INDENT; body = function_body; UNDENT
+    INDENT; body = expression; UNDENT
     {Crisp_syntax.Iterate (v, l, None, body, true)}
   | MAP; v = IDENTIFIER; IN; UNORDERED; l = expression; COLON;
-    INDENT; body = function_body; UNDENT
+    INDENT; body = expression; UNDENT
     {Crisp_syntax.Map (v, l, body, true)}
+
+  | e = expression; NL; f = expression {Crisp_syntax.Seq (e, f)}
 
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
@@ -564,17 +567,11 @@ process_decl: PROC; name = IDENTIFIER; COLON; pt = process_type; INDENT;
   pb = process_body; UNDENT
   {Crisp_syntax.Process (name, pt, pb)}
 
-(*NOTE a process_body is nested between an INDENT and an UNDENT*)
-(*NOTE we cannot have empty processes*)
-function_body:
-  | e = expression; NL; f = function_body {Crisp_syntax.Seq (e, f)}
-  | e = expression {e}
-
 function_decl: FUN; name = IDENTIFIER; COLON; ft = function_type; INDENT;
-  fb = function_body; UNDENT
+  e = expression; UNDENT
     {Crisp_syntax.Function {Crisp_syntax.fn_name = name;
                             Crisp_syntax.fn_params = ft;
-                            Crisp_syntax.fn_body = fb}}
+                            Crisp_syntax.fn_body = e}}
 
 toplevel_decl:
   | ty_decl = type_decl {Crisp_syntax.Type ty_decl}

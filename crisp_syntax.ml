@@ -478,7 +478,8 @@ let process_body_to_string indent (ProcessBody (st_decls, e, exc_decls)) =
   let exc_decls_s =
     List.map (excepts_decl_to_string indent) exc_decls
     |> inter "\n" in
-  st_decls_s ^ e_s ^
+  (if st_decls = [] then "" else st_decls_s ^ "\n") ^
+  e_s ^
   (if exc_decls = [] then "" else "\n" ^ exc_decls_s)
 
 (*Top-level declarations. We cannot define types or functions within functions*)

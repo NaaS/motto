@@ -7,10 +7,9 @@ type mcd_reply : record
   value : string
 #
 proc MCD : (type mcd_request/type mcd_reply client, [type mcd_request/type mcd_reply] backends)
-  # NOTE shared dictionaries are application-level primitives we supply.
-  # FIXME give type of the dictionary
-  # NOTE what parameters to give e.g., whether to randomise, and initial allocation.
-  global cache := empty_dictionary
+  # NOTE (possibly shared) dictionaries are application-level primitives we supply.
+  # FIXME specift what parameters to give? e.g., whether to randomise, and initial allocation.
+  global cache : dictionary <string * string> := empty_dictionary
 #
   # Any time we get something from a backend, cache it and forward it to the
   # client.
@@ -18,8 +17,8 @@ proc MCD : (type mcd_request/type mcd_reply client, [type mcd_request/type mcd_r
 #
   client => test_cache_or_pass_on(client, backends)
 #
-fun update_cache : (cache : type pbr_BLA, response : type mcd_reply) -> (type mcd_reply)
-# FIXME relying on pass-by-reference of cache
+fun update_cache : (cache : ref dictionary <string * string>, response : type mcd_reply) -> (type mcd_reply)
+  # NOTE relying on pass-by-reference of cache
   cache[response.key] := response
   response
 #

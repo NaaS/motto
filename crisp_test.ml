@@ -220,6 +220,7 @@ let string_of_token = function
   | STRING s -> "STRING \"" ^ s ^ "\""
 
   | TYPE_DICTIONARY -> "TYPE_DICTIONARY"
+  | TYPE_REF -> "TYPE_REF"
 ;;
 
 let test filepath =

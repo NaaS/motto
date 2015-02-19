@@ -101,6 +101,7 @@
 %token INCLUDE
 
 %token TYPE_DICTIONARY
+%token TYPE_REF
 
 (*Names*)
 (*
@@ -261,6 +262,11 @@ single_line_type_def:
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_syntax.type_annotation) ->
        Crisp_syntax.Dictionary (name, td None ann)}
+  | TYPE_REF; ty = single_line_type_def
+    {fun (name : Crisp_syntax.label option)
+         (ann : Crisp_syntax.type_annotation) ->
+       if ann <> [] then failwith "reference types shouldn't be annotated"
+       else Crisp_syntax.Reference (name, ty None ann)}
 
 type_def:
   | sltd = single_line_type_def

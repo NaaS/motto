@@ -71,6 +71,7 @@ type type_value =
     don't need type annotations.*)
   | Tuple of label option * type_value list
   | Dictionary of label option * type_value
+  | Reference of label option * type_value
 ;;
 
 let inter (mid : string) (ss : string list) =
@@ -153,6 +154,10 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
         ")" ^ endline
   | Dictionary (label, ty) ->
       opt_string (indn indent) label " : " ^ "dictionary " ^
+       type_value_to_string mixfix_lists false 0 ty ^
+        endline
+  | Reference (label, ty) ->
+      opt_string (indn indent) label " : " ^ "ref " ^
        type_value_to_string mixfix_lists false 0 ty ^
         endline
 ;;

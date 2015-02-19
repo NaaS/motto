@@ -314,11 +314,14 @@ dep_vars:
   | dvar = dep_var; COMMA; dvars = dep_vars {dvar :: dvars}
   | dvar = dep_var {[dvar]}
 
-(*FIXME allow processes to accept parameters*)
 (*NOTE that an independent_process_type may contain free variables -- this is
   picked up during type-checking, not during parsing.*)
-independent_process_type: LEFT_R_BRACKET; chans = channels; RIGHT_R_BRACKET
-  {chans}
+independent_process_type:
+  | LEFT_R_BRACKET; chans = channels; RIGHT_R_BRACKET
+    {(chans, [])}
+  | LEFT_R_BRACKET; chans = channels; SEMICOLON; ps = parameters; RIGHT_R_BRACKET
+    {(chans, ps)}
+(*NOTE dependent types aren't used in the current implementation of the language*)
 dependent_process_type: LEFT_C_BRACKET; dvars = dep_vars; RIGHT_C_BRACKET; ARR_RIGHT;
   ipt = independent_process_type
   {Crisp_syntax.ProcessType (dvars, ipt)}

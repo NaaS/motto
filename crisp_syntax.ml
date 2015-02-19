@@ -166,13 +166,20 @@ type channel = Channel of channel_type * channel_name
 let channel_to_string (Channel (channel_type, channel_name)) =
   channel_type_to_string channel_type ^ " " ^ channel_name
 
-type process_type = ProcessType of dependency_index list * channel list
-let process_type_to_string (ProcessType (dvars, chans)) =
+type process_type =
+  ProcessType of dependency_index list * (channel list * type_value list)
+let process_type_to_string (ProcessType (dvars, (chans, params))) =
   let deps =
     if dvars = [] then ""
     else
-      "{" ^ inter ", " dvars ^ "} => "
-  in deps ^ "(" ^ inter ", " (List.map channel_to_string chans) ^ ")"
+      "{" ^ inter ", " dvars ^ "} => " in
+  let params_s =
+    if params = [] then ""
+    else
+      "; " ^
+      inter ", " (List.map (type_value_to_string default_use_mixfix_lists false 0) params)
+  in deps ^ "(" ^ inter ", " (List.map channel_to_string chans) ^
+    params_s ^ ")"
 ;;
 
 type function_domtype = FunDomType of channel list * type_value list

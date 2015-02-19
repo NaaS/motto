@@ -146,5 +146,10 @@ rule main = parse
   | "<=" {ARR_LEFT}
   | "<=>" {ARR_BOTH}
 
+  | "include" {INCLUDE}
+
+  | '"' ([^'"''\\']* as str) '"' {STRING str}
+
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
-(*FIXME string primitives*)
+
+(*FIXME string primitives as keywords -- e.g., concat, etc*)

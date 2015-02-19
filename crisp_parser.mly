@@ -10,9 +10,7 @@
 (*Native value interpretations*)
 %token <int> INTEGER (*FIXME is OCaml's "int" of the precision we want to support?*)
 %token <int * int * int * int> IPv4
-(*
 %token <string> STRING
-*)
 (*FIXME include float?*)
 (*FIXME include char?*)
 
@@ -99,6 +97,8 @@
 
 %token ARR_LEFT
 %token ARR_BOTH
+
+%token INCLUDE
 
 (*Names*)
 (*
@@ -599,3 +599,4 @@ toplevel_decl:
   | ty_decl = type_decl {Crisp_syntax.Type ty_decl}
   | process = process_decl {process}
   | funxion = function_decl {funxion}
+  | INCLUDE; str = STRING {Crisp_syntax.Include str}

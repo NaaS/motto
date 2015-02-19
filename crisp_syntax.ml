@@ -455,7 +455,6 @@ let rec expression_to_string indent = function
     expression_to_string indent e1 ^ " <=> " ^
      expression_to_string 0 e2
 
-
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"
 
@@ -512,6 +511,7 @@ type toplevel_decl =
   | Type of ty_decl
   | Function of fn_decl
   | Process of process_name * process_type * process_body
+  | Include of string
 let toplevel_decl_to_string = function
   | Type ty_decl -> "type " ^ ty_decl_to_string ty_decl
   | Process (process_name, process_type, process_body) ->
@@ -520,6 +520,8 @@ let toplevel_decl_to_string = function
   | Function fn_decl ->
     "fun " ^ fn_decl.fn_name ^ " : " ^ function_type_to_string fn_decl.fn_params ^
      "\n" ^ expression_to_string indentation fn_decl.fn_body
+  | Include s ->
+    "include \"" ^ s ^ "\""
   | _ -> failwith "Unsupported"
 
 type program = toplevel_decl list

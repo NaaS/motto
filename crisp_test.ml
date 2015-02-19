@@ -215,6 +215,9 @@ let string_of_token = function
   | ARG_NAMING -> "ARG_NAMING"
   | ARR_LEFT -> "ARR_LEFT"
   | ARR_BOTH -> "ARR_BOTH"
+
+  | INCLUDE -> "INCLUDE"
+  | STRING s -> "STRING \"" ^ s ^ "\""
 ;;
 
 let test filepath =

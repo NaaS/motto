@@ -593,6 +593,9 @@ expression:
   | e = expression; ARR_BOTH; f = expression
     {Crisp_syntax.Exchange (e, f)}
 
+  (*FIXME we're missing operations on strings: substring, concat, etc*)
+  | str = STRING
+    {Crisp_syntax.Str str}
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.

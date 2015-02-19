@@ -313,6 +313,8 @@ and expression =
   (*Send and receive between two channels*)
   | Exchange of expression * expression
 
+  | Str of string
+
 let rec expression_to_string indent = function
   | Variable value_name -> indn indent ^ value_name
   | Seq (e1, e2) ->
@@ -473,6 +475,8 @@ let rec expression_to_string indent = function
   | Exchange (e1, e2) ->
     expression_to_string indent e1 ^ " <=> " ^
      expression_to_string 0 e2
+
+  | Str s -> "\"" ^ s ^ "\""
 
     (*FIXME for remainder of this could emulate how blocks are printed*)
   | _ -> failwith "Unsupported"

@@ -158,6 +158,6 @@ rule main = parse
   (*FIXME need to check for escapes, particularly that of doublequotes*)
   | '"' ([^'"']* as str) '"' {STRING str}
 
-  | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_']* as id {IDENTIFIER id}
+  | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_''\'']* as id {IDENTIFIER id}
 
 (*FIXME string primitives as keywords -- e.g., concat, etc*)

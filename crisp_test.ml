@@ -225,20 +225,35 @@ let test filepath =
   loop filepath ()
 ;;
 
-print_endline "*crisp* *crisp*";
-
-if Array.length Sys.argv = 1 then
-  let testdir = "tests" in
+(*Only considers files ending in ".cp"*)
+let test_whole_dir testdir =
+  let ending = ".cp" in
+  let ending_length = String.length ending in
   let dh = Unix.opendir testdir in
   try
     while true do
-      let file = Unix.readdir dh in
+      let filename = Unix.readdir dh in
+      let filename_length = String.length filename in
       (*FIXME naive*)
-      if file <> "." && file <> ".." then test (testdir ^ "/" ^ file)
+      if filename <> "." && filename <> ".." &&
+         filename_length > ending_length &&
+         ending = String.sub filename
+                    ~pos:(filename_length - ending_length)
+                    ~len:ending_length then
+        test (testdir ^ "/" ^ filename)
       else ()
     done
   with End_of_file ->
-    Unix.closedir dh;
+    Unix.closedir dh
+;;
+
+print_endline "*crisp* *crisp*";
+
+if Array.length Sys.argv = 1 then
+  begin
+  test_whole_dir "tests";
+  test_whole_dir "examples";
+  end
 else
   for i = 1 to Array.length Sys.argv - 1 do
     test Sys.argv.(i)

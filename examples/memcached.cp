@@ -16,17 +16,17 @@ proc MCD : (type mcd_request/type mcd_reply client, [type mcd_request/type mcd_r
   # client.
   backends => update_cache(cache) => client
 #
-  # client => backends
-  let request = read(client)
-  if cache[request.key] = None:
-    # Work out which backend memcached to forward this request to, and send.
-    request => backends[hash(request.key) mod len(backends)]
-  else:
-    cache[request.key] => client
+  client => test_cache_or_pass_on(client, backends)
 #
 fun update_cache : (cache : type pbr_BLA, response : type mcd_reply) -> (type mcd_reply)
 # FIXME relying on pass-by-reference of cache
 # FIXME need array assignment syntax
 #  cache[response.key] := response
   response
-
+#
+fun test_cache_or_pass_on : (type mcd_request/type mcd_reply client, [type mcd_request/type mcd_reply] backend; request : type mcd_request) -> ()
+  if cache[request.key] = None:
+    # Work out which backend memcached to forward this request to, and send.
+    request => backends[hash(request.key) mod len(backends)]
+  else:
+    cache[request.key] => client

@@ -20,8 +20,7 @@ proc MCD : (type mcd_request/type mcd_reply client, [type mcd_request/type mcd_r
 #
 fun update_cache : (cache : type pbr_BLA, response : type mcd_reply) -> (type mcd_reply)
 # FIXME relying on pass-by-reference of cache
-# FIXME need array assignment syntax
-#  cache[response.key] := response
+  cache[response.key] := response
   response
 #
 fun test_cache_or_pass_on : (type mcd_request/type mcd_reply client, [type mcd_request/type mcd_reply] backend; request : type mcd_request) -> ()

@@ -472,8 +472,11 @@ expression:
     %prec ite_singlehanded
     {Crisp_syntax.ITE (be, e1, None)}
 *)
+
   | v = IDENTIFIER; ASSIGN; e = expression
     {Crisp_syntax.Update (v, e)}
+  | ident = IDENTIFIER; LEFT_S_BRACKET; idx = expression; RIGHT_S_BRACKET; ASSIGN; e = expression
+    {Crisp_syntax.UpdateIndexable (ident, idx, e)}
 
   | LET; v = IDENTIFIER; EQUALS; e = expression
     {Crisp_syntax.LocalDef ((v, None), e)}

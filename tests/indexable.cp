@@ -6,4 +6,5 @@ fun F : ([integer/integer] c; x : [boolean]) -> ()
   x[y]
   x[3]
   c[{ l = 4 }]
+  c[{ l = 4 }] := { name = "Doe" }
   <>

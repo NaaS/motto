@@ -279,6 +279,8 @@ and expression =
   | ITE of expression * expression * expression option
   | LocalDef of typing * expression (*def value_name : type = expression*)
   | Update of value_name * expression (*value_name := expression*)
+  (*value_name[idx] := expression*)
+  | UpdateIndexable of value_name * expression * expression
 
   (*This work for both tuples and records.*)
   | Projection of expression * label
@@ -350,6 +352,10 @@ let rec expression_to_string indent = function
            code blocks, as is standard. Currently this approach is crude, to get
            going.*)
     indn indent ^ value_name ^ " := " ^ expression_to_string 0 expression
+  | UpdateIndexable (value_name, idx, expression) ->
+    indn indent ^ value_name ^ "[" ^
+    expression_to_string 0 idx ^ "]" ^
+    " := " ^ expression_to_string 0 expression
 
   | LocalDef ((v, ty_opt), e) ->
     let ty_s =

@@ -70,6 +70,7 @@ type type_value =
   (*We send records, not tuples, over the wire, so tuples
     don't need type annotations.*)
   | Tuple of label option * type_value list
+  | Dictionary of label option * type_value
 ;;
 
 let inter (mid : string) (ss : string list) =
@@ -150,6 +151,10 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
       opt_string (indn indent) label " : " ^ "tuple (" ^
        inter ", " (List.map (type_value_to_string mixfix_lists false 0) tys) ^
         ")" ^ endline
+  | Dictionary (label, ty) ->
+      opt_string (indn indent) label " : " ^ "dictionary " ^
+       type_value_to_string mixfix_lists false 0 ty ^
+        endline
 ;;
 
 type typing = value_name * type_value option

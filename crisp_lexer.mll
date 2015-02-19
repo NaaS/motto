@@ -148,6 +148,8 @@ rule main = parse
 
   | "include" {INCLUDE}
 
+  | "dictionary" {TYPE_DICTIONARY}
+
   (*FIXME need to check for escapes, particularly that of doublequotes*)
   | '"' ([^'"']* as str) '"' {STRING str}
 

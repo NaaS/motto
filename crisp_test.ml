@@ -218,6 +218,8 @@ let string_of_token = function
 
   | INCLUDE -> "INCLUDE"
   | STRING s -> "STRING \"" ^ s ^ "\""
+
+  | TYPE_DICTIONARY -> "TYPE_DICTIONARY"
 ;;
 
 let test filepath =

@@ -100,6 +100,8 @@
 
 %token INCLUDE
 
+%token TYPE_DICTIONARY
+
 (*Names*)
 (*
 %token <string> UPPER_ALPHA
@@ -255,6 +257,10 @@ single_line_type_def:
          (ann : Crisp_syntax.type_annotation) ->
        if ann <> [] then failwith "user-defined type shouldn't be annotated"
        else Crisp_syntax.Tuple (name, tl)}
+  | TYPE_DICTIONARY; td = type_def
+    {fun (name : Crisp_syntax.label option)
+         (ann : Crisp_syntax.type_annotation) ->
+       Crisp_syntax.Dictionary (name, td None ann)}
 
 type_def:
   | sltd = single_line_type_def

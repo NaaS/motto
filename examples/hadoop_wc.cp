@@ -57,8 +57,7 @@ fun consume : ([type hadoop_wc/-] input; ans : <[integer] * type hadoop_wc>) -> 
   wc
 
 # Returns true if all channels are able to provide an input.
-# FIXME iron the semicolon out -- shouldnt be needed when have no parameters
-fun AllReady : ([type hadoop_wc/-] chans;) -> (boolean)
+fun AllReady : ([type hadoop_wc/-] chans) -> (boolean)
   for i in unordered chans
   initially acc = True:
     acc and not (peek(chans[i]) = None)

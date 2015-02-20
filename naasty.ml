@@ -19,13 +19,18 @@ type identifier = string
 type naasty_expression =
   | Int_Value of int
 
-
 type naasty_statement =
     (*Should include function prototypes here?*)
   | Declaration of identifier * naasty_type
   | Seq of naasty_statement * naasty_statement
   | Assign of identifier * naasty_expression
-
+  | For of (identifier * naasty_expression * naasty_statement) *
+           naasty_statement
+  | If of naasty_expression * naasty_statement * naasty_statement
+  | Break
+  | Continue
+  | WriteToChan of identifier * identifier
+  | ReadFromChan of identifier * identifier
 
 type naasty_program = naasty_statement list
 

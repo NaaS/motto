@@ -9,12 +9,17 @@
 
 type int_metadata = { signed : bool; precision : int}
 
+type array_size = int
+
 type naasty_type =
   | Int_Type of int_metadata
   | Bool_Type
   | String_Type
+  | Byte_Type
+  | Array_Type of naasty_type * array_size option
 
-type identifier = string
+(*Using de Bruijn binding at this level*)
+type identifier = int
 
 type naasty_expression =
   | Int_Value of int
@@ -31,6 +36,32 @@ type naasty_statement =
   | Continue
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
+
+(*Channels and tasks identified uniquely*)
+type channel_id = int
+type task_id = int
+
+type task =
+    Task of task_id * channel_id list * naasty_statement
+
+(*
+Target is like an infinite register machine?
+*)
+
+(*
+Maybe channels should be implicit -- in the connections between tasks
+*)
+
+type task_graph =
+  task list *
+  channel_id list
+
+(*
+   Task
+   Channel
+   TaskGraph
+
+*)
 
 type naasty_program = naasty_statement list
 

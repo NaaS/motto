@@ -233,7 +233,7 @@ single_line_type_def:
          (ann : Crisp_syntax.type_annotation) ->
        Crisp_syntax.List (name, td None [](*FIXME what annotation for listed value?*),
                           None, ann)}
-  | TYPE; type_name = IDENTIFIER
+  | TYPE (*FIXME use sigil? make implicit?*); type_name = IDENTIFIER
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_syntax.type_annotation) ->
        if ann <> [] then failwith "user-defined type shouldn't be annotated"
@@ -262,7 +262,7 @@ single_line_type_def:
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_syntax.type_annotation) ->
        Crisp_syntax.Dictionary (name, td None ann)}
-  | TYPE_REF; ty = single_line_type_def
+  | TYPE_REF (*FIXME use sigil*); ty = single_line_type_def
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_syntax.type_annotation) ->
        if ann <> [] then failwith "reference types shouldn't be annotated"

@@ -29,6 +29,7 @@ type naasty_type =
   | Array_Type of naasty_type * array_size option
   (*Tuples will be encoded as records*)
   | Record_Type of type_identifier * (field_id * naasty_type) list
+  | Unit_Type
 let rec string_of_naasty_type declaration = function
   | Int_Type int_metadata ->
     let prefix =
@@ -59,9 +60,11 @@ let rec string_of_naasty_type declaration = function
           |> inter "; "
         in " { " ^ fields_str ^ " }"
     in "struct " ^ ty_name ty_id ^ body
+  | Unit_Type -> "void"
 
 type naasty_expression =
   | Int_Value of int
+  | Plus of naasty_expression * naasty_expression
 
 type naasty_statement =
     (*Should include function prototypes here?*)
@@ -75,6 +78,7 @@ type naasty_statement =
   | Continue
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
+  | Return of naasty_expression
 let string_of_naasty_statement _ = failwith "TODO"
 
 type naasty_function =
@@ -110,3 +114,4 @@ Record_Type (0, [(1, Int_Type {signed = true; precision = 32});
                                  Some 4))])
 |> string_of_naasty_type true
 |> print_endline
+;;

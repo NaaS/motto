@@ -43,7 +43,9 @@ let rec string_of_naasty_type declaration = function
     prefix ^ "int" ^ suffix ^ "_t"
   | Bool_Type -> "bool"
   | String_Type ->
-    (*FIXME ensure that we have '#include <string>' if we're to use this type*)
+    (*FIXME ensure that we have '#include <cstring>' if we're to use this type
+            (we're not using the standard C++ string type, according to examples
+             i've seen)*)
     "string"
     (*FIXME representation of string might lend itself better to C-style
       strings, to play nice with de/serialisers.*)

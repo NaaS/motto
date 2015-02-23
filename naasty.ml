@@ -10,6 +10,7 @@
 open General
 
 let prog_indentation = 0
+let no_indent = 0
 let default_indentation = 2
 
 type int_metadata = { signed : bool; precision : int}
@@ -34,27 +35,27 @@ type naasty_type =
   | Record_Type of type_identifier * (field_id * naasty_type) list
   | Unit_Type
   | UserDefined_Type of type_identifier * naasty_type option
-let rec string_of_naasty_type declaration = function
+let rec string_of_naasty_type indent declaration = function
   | Int_Type int_metadata ->
     let prefix =
       if int_metadata.signed then "" else "u" in
     let suffix =
       (*FIXME should limit it to 16, 32, 64 etc*)
       string_of_int int_metadata.precision in
-    prefix ^ "int" ^ suffix ^ "_t"
-  | Bool_Type -> "bool"
+    indn indent ^ prefix ^ "int" ^ suffix ^ "_t"
+  | Bool_Type -> indn indent ^ "bool"
   | String_Type ->
     (*FIXME ensure that we have '#include <cstring>' if we're to use this type
             (we're not using the standard C++ string type, according to examples
              i've seen)*)
-    "string"
+    indn indent ^ "string"
     (*FIXME representation of string might lend itself better to C-style
       strings, to play nice with de/serialisers.*)
   | Array_Type (naasty_type, array_size_opt) ->
     let size = match array_size_opt with
       | None -> ""
       | Some i -> string_of_int i in
-    string_of_naasty_type false naasty_type ^ "[" ^ size ^ "]"
+    indn indent ^ string_of_naasty_type no_indent false naasty_type ^ "[" ^ size ^ "]"
   (*Tuples will be encoded as records*)
   | Record_Type (ty_id, fields) ->
     let body =
@@ -62,22 +63,23 @@ let rec string_of_naasty_type declaration = function
       else
         let fields_str =
           List.map (fun (f_id, ty) ->
-            string_of_naasty_type false ty ^ " " ^ id_name f_id) fields
-          |> inter "; "
-        in " { " ^ fields_str ^ " }"
-    in "struct " ^ ty_name ty_id ^ body
-  | Unit_Type -> "void"
+            string_of_naasty_type (indent + default_indentation) false(*FIXME*) ty ^ " " ^ id_name f_id) fields
+          |> inter ";\n"
+        in fields_str
+    in indn indent ^ "struct " ^ ty_name ty_id ^
+       " {\n" ^ body ^ "\n" ^ indn indent ^ "}"
+  | Unit_Type -> indn indent ^ "void"
   | UserDefined_Type (ty_id, tydef_opt) ->
     if declaration then
       begin
         match tydef_opt with
         | None -> failwith "Missing type definition"
         | Some ty ->
-          "typedef " ^
-          string_of_naasty_type false ty ^ " " ^
+          indn indent ^ "typedef " ^
+          string_of_naasty_type (indent + default_indentation) declaration ty ^ " " ^
           ty_name ty_id
       end
-    else ty_name ty_id
+    else indn indent ^ ty_name ty_id
 
 type naasty_expression =
   | Var of identifier
@@ -106,7 +108,7 @@ type naasty_statement =
 let rec string_of_naasty_statement indent = function
   | Declaration (id, ty) ->
     (*NOTE assuming that types can only be declared globally*)
-    indn indent ^ string_of_naasty_type false ty ^ " " ^ id_name id
+    indn indent ^ string_of_naasty_type indent false ty ^ " " ^ id_name id
   | Seq (stmt1, stmt2) ->
     string_of_naasty_statement indent stmt1 ^ ";\n" ^
     string_of_naasty_statement indent stmt2
@@ -130,9 +132,9 @@ type naasty_function =
   identifier * naasty_type list * naasty_type * naasty_statement
 let string_of_naasty_function (f_id, arg_types, res_type, body) =
   let arg_types_s =
-   List.map (string_of_naasty_type false) arg_types
+   List.map (string_of_naasty_type no_indent false) arg_types
    |> inter ", " in
-  string_of_naasty_type false res_type ^ " " ^ id_name f_id ^
+  string_of_naasty_type no_indent false res_type ^ " " ^ id_name f_id ^
     "(" ^ arg_types_s ^ ") {\n" ^
     string_of_naasty_statement default_indentation body ^ "\n}"
 
@@ -141,7 +143,7 @@ type naasty_declaration =
   | Fun_Decl of naasty_function
   | Stmt of naasty_statement
 let string_of_naasty_declaration = function
-  | Type_Decl naasty_type -> string_of_naasty_type true naasty_type
+  | Type_Decl naasty_type -> string_of_naasty_type prog_indentation true naasty_type
   | Fun_Decl naasty_function -> string_of_naasty_function naasty_function
   | Stmt naasty_statement -> string_of_naasty_statement prog_indentation naasty_statement
 
@@ -157,7 +159,7 @@ Record_Type (0, [(1, Int_Type {signed = true; precision = 32});
                  (3, String_Type);
                  (4, Array_Type (Int_Type {signed = false; precision = 64},
                                  Some 4))])
-|> string_of_naasty_type true
+|> string_of_naasty_type prog_indentation true
 |> print_endline
 ;;
 Fun_Decl (0, [], Int_Type {signed = false; precision = 16},

@@ -33,6 +33,7 @@ type naasty_type =
   (*Tuples will be encoded as records*)
   | Record_Type of type_identifier * (field_id * naasty_type) list
   | Unit_Type
+  | UserDefined_Type of type_identifier * naasty_type option
 let rec string_of_naasty_type declaration = function
   | Int_Type int_metadata ->
     let prefix =
@@ -66,6 +67,17 @@ let rec string_of_naasty_type declaration = function
         in " { " ^ fields_str ^ " }"
     in "struct " ^ ty_name ty_id ^ body
   | Unit_Type -> "void"
+  | UserDefined_Type (ty_id, tydef_opt) ->
+    if declaration then
+      begin
+        match tydef_opt with
+        | None -> failwith "Missing type definition"
+        | Some ty ->
+          "typedef " ^
+          string_of_naasty_type false ty ^ " " ^
+          ty_name ty_id
+      end
+    else ty_name ty_id
 
 type naasty_expression =
   | Var of identifier

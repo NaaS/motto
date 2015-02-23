@@ -63,8 +63,15 @@ let rec string_of_naasty_type declaration = function
   | Unit_Type -> "void"
 
 type naasty_expression =
+  | Var of identifier
   | Int_Value of int
   | Plus of naasty_expression * naasty_expression
+let rec string_of_naasty_expression = function
+  | Int_Value i -> string_of_int i
+  | Plus (e1, e2) ->
+    "(" ^ string_of_naasty_expression e1 ^ ") + (" ^
+    string_of_naasty_expression e2 ^ ")"
+  | Var id -> id_name id
 
 type naasty_statement =
     (*Should include function prototypes here?*)
@@ -79,7 +86,28 @@ type naasty_statement =
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
   | Return of naasty_expression
-let string_of_naasty_statement _ = failwith "TODO"
+let rec string_of_naasty_statement = function
+  | Declaration (id, ty) ->
+    (*NOTE assuming that types can only be declared globally*)
+    string_of_naasty_type false ty ^ " " ^ id_name id
+  | Seq (stmt1, stmt2) ->
+    string_of_naasty_statement stmt1 ^ ";\n" ^
+    string_of_naasty_statement stmt2
+  | Assign (id, e) ->
+    id_name id ^ " = " ^ string_of_naasty_expression e
+(*
+  | For of (identifier * naasty_expression * naasty_statement) *
+           naasty_statement
+  | If of naasty_expression * naasty_statement * naasty_statement
+*)
+  | Break -> "break"
+  | Continue -> "continue"
+(*
+  | WriteToChan of identifier * identifier
+  | ReadFromChan of identifier * identifier
+*)
+  | Return e ->
+    "return (" ^ string_of_naasty_expression e ^ ")"
 
 type naasty_function =
   identifier * naasty_type list * naasty_type * naasty_statement
@@ -113,5 +141,13 @@ Record_Type (0, [(1, Int_Type {signed = true; precision = 32});
                  (4, Array_Type (Int_Type {signed = false; precision = 64},
                                  Some 4))])
 |> string_of_naasty_type true
+|> print_endline
+;;
+Fun_Decl (0, [], Int_Type {signed = false; precision = 16},
+          Seq (Declaration (1, Int_Type {signed = false; precision = 16}),
+               Seq (Assign (1, Int_Value 5),
+                    Return (Var 1))))
+
+|> string_of_naasty_declaration
 |> print_endline
 ;;

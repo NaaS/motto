@@ -21,27 +21,6 @@ type decorator_name = string
 type label = string
 type univ_type = string (*FIXME hack*)
 
-let opt_string (prefix : string) (s : string option) (suffix : string) : string =
-  match s with
-  | None -> ""
-  | Some s' -> prefix ^ s' ^ suffix
-;;
-let replicate (s : string) (count : int) =
-  assert (count > -1);
-  let rec replicate' (acc : string) (i : int) =
-    if i = 0 then acc
-    else replicate' (acc ^ s) (i - 1)
-  in
-    replicate' "" count
-;;
-let indn (indent : int) : string =
-  replicate " " indent
-;;
-let mk_block (indent : int) (f : int -> 'a -> string) (l : 'a list) : string =
-  List.fold_right (fun x already ->
-    already ^ f indent x) l ""
-;;
-
 type dependency_index = string
 
 (*FIXME must allow the annotation to talk about a value that won't be used in

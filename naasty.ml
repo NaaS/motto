@@ -75,19 +75,31 @@ type naasty_statement =
   | Continue
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
+let string_of_naasty_statement _ = failwith "TODO"
 
 type naasty_function =
-  identifier * naasty_type * naasty_type * naasty_statement
+  identifier * naasty_type list * naasty_type * naasty_statement
+let string_of_naasty_function (f_id, arg_types, res_type, body) =
+  let arg_types_s =
+   List.map (string_of_naasty_type false) arg_types
+   |> inter ", " in
+  string_of_naasty_type false res_type ^ " " ^ id_name f_id ^
+    "(" ^ arg_types_s ^ ") {\n" ^
+    string_of_naasty_statement body ^ "\n}"
 
 type naasty_declaration =
     Type_Decl of naasty_type
   | Fun_Decl of naasty_function
   | Stmt of naasty_statement
+let string_of_naasty_declaration = function
+  | Type_Decl naasty_type -> string_of_naasty_type true naasty_type
+  | Fun_Decl naasty_function -> string_of_naasty_function naasty_function
+  | Stmt naasty_statement -> string_of_naasty_statement naasty_statement
 
 type naasty_program = naasty_declaration list
-
-(*FIXME pretty printing*)
-let string_of_program = ""
+let string_of_program prog =
+  List.map string_of_naasty_declaration prog
+  |> inter "; "
 
 ;;
 (*FIXME crude test*)

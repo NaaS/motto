@@ -4,6 +4,8 @@
    (based on prototypical Matron language from last November)
 *)
 
+open General
+
 (*NOTE currently we don't allow programmers to have a non-zero program-level
   indentation. Cannot think of a reason why this policy is a bad thing.*)
 let min_indentation = 0
@@ -72,12 +74,6 @@ type type_value =
   | Tuple of label option * type_value list
   | Dictionary of label option * type_value
   | Reference of label option * type_value
-;;
-
-let inter (mid : string) (ss : string list) =
-  List.fold_right (fun x s ->
-    if s = "" then x
-    else x ^ mid ^ s) ss ""
 ;;
 
 let rec type_value_to_string mixfix_lists ending_newline indent ty_value =

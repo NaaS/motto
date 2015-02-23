@@ -7,22 +7,58 @@
    libNaaS, into OCaml.
 *)
 
+open General
+
 type int_metadata = { signed : bool; precision : int}
-type string_metadata = { max_size : int option } (*FIXME include other metadata*)
 type array_size = int
 type field_id = int
+type type_identifier = int
+type identifier = int
 
+(* NOTE in the basic pretty-printing functions below we don't terminate with
+        semicolons, since these functions could be used compositionally.*)
+
+let ty_name i = "ty_" ^ string_of_int i
+let id_name i = "id_" ^ string_of_int i
+
+(*FIXME where to store/use metadata for de/serialisers*)
 type naasty_type =
   | Int_Type of int_metadata
   | Bool_Type
-  | String_Type of string_metadata
-  | Byte_Type
+  | String_Type
   | Array_Type of naasty_type * array_size option
   (*Tuples will be encoded as records*)
-  | Record_Type of (field_id * naasty_type) list
-
-(*Using de Bruijn binding at this level*)
-type identifier = int
+  | Record_Type of type_identifier * (field_id * naasty_type) list
+let rec string_of_naasty_type declaration = function
+  | Int_Type int_metadata ->
+    let prefix =
+      if int_metadata.signed then "" else "u" in
+    let suffix =
+      (*FIXME should limit it to 16, 32, 64 etc*)
+      string_of_int int_metadata.precision in
+    prefix ^ "int" ^ suffix ^ "_t"
+  | Bool_Type -> "bool"
+  | String_Type ->
+    (*FIXME ensure that we have '#include <string>' if we're to use this type*)
+    "string"
+    (*FIXME representation of string might lend itself better to C-style
+      strings, to play nice with de/serialisers.*)
+  | Array_Type (naasty_type, array_size_opt) ->
+    let size = match array_size_opt with
+      | None -> ""
+      | Some i -> string_of_int i in
+    string_of_naasty_type false naasty_type ^ "[" ^ size ^ "]"
+  (*Tuples will be encoded as records*)
+  | Record_Type (ty_id, fields) ->
+    let body =
+      if not declaration then ""
+      else
+        let fields_str =
+          List.map (fun (f_id, ty) ->
+            string_of_naasty_type false ty ^ " " ^ id_name f_id) fields
+          |> inter "; "
+        in " { " ^ fields_str ^ " }"
+    in "struct " ^ ty_name ty_id ^ body
 
 type naasty_expression =
   | Int_Value of int
@@ -52,3 +88,13 @@ type naasty_program = naasty_declaration list
 
 (*FIXME pretty printing*)
 let string_of_program = ""
+
+;;
+(*FIXME crude test*)
+Record_Type (0, [(1, Int_Type {signed = true; precision = 32});
+                 (2, Bool_Type);
+                 (3, String_Type);
+                 (4, Array_Type (Int_Type {signed = false; precision = 64},
+                                 Some 4))])
+|> string_of_naasty_type true
+|> print_endline

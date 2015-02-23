@@ -9,6 +9,9 @@
 
 open General
 
+let prog_indentation = 0
+let default_indentation = 2
+
 type int_metadata = { signed : bool; precision : int}
 type array_size = int
 type field_id = int
@@ -86,28 +89,28 @@ type naasty_statement =
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
   | Return of naasty_expression
-let rec string_of_naasty_statement = function
+let rec string_of_naasty_statement indent = function
   | Declaration (id, ty) ->
     (*NOTE assuming that types can only be declared globally*)
-    string_of_naasty_type false ty ^ " " ^ id_name id
+    indn indent ^ string_of_naasty_type false ty ^ " " ^ id_name id
   | Seq (stmt1, stmt2) ->
-    string_of_naasty_statement stmt1 ^ ";\n" ^
-    string_of_naasty_statement stmt2
+    string_of_naasty_statement indent stmt1 ^ ";\n" ^
+    string_of_naasty_statement indent stmt2
   | Assign (id, e) ->
-    id_name id ^ " = " ^ string_of_naasty_expression e
+    indn indent ^ id_name id ^ " = " ^ string_of_naasty_expression e
 (*
   | For of (identifier * naasty_expression * naasty_statement) *
            naasty_statement
   | If of naasty_expression * naasty_statement * naasty_statement
 *)
-  | Break -> "break"
-  | Continue -> "continue"
+  | Break -> indn indent ^ "break"
+  | Continue -> indn indent ^ "continue"
 (*
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
 *)
   | Return e ->
-    "return (" ^ string_of_naasty_expression e ^ ")"
+    indn indent ^ "return (" ^ string_of_naasty_expression e ^ ")"
 
 type naasty_function =
   identifier * naasty_type list * naasty_type * naasty_statement
@@ -117,7 +120,7 @@ let string_of_naasty_function (f_id, arg_types, res_type, body) =
    |> inter ", " in
   string_of_naasty_type false res_type ^ " " ^ id_name f_id ^
     "(" ^ arg_types_s ^ ") {\n" ^
-    string_of_naasty_statement body ^ "\n}"
+    string_of_naasty_statement default_indentation body ^ "\n}"
 
 type naasty_declaration =
     Type_Decl of naasty_type
@@ -126,7 +129,7 @@ type naasty_declaration =
 let string_of_naasty_declaration = function
   | Type_Decl naasty_type -> string_of_naasty_type true naasty_type
   | Fun_Decl naasty_function -> string_of_naasty_function naasty_function
-  | Stmt naasty_statement -> string_of_naasty_statement naasty_statement
+  | Stmt naasty_statement -> string_of_naasty_statement prog_indentation naasty_statement
 
 type naasty_program = naasty_declaration list
 let string_of_program prog =

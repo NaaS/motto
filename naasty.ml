@@ -8,15 +8,18 @@
 *)
 
 type int_metadata = { signed : bool; precision : int}
-
+type string_metadata = { max_size : int option } (*FIXME include other metadata*)
 type array_size = int
+type field_id = int
 
 type naasty_type =
   | Int_Type of int_metadata
   | Bool_Type
-  | String_Type
+  | String_Type of string_metadata
   | Byte_Type
   | Array_Type of naasty_type * array_size option
+  (*Tuples will be encoded as records*)
+  | Record_Type of (field_id * naasty_type) list
 
 (*Using de Bruijn binding at this level*)
 type identifier = int
@@ -37,41 +40,15 @@ type naasty_statement =
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
 
-(*Channels and tasks identified uniquely*)
-type channel_id = int
-type task_id = int
+type naasty_function =
+  identifier * naasty_type * naasty_type * naasty_statement
 
-type task =
-    Task of task_id * channel_id list * naasty_statement
+type naasty_declaration =
+    Type_Decl of naasty_type
+  | Fun_Decl of naasty_function
+  | Stmt of naasty_statement
 
-(*
-Target is like an infinite register machine?
-*)
-
-(*
-Maybe channels should be implicit -- in the connections between tasks
-*)
-
-type task_graph =
-  task list *
-  channel_id list
-
-(*
-   Task
-   Channel
-   TaskGraph
-
-*)
-
-type naasty_program = naasty_statement list
+type naasty_program = naasty_declaration list
 
 (*FIXME pretty printing*)
 let string_of_program = ""
-
-(*FIXME what's the metric for cost?
-        maybe it should be a vector: memory use, computational cost, ...*)
-let analyse_cost (prog : naasty_program) = 0
-let parallelise (prog : naasty_program) : naasty_program list = []
-let bound_cost (expense_per_unit : int) (prog : naasty_program) : naasty_program list = []
-
-

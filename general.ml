@@ -8,10 +8,13 @@ let inter (mid : string) (ss : string list) =
     if s = "" then x
     else x ^ mid ^ s) ss ""
 
+let bind_opt (f : 'a -> 'b) (default : 'b) (x_opt : 'a option) : 'b =
+  match x_opt with
+  | None -> default
+  | Some x -> f x
+
 let opt_string (prefix : string) (s : string option) (suffix : string) : string =
-  match s with
-  | None -> ""
-  | Some s' -> prefix ^ s' ^ suffix
+  bind_opt (fun s' -> prefix ^ s' ^ suffix) "" s
 
 let replicate (s : string) (count : int) =
   assert (count > -1);

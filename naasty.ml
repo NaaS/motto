@@ -14,6 +14,7 @@ let no_indent = 0
 let default_indentation = 2
 
 type int_metadata = { signed : bool; precision : int }
+let default_int_metadata = { signed = true; precision = 32 }
 (*"identifier" is used for variables, constants and also field names.*)
 type identifier = int
 (*Variable-length types -- such as arrays -- can have their lengths either

@@ -142,8 +142,19 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     in (Int_Type (label_opt', metadata), st')
   | String (label_opt, type_ann) ->
     let (label_opt', st') = check_and_generate_name label_opt in
-    let vlen = Undefined (*FIXME determine from type_ann*)
-    in (Array_Type (label_opt', Char_Type None, vlen), st')
+    let vlen = Undefined (*FIXME determine from type_ann*) in
+    let container_type =
+      match vlen with
+      | Undefined ->
+        (*FIXME it's really important to specify stopping conditions, for the
+          deserialiser to work -- plus this could also allow us to implement
+          bounds checking. This also applies to "Dependent" below.*)
+        Reference_Type (label_opt', Char_Type None)
+      | Max _ -> Array_Type (label_opt', Char_Type None, vlen)
+      | Dependent _ ->
+        (*FIXME as in "Undefined" above, we need stopping conditions.*)
+        Reference_Type (label_opt', Char_Type None)
+    in (container_type, st')
   | Reference (label_opt, ty) ->
     let (label_opt', st') = check_and_generate_name label_opt in
     let (ty', st'') = naasty_of_flick_type st' ty

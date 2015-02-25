@@ -76,7 +76,7 @@ let rec string_of_naasty_type indent = function
       strings, to play nice with de/serialisers.*)
   | Array_Type (id_opt, naasty_type, array_size) ->
     let size = match array_size with
-      | Undefined -> ""
+      | Undefined -> failwith "Arrays must have a defined size."
       | Max i -> string_of_int i
       | Dependent _ -> failwith "TODO"
     in indn indent ^

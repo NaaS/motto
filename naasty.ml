@@ -146,45 +146,44 @@ let rec string_of_naasty_statement indent = function
 
 type naasty_function =
   identifier * naasty_type list * naasty_type * naasty_statement
-let string_of_naasty_function (f_id, arg_types, res_type, body) =
+let string_of_naasty_function indent (f_id, arg_types, res_type, body) =
   let arg_types_s =
-   List.map (string_of_naasty_type no_indent) arg_types
+   List.map (string_of_naasty_type indent) arg_types
    |> inter ", " in
-  string_of_naasty_type no_indent res_type ^ " " ^ id_name f_id ^ " " ^
+  string_of_naasty_type indent res_type ^ " " ^ id_name f_id ^ " " ^
     "(" ^ arg_types_s ^ ") {\n" ^
-    string_of_naasty_statement default_indentation body ^ "\n}"
+    string_of_naasty_statement (indent + default_indentation) body ^ ";\n" ^
+    "}"
 
 type naasty_declaration =
     Type_Decl of naasty_type
   | Fun_Decl of naasty_function
   | Stmt of naasty_statement
-let string_of_naasty_declaration = function
-  | Type_Decl naasty_type -> string_of_naasty_type prog_indentation naasty_type
-  | Fun_Decl naasty_function -> string_of_naasty_function naasty_function
-  | Stmt naasty_statement -> string_of_naasty_statement prog_indentation naasty_statement
+let string_of_naasty_declaration indent = function
+  | Type_Decl naasty_type -> string_of_naasty_type indent naasty_type
+  | Fun_Decl naasty_function -> string_of_naasty_function indent naasty_function
+  | Stmt naasty_statement -> string_of_naasty_statement indent naasty_statement
 
 type naasty_program = naasty_declaration list
-let string_of_program prog =
-  List.map string_of_naasty_declaration prog
-  |> inter "; "
+let string_of_naasty_program indent prog =
+  List.map (string_of_naasty_declaration indent) prog
+  |> String.concat ";\n"
 
 ;;
 (*FIXME crude test*)
-Record_Type (8, [(Int_Type (Some 1, {signed = true; precision = 32}));
+[
+Type_Decl (Record_Type (8, [(Int_Type (Some 1, {signed = true; precision = 32}));
                  (Bool_Type (Some 2));
                  (String_Type (Some 3));
                  (Array_Type (Some 4,
                               Int_Type (None,
                                         {signed = false; precision = 64}),
-                                 Some 4))])
-|> string_of_naasty_type prog_indentation
-|> print_endline
-;;
+                              Some 4))]));
 Fun_Decl (0, [Bool_Type (Some 6); UserDefined_Type (Some 7, 8)], Int_Type (None, {signed = false; precision = 16}),
           Seq (Declaration (Int_Type (Some 1, {signed = false; precision = 16})),
                Seq (Assign (1, Int_Value 5),
                     Return (Var 1))))
-
-|> string_of_naasty_declaration
+]
+|> string_of_naasty_program prog_indentation
 |> print_endline
 ;;

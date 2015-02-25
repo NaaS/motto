@@ -82,11 +82,10 @@ let rec string_of_naasty_type indent = function
     (*Record types won't appear nested -- instead, the nested record will be
       pulled up to a global scope as a separate record type.*)
     let body =
-      let fields_str =
-        List.map (string_of_naasty_type (indent + default_indentation))
-          fields
-        |> inter ";\n"
-      in fields_str
+      List.map (fun s ->
+        string_of_naasty_type (indent + default_indentation) s ^ ";")
+       fields
+      |> String.concat "\n"
     in indn indent ^ "typedef " ^
     "struct " ^
     "{\n" ^ body ^ "\n" ^ indn indent ^ "}" ^

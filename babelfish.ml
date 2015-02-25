@@ -18,14 +18,14 @@ type state =
 
 (*FIXME i'm ignoring annotations for the time being*)
 let rec naasty_of_flick_type (st : state)
-  : (type_value -> naasty_type option(*FIXME why option?*) * state) = function
+  : (type_value -> naasty_type * state) = function
   | Disjoint_Union (_, _) -> failwith "Unsupported"
   | Empty -> failwith "Cannot translate empty type"
   | Tuple (label_opt, []) ->
     assert (label_opt = None);
     (*We cannot have values of type "void" in the target, we can only type
       functions with such a type.*)
-    ((Some Unit_Type, st))
+    (Unit_Type, st)
   | UserDefinedType (label_opt, type_name) ->
     if not (List.mem_assoc type_name st.type_symbols) then
       failwith ("Undeclared type: " ^ type_name);
@@ -45,7 +45,7 @@ let rec naasty_of_flick_type (st : state)
            })
       end in
     let ty' =
-      Some (UserDefined_Type (label_opt', type_name'))
+      UserDefined_Type (label_opt', type_name')
     in (ty', st')
 (*
   | String (label_opt, type_ann)

@@ -13,10 +13,20 @@ let prog_indentation = 0
 let no_indent = 0
 let default_indentation = 2
 
-type int_metadata = { signed : bool; precision : int}
+type int_metadata = { signed : bool; precision : int }
+(*"identifier" is used for variables, constants and also field names.*)
+type identifier = int
+(*Variable-length types -- such as arrays -- can have their lengths either
+  undefined, or fixed by a constant, or defined by some other field.*)
+type vlen =
+  | Undefined
+  | Max of int
+  | Dependent of identifier
+    (*All identifiers have unique names, by construction. In this case, we're
+      referring to a field name.*)
+type string_metadata = { length : vlen }
 type array_size = int
 type type_identifier = int
-type identifier = int
 
 (* NOTE in the basic pretty-printing functions below we don't terminate with
         semicolons, since these functions could be used compositionally.*)
@@ -28,7 +38,8 @@ let id_name i = "id_" ^ string_of_int i
 type naasty_type =
   | Int_Type of identifier option * int_metadata
   | Bool_Type of identifier option
-  | String_Type of identifier option
+  | String_Type of identifier option (** string_metadata*)
+    (*Should we drop String_Type and simple expand it into an array of chars?*)
   | Array_Type of identifier option * naasty_type * array_size option
   (*Tuples will be encoded as records*)
   | Record_Type of

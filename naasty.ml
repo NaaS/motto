@@ -15,7 +15,6 @@ let default_indentation = 2
 
 type int_metadata = { signed : bool; precision : int}
 type array_size = int
-type field_id = int
 type type_identifier = int
 type identifier = int
 
@@ -27,59 +26,75 @@ let id_name i = "id_" ^ string_of_int i
 
 (*FIXME where to store/use metadata for de/serialisers*)
 type naasty_type =
-  | Int_Type of int_metadata
-  | Bool_Type
-  | String_Type
-  | Array_Type of naasty_type * array_size option
+  | Int_Type of identifier option * int_metadata
+  | Bool_Type of identifier option
+  | String_Type of identifier option
+  | Array_Type of identifier option * naasty_type * array_size option
   (*Tuples will be encoded as records*)
-  | Record_Type of type_identifier * (field_id * naasty_type) list
+  | Record_Type of
+(*
+      identifier option * (*possible identifier this "type" -- this is only
+                            relevant if the type spec occurs within another type
+                            spec -- such as when we have a struct within a
+                            struct.*)
+*)
+      type_identifier * (*name for this type*)
+      naasty_type list (*fields in the record*)
   | Unit_Type
-  | UserDefined_Type of type_identifier * naasty_type option
-let rec string_of_naasty_type indent declaration = function
-  | Int_Type int_metadata ->
+    (*You cannot declare or name a value of unit type in NaaSty*)
+  | UserDefined_Type of identifier option * type_identifier
+    (*No identifier is provided if the UDT appears in the value type within
+    a function type*)
+let rec string_of_naasty_type indent = function
+  | Int_Type (id_opt, int_metadata) ->
     let prefix =
       if int_metadata.signed then "" else "u" in
     let suffix =
       (*FIXME should limit it to 16, 32, 64 etc*)
       string_of_int int_metadata.precision in
-    indn indent ^ prefix ^ "int" ^ suffix ^ "_t"
-  | Bool_Type -> indn indent ^ "bool"
-  | String_Type ->
+    indn indent ^
+    prefix ^ "int" ^ suffix ^ "_t" ^
+    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+  | Bool_Type id_opt ->
+    indn indent ^
+    "bool" ^
+    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+  | String_Type id_opt ->
     (*FIXME ensure that we have '#include <cstring>' if we're to use this type
             (we're not using the standard C++ string type, according to examples
              i've seen)*)
-    indn indent ^ "string"
+    indn indent ^
+    "string" ^
+    bind_opt (fun i -> " " ^ id_name i) "" id_opt
     (*FIXME representation of string might lend itself better to C-style
       strings, to play nice with de/serialisers.*)
-  | Array_Type (naasty_type, array_size_opt) ->
+  | Array_Type (id_opt, naasty_type, array_size_opt) ->
     let size = match array_size_opt with
       | None -> ""
       | Some i -> string_of_int i in
-    indn indent ^ string_of_naasty_type no_indent false naasty_type ^ "[" ^ size ^ "]"
+    indn indent ^
+    (*FIXME notation might be wrong -- the brackets enclosing the size might
+            need to appear to the right of the variable name.*)
+    string_of_naasty_type no_indent naasty_type ^ "[" ^ size ^ "]" ^
+    bind_opt (fun i -> " " ^ id_name i) "" id_opt
   (*Tuples will be encoded as records*)
-  | Record_Type (ty_id, fields) ->
+  | Record_Type (ty_ident, fields) ->
+    (*Record types won't appear nested -- instead, the nested record will be
+      pulled up to a global scope as a separate record type.*)
     let body =
-      if not declaration then ""
-      else
-        let fields_str =
-          List.map (fun (f_id, ty) ->
-            string_of_naasty_type (indent + default_indentation) false(*FIXME*) ty ^ " " ^ id_name f_id) fields
-          |> inter ";\n"
-        in fields_str
-    in indn indent ^ "struct " ^ ty_name ty_id ^
-       " {\n" ^ body ^ "\n" ^ indn indent ^ "}"
+      let fields_str =
+        List.map (string_of_naasty_type (indent + default_indentation))
+          fields
+        |> inter ";\n"
+      in fields_str
+    in indn indent ^ "typedef " ^
+    "struct " ^ ty_name ty_ident ^
+    " {\n" ^ body ^ "\n" ^ indn indent ^ "}"
   | Unit_Type -> indn indent ^ "void"
-  | UserDefined_Type (ty_id, tydef_opt) ->
-    if declaration then
-      begin
-        match tydef_opt with
-        | None -> failwith "Missing type definition"
-        | Some ty ->
-          indn indent ^ "typedef " ^
-          string_of_naasty_type (indent + default_indentation) declaration ty ^ " " ^
-          ty_name ty_id
-      end
-    else indn indent ^ ty_name ty_id
+  | UserDefined_Type (id_opt, ty_ident) ->
+    indn indent ^
+    ty_name ty_ident ^
+    bind_opt (fun i -> " " ^ id_name i) "" id_opt
 
 type naasty_expression =
   | Var of identifier
@@ -94,7 +109,7 @@ let rec string_of_naasty_expression = function
 
 type naasty_statement =
     (*Should include function prototypes here?*)
-  | Declaration of identifier * naasty_type
+  | Declaration of naasty_type
   | Seq of naasty_statement * naasty_statement
   | Assign of identifier * naasty_expression
   | For of (identifier * naasty_expression * naasty_statement) *
@@ -106,9 +121,10 @@ type naasty_statement =
   | ReadFromChan of identifier * identifier
   | Return of naasty_expression
 let rec string_of_naasty_statement indent = function
-  | Declaration (id, ty) ->
-    (*NOTE assuming that types can only be declared globally*)
-    indn indent ^ string_of_naasty_type indent false ty ^ " " ^ id_name id
+  | Declaration ty ->
+    (*NOTE assuming that types can only be defined globally,
+           but they can be used in local variable declarations.*)
+    string_of_naasty_type indent ty
   | Seq (stmt1, stmt2) ->
     string_of_naasty_statement indent stmt1 ^ ";\n" ^
     string_of_naasty_statement indent stmt2
@@ -132,9 +148,9 @@ type naasty_function =
   identifier * naasty_type list * naasty_type * naasty_statement
 let string_of_naasty_function (f_id, arg_types, res_type, body) =
   let arg_types_s =
-   List.map (string_of_naasty_type no_indent false) arg_types
+   List.map (string_of_naasty_type no_indent) arg_types
    |> inter ", " in
-  string_of_naasty_type no_indent false res_type ^ " " ^ id_name f_id ^
+  string_of_naasty_type no_indent res_type ^ " " ^ id_name f_id ^
     "(" ^ arg_types_s ^ ") {\n" ^
     string_of_naasty_statement default_indentation body ^ "\n}"
 
@@ -143,7 +159,7 @@ type naasty_declaration =
   | Fun_Decl of naasty_function
   | Stmt of naasty_statement
 let string_of_naasty_declaration = function
-  | Type_Decl naasty_type -> string_of_naasty_type prog_indentation true naasty_type
+  | Type_Decl naasty_type -> string_of_naasty_type prog_indentation naasty_type
   | Fun_Decl naasty_function -> string_of_naasty_function naasty_function
   | Stmt naasty_statement -> string_of_naasty_statement prog_indentation naasty_statement
 
@@ -154,16 +170,18 @@ let string_of_program prog =
 
 ;;
 (*FIXME crude test*)
-Record_Type (0, [(1, Int_Type {signed = true; precision = 32});
-                 (2, Bool_Type);
-                 (3, String_Type);
-                 (4, Array_Type (Int_Type {signed = false; precision = 64},
+Record_Type (0, [(Int_Type (Some 1, {signed = true; precision = 32}));
+                 (Bool_Type (Some 2));
+                 (String_Type (Some 3));
+                 (Array_Type (Some 4,
+                              Int_Type (None,
+                                        {signed = false; precision = 64}),
                                  Some 4))])
-|> string_of_naasty_type prog_indentation true
+|> string_of_naasty_type prog_indentation
 |> print_endline
 ;;
-Fun_Decl (0, [], Int_Type {signed = false; precision = 16},
-          Seq (Declaration (1, Int_Type {signed = false; precision = 16}),
+Fun_Decl (0, [], Int_Type (None, {signed = false; precision = 16}),
+          Seq (Declaration (Int_Type (Some 1, {signed = false; precision = 16})),
                Seq (Assign (1, Int_Value 5),
                     Return (Var 1))))
 

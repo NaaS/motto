@@ -88,8 +88,9 @@ let rec string_of_naasty_type indent = function
         |> inter ";\n"
       in fields_str
     in indn indent ^ "typedef " ^
-    "struct " ^ ty_name ty_ident ^
-    " {\n" ^ body ^ "\n" ^ indn indent ^ "}"
+    "struct " ^
+    "{\n" ^ body ^ "\n" ^ indn indent ^ "}" ^
+    " " ^ ty_name ty_ident
   | Unit_Type -> indn indent ^ "void"
   | UserDefined_Type (id_opt, ty_ident) ->
     indn indent ^

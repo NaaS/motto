@@ -47,10 +47,12 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     let (label_opt', st') = check_and_generate_name label_opt in
     let ty' = UserDefined_Type (label_opt', type_name')
     in (ty', st')
+  | Boolean (label_opt, type_ann) ->
+    let (label_opt', st') = check_and_generate_name label_opt
+    in (Bool_Type label_opt', st')
 (*
   | String (label_opt, type_ann)
   | Integer (label_opt, type_ann)
-  | Boolean (label_opt, type_ann)
   | RecordType (label_opt, tys, type_ann)
   | List (label_opt, ty, _, type_ann)
   | IPv4Address label_opt

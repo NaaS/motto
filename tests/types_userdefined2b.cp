@@ -1,4 +1,4 @@
-
+# This differs from types_userdefined2.cp in field "c" below
 
 type t1 : record
   a : string
@@ -6,6 +6,6 @@ type t1 : record
     more = bla }
   b : integer
     { encoding = blaInteger }
-  c : boolean
+  c : [integer]
     { encoding = blaListInt }
 

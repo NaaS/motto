@@ -3,6 +3,7 @@
    Nik Sultana, Cambridge University Computer Lab, February 2015
 *)
 
+open General
 open Crisp_syntax
 open Naasty
 
@@ -98,7 +99,5 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     in (Reference_Type (label_opt', ty'), st'')
   | RecordType (label_opt, tys, type_ann(*FIXME unused*)) ->
     let (type_identifier, st') = check_and_generate_typename label_opt in
-    let (tys', st'') = List.fold_right (fun ty (tys_acc, st_acc) ->
-      let (ty', st_acc') = naasty_of_flick_type st_acc ty
-      in (ty' :: tys_acc, st_acc')) tys ([], st')
+    let (tys', st'') = fold_map ([], st') naasty_of_flick_type tys
     in (Record_Type (type_identifier, List.rev tys'), st'')

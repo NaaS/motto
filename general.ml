@@ -25,3 +25,11 @@ let indn (indent : int) : string =
 let mk_block (indent : int) (f : int -> 'a -> string) (l : 'a list) : string =
   List.fold_right (fun x already ->
     already ^ f indent x) l ""
+
+(*Fold-right that threads another parameter through the fold. I use this for
+  threading a state value.*)
+let fold_map (z : 'b list * 'c) (f : 'c -> 'a -> 'b * 'c)
+      (l : 'a list) : ('b list * 'c) =
+  List.fold_right (fun ty (tys_acc, st_acc) ->
+    let (ty', st_acc') = f st_acc ty
+    in (ty' :: tys_acc, st_acc')) l z

@@ -42,12 +42,6 @@ type naasty_type =
   | Array_Type of identifier option * naasty_type * vlen
   (*Tuples will be encoded as records*)
   | Record_Type of
-(*
-      identifier option * (*possible identifier this "type" -- this is only
-                            relevant if the type spec occurs within another type
-                            spec -- such as when we have a struct within a
-                            struct.*)
-*)
       type_identifier * (*name for this type*)
       naasty_type list (*fields in the record*)
   | Unit_Type

@@ -180,7 +180,7 @@ Record_Type (0, [(Int_Type (Some 1, {signed = true; precision = 32}));
 |> string_of_naasty_type prog_indentation
 |> print_endline
 ;;
-Fun_Decl (0, [], Int_Type (None, {signed = false; precision = 16}),
+Fun_Decl (0, [Bool_Type (Some 6); UserDefined_Type (Some 7, 8)], Int_Type (None, {signed = false; precision = 16}),
           Seq (Declaration (Int_Type (Some 1, {signed = false; precision = 16})),
                Seq (Assign (1, Int_Value 5),
                     Return (Var 1))))

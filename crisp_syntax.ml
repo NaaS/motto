@@ -464,9 +464,6 @@ let rec expression_to_string indent = function
 
   | Str s -> "\"" ^ s ^ "\""
 
-    (*FIXME for remainder of this could emulate how blocks are printed*)
-  | _ -> failwith "Unsupported"
-
 type ty_decl =
   {type_name : type_name;
    type_value : type_value}
@@ -531,7 +528,6 @@ let toplevel_decl_to_string = function
      "\n" ^ expression_to_string indentation fn_decl.fn_body
   | Include s ->
     "include \"" ^ s ^ "\""
-  | _ -> failwith "Unsupported"
 
 type program = toplevel_decl list
 let program_to_string (p : program) =

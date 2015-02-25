@@ -3,11 +3,6 @@
    Nik Sultana, Cambridge University Computer Lab, February 2015
 *)
 
-let inter (mid : string) (ss : string list) =
-  List.fold_right (fun x s ->
-    if s = "" then x
-    else x ^ mid ^ s) ss ""
-
 let bind_opt (f : 'a -> 'b) (default : 'b) (x_opt : 'a option) : 'b =
   match x_opt with
   | None -> default

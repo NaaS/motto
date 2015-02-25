@@ -121,11 +121,11 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
   | Tuple (label, tys) ->
     if use_mixfix_list_syntax_for ty_value then
       opt_string (indn indent) label " : " ^ "<" ^
-       inter " * " (List.map (type_value_to_string mixfix_lists false 0) tys) ^
+       String.concat " * " (List.map (type_value_to_string mixfix_lists false 0) tys) ^
         ">" ^ endline
     else
       opt_string (indn indent) label " : " ^ "tuple (" ^
-       inter ", " (List.map (type_value_to_string mixfix_lists false 0) tys) ^
+       String.concat ", " (List.map (type_value_to_string mixfix_lists false 0) tys) ^
         ")" ^ endline
   | Dictionary (label, ty) ->
       opt_string (indn indent) label " : " ^ "dictionary " ^
@@ -171,13 +171,13 @@ let process_type_to_string (ProcessType (dvars, (chans, params))) =
   let deps =
     if dvars = [] then ""
     else
-      "{" ^ inter ", " dvars ^ "} => " in
+      "{" ^ String.concat ", " dvars ^ "} => " in
   let params_s =
     if params = [] then ""
     else
       "; " ^
-      inter ", " (List.map (type_value_to_string default_use_mixfix_lists false 0) params)
-  in deps ^ "(" ^ inter ", " (List.map channel_to_string chans) ^
+      String.concat ", " (List.map (type_value_to_string default_use_mixfix_lists false 0) params)
+  in deps ^ "(" ^ String.concat ", " (List.map channel_to_string chans) ^
     params_s ^ ")"
 ;;
 
@@ -185,15 +185,15 @@ type function_domtype = FunDomType of channel list * type_value list
 let function_domtype_to_string (FunDomType (chans, params)) =
   let chan_params =
     if List.length chans > 0 then
-      inter ", " (List.map channel_to_string chans) ^ "; "
+      String.concat ", " (List.map channel_to_string chans) ^ "; "
     else "" in
   "(" ^ chan_params ^
-    inter ", " (List.map (type_value_to_string default_use_mixfix_lists false 0) params) ^
+    String.concat ", " (List.map (type_value_to_string default_use_mixfix_lists false 0) params) ^
     ")"
 ;;
 type function_rettype = FunRetType of type_value list
 let function_rettype_to_string (FunRetType tys) =
-  "(" ^ inter ", " (List.map (type_value_to_string default_use_mixfix_lists false 0) tys) ^ ")"
+  "(" ^ String.concat ", " (List.map (type_value_to_string default_use_mixfix_lists false 0) tys) ^ ")"
 ;;
 type function_type = FunType of function_domtype * function_rettype
 let function_type_to_string (FunType (fd, fr)) =
@@ -396,7 +396,7 @@ let rec expression_to_string indent = function
 
   | TupleValue xs ->
     indn indent ^ "<" ^
-      inter ", " (List.map (expression_to_string 0) xs) ^ ">"
+      String.concat ", " (List.map (expression_to_string 0) xs) ^ ">"
 
   | Projection (e, l) ->
     indn indent ^ expression_to_string 0 e ^ "." ^ l
@@ -407,13 +407,13 @@ let rec expression_to_string indent = function
       | Named (l, e) -> l ^ " <- " ^ expression_to_string 0 e
     in
     indn indent ^ f ^ " (" ^
-    inter ", " (List.map fun_arg_to_string es) ^ ")"
+    String.concat ", " (List.map fun_arg_to_string es) ^ ")"
 
   | Record entries ->
     let entry_to_string (l, e) =
       l ^ " = " ^ expression_to_string 0 e in
     indn indent ^ "{" ^
-    inter ", " (List.map entry_to_string entries) ^ "}"
+    String.concat ", " (List.map entry_to_string entries) ^ "}"
   | RecordUpdate (r, ((l, e) as entry)) ->
     let entry_to_string (l, e) =
       l ^ " = " ^ expression_to_string 0 e in
@@ -506,11 +506,11 @@ type process_body =
 let process_body_to_string indent (ProcessBody (st_decls, e, exc_decls)) =
   let st_decls_s =
     List.map (state_decl_to_string indent) st_decls
-    |> inter "\n" in
+    |> String.concat "\n" in
   let e_s = expression_to_string indent e in
   let exc_decls_s =
     List.map (excepts_decl_to_string indent) exc_decls
-    |> inter "\n" in
+    |> String.concat "\n" in
   (if st_decls = [] then "" else st_decls_s ^ "\n") ^
   e_s ^
   (if exc_decls = [] then "" else "\n" ^ exc_decls_s)
@@ -536,4 +536,4 @@ let toplevel_decl_to_string = function
 type program = toplevel_decl list
 let program_to_string (p : program) =
   List.map toplevel_decl_to_string p
-  |> inter "\n"
+  |> String.concat "\n"

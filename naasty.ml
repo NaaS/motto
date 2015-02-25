@@ -149,7 +149,7 @@ type naasty_function =
 let string_of_naasty_function indent (f_id, arg_types, res_type, body) =
   let arg_types_s =
    List.map (string_of_naasty_type indent) arg_types
-   |> inter ", " in
+   |> String.concat ", " in
   string_of_naasty_type indent res_type ^ " " ^ id_name f_id ^ " " ^
     "(" ^ arg_types_s ^ ") {\n" ^
     string_of_naasty_statement (indent + default_indentation) body ^ ";\n" ^

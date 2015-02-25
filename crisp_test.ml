@@ -134,11 +134,19 @@ let loop filename () =
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
   let result = parse_and_print lexbuf in
     In_channel.close inx;
-  print_endline "Starting program";
+  print_endline "Starting source program";
   result
   |> Crisp_syntax.program_to_string
   |> print_endline;
-  print_endline "Finished program"
+  print_endline "Finished source program";
+  (*FIXME this next block is very rudimentary*)
+  print_endline "Starting translated program";
+  result
+  |> Babelfish.naasty_of_flick_program
+  |> fst (*NOTE discarding state*)
+  |> Naasty.string_of_naasty_program Naasty.prog_indentation
+  |> print_endline;
+  print_endline "Finished translated program"
 
 (*
 let loop filename () =

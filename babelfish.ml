@@ -26,6 +26,57 @@ let initial_state =
     symbols = [];
   }
 
+(*Sets the label of a type unless it's already defined. This is used to bridge
+  the gap between Flick and NaaSty, since the latter expects all type
+  declarations to be associated with their names, while the former distributes
+  this a bit (the name is stored in a type record).*)
+let update_empty_label label = function
+  | UserDefinedType (label_opt, type_name) ->
+    if label_opt = None then
+      UserDefinedType (Some label, type_name)
+    else failwith "Cannot set an already-set label"
+  | String (label_opt, type_annotation) ->
+    if label_opt = None then
+      String (Some label, type_annotation)
+    else failwith "Cannot set an already-set label"
+  | Integer (label_opt, type_annotation) ->
+    if label_opt = None then
+      Integer (Some label, type_annotation)
+    else failwith "Cannot set an already-set label"
+  | Boolean (label_opt, type_annotation) ->
+    if label_opt = None then
+      Boolean (Some label, type_annotation)
+    else failwith "Cannot set an already-set label"
+  | RecordType (label_opt, tys, type_annotation) ->
+    if label_opt = None then
+      RecordType (Some label, tys, type_annotation)
+    else failwith "Cannot set an already-set label"
+  | Disjoint_Union (label_opt, tys) ->
+    if label_opt = None then
+      Disjoint_Union (Some label, tys)
+    else failwith "Cannot set an already-set label"
+  | List (label_opt, ty, dep_idx_opt, type_annotation) ->
+    if label_opt = None then
+      List (Some label, ty, dep_idx_opt, type_annotation)
+    else failwith "Cannot set an already-set label"
+  | Empty -> Empty
+  | IPv4Address label_opt ->
+    if label_opt = None then
+      IPv4Address (Some label)
+    else failwith "Cannot set an already-set label"
+  | Tuple (label_opt, tys) ->
+    if label_opt = None then
+      Tuple (Some label, tys)
+    else failwith "Cannot set an already-set label"
+  | Dictionary (label_opt, ty) ->
+    if label_opt = None then
+      Dictionary (Some label, ty)
+    else failwith "Cannot set an already-set label"
+  | Reference (label_opt, ty) ->
+    if label_opt = None then
+      Reference (Some label, ty)
+    else failwith "Cannot set an already-set label"
+
 (*FIXME i'm ignoring annotations for the time being*)
 let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * state) =
   let check_and_resolve_typename type_name =
@@ -101,3 +152,22 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     let (type_identifier, st') = check_and_generate_typename label_opt in
     let (tys', st'') = fold_map ([], st') naasty_of_flick_type tys
     in (Record_Type (type_identifier, List.rev tys'), st'')
+
+
+let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
+  (naasty_declaration * state) =
+  match tl with
+  | Type ty_decl ->
+    let (ty', st') =
+      update_empty_label ty_decl.type_name ty_decl.type_value
+      |> naasty_of_flick_type st
+    in (Type_Decl ty', st)
+  | Function fn_decl ->
+    (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
+  | Process (process_name, process_type, process_body) ->
+    (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
+  | Include filename ->
+    (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
+
+let naasty_of_flick_program (p : program) : (naasty_program * state) =
+  fold_map ([], initial_state) naasty_of_flick_toplevel_decl p

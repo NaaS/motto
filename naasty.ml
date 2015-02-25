@@ -103,7 +103,6 @@ let rec string_of_naasty_type indent = function
     ty_name ty_ident ^
     bind_opt (fun i -> " " ^ id_name i) "" id_opt
   | Reference_Type (id_opt, naasty_type) ->
-    indn indent ^
     string_of_naasty_type indent naasty_type ^ " *" ^
     bind_opt (fun i -> " " ^ id_name i) "" id_opt
   | Size_Type id_opt ->

@@ -150,7 +150,7 @@ let string_of_naasty_function (f_id, arg_types, res_type, body) =
   let arg_types_s =
    List.map (string_of_naasty_type no_indent) arg_types
    |> inter ", " in
-  string_of_naasty_type no_indent res_type ^ " " ^ id_name f_id ^
+  string_of_naasty_type no_indent res_type ^ " " ^ id_name f_id ^ " " ^
     "(" ^ arg_types_s ^ ") {\n" ^
     string_of_naasty_statement default_indentation body ^ "\n}"
 

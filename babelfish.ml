@@ -17,8 +17,24 @@ type state =
   }
 
 (*FIXME i'm ignoring annotations for the time being*)
-let rec naasty_of_flick_type (st : state)
-  : (type_value -> naasty_type * state) = function
+let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * state) =
+  let check_and_resolve_typename type_name =
+    if not (List.mem_assoc type_name st.type_symbols) then
+      failwith ("Undeclared type: " ^ type_name)
+    else List.assoc type_name st.type_symbols in
+  let check_and_generate_name label_opt =
+    match label_opt with
+    | None -> (None, st)
+    | Some s ->
+      if (List.mem_assoc s st.symbols) then
+        (*shadowing is forbidden*)
+        failwith ("Already declared: " ^ s);
+      (Some st.next_symbol,
+       { st with
+         symbols = (s, st.next_symbol) :: st.symbols;
+         next_symbol = 1 + st.next_symbol;
+       }) in
+  match ty with
   | Disjoint_Union (_, _) -> failwith "Unsupported"
   | Empty -> failwith "Cannot translate empty type"
   | Tuple (label_opt, []) ->
@@ -27,25 +43,9 @@ let rec naasty_of_flick_type (st : state)
       functions with such a type.*)
     (Unit_Type, st)
   | UserDefinedType (label_opt, type_name) ->
-    if not (List.mem_assoc type_name st.type_symbols) then
-      failwith ("Undeclared type: " ^ type_name);
-    let type_name' = List.assoc type_name st.type_symbols in
-    let (label_opt', st') =
-      begin
-        match label_opt with
-        | None -> (None, st)
-        | Some s ->
-          if (List.mem_assoc s st.symbols) then
-            (*shadowing is forbidden*)
-            failwith ("Already declared: " ^ s);
-          (Some st.next_symbol,
-           { st with
-             symbols = (s, st.next_symbol) :: st.symbols;
-             next_symbol = 1 + st.next_symbol;
-           })
-      end in
-    let ty' =
-      UserDefined_Type (label_opt', type_name')
+    let type_name' = check_and_resolve_typename type_name in
+    let (label_opt', st') = check_and_generate_name label_opt in
+    let ty' = UserDefined_Type (label_opt', type_name')
     in (ty', st')
 (*
   | String (label_opt, type_ann)

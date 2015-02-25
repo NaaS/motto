@@ -75,8 +75,8 @@ let rec string_of_naasty_type indent = function
     indn indent ^
     (*FIXME notation might be wrong -- the brackets enclosing the size might
             need to appear to the right of the variable name.*)
-    string_of_naasty_type no_indent naasty_type ^ "[" ^ size ^ "]" ^
-    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+    string_of_naasty_type no_indent naasty_type ^
+    bind_opt (fun i -> " " ^ id_name i) "" id_opt ^ "[" ^ size ^ "]"
   (*Tuples will be encoded as records*)
   | Record_Type (ty_ident, fields) ->
     (*Record types won't appear nested -- instead, the nested record will be

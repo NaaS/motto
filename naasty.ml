@@ -24,8 +24,6 @@ type vlen =
   | Dependent of identifier
     (*All identifiers have unique names, by construction. In this case, we're
       referring to a field name.*)
-type string_metadata = { length : vlen }
-type array_size = int
 type type_identifier = int
 
 (* NOTE in the basic pretty-printing functions below we don't terminate with
@@ -38,9 +36,10 @@ let id_name i = "id_" ^ string_of_int i
 type naasty_type =
   | Int_Type of identifier option * int_metadata
   | Bool_Type of identifier option
-  | String_Type of identifier option (** string_metadata*)
-    (*Should we drop String_Type and simple expand it into an array of chars?*)
-  | Array_Type of identifier option * naasty_type * array_size option
+  | Char_Type of identifier option
+    (*FIXME i'd prefer to use a "byte" type, but char seems to serve this
+            purpose in C++*)
+  | Array_Type of identifier option * naasty_type * vlen
   (*Tuples will be encoded as records*)
   | Record_Type of
 (*
@@ -70,20 +69,18 @@ let rec string_of_naasty_type indent = function
     indn indent ^
     "bool" ^
     bind_opt (fun i -> " " ^ id_name i) "" id_opt
-  | String_Type id_opt ->
-    (*FIXME ensure that we have '#include <cstring>' if we're to use this type
-            (we're not using the standard C++ string type, according to examples
-             i've seen)*)
+  | Char_Type id_opt ->
     indn indent ^
-    "string" ^
+    "char" ^ (*FIXME signed vs unsigned?*)
     bind_opt (fun i -> " " ^ id_name i) "" id_opt
     (*FIXME representation of string might lend itself better to C-style
       strings, to play nice with de/serialisers.*)
-  | Array_Type (id_opt, naasty_type, array_size_opt) ->
-    let size = match array_size_opt with
-      | None -> ""
-      | Some i -> string_of_int i in
-    indn indent ^
+  | Array_Type (id_opt, naasty_type, array_size) ->
+    let size = match array_size with
+      | Undefined -> ""
+      | Max i -> string_of_int i
+      | Dependent _ -> failwith "TODO"
+    in indn indent ^
     (*FIXME notation might be wrong -- the brackets enclosing the size might
             need to appear to the right of the variable name.*)
     string_of_naasty_type no_indent naasty_type ^
@@ -185,11 +182,11 @@ let string_of_naasty_program indent prog =
 [
 Type_Decl (Record_Type (8, [(Int_Type (Some 1, {signed = true; precision = 32}));
                  (Bool_Type (Some 2));
-                 (String_Type (Some 3));
+                 (Char_Type (Some 3));
                  (Array_Type (Some 4,
                               Int_Type (None,
                                         {signed = false; precision = 64}),
-                              Some 4))]));
+                              Max 4))]));
 Fun_Decl (0, [Bool_Type (Some 6); UserDefined_Type (Some 7, 8)], Int_Type (None, {signed = false; precision = 16}),
           Seq (Declaration (Int_Type (Some 1, {signed = false; precision = 16})),
                Seq (Assign (1, Int_Value 5),

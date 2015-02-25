@@ -170,7 +170,7 @@ let string_of_program prog =
 
 ;;
 (*FIXME crude test*)
-Record_Type (0, [(Int_Type (Some 1, {signed = true; precision = 32}));
+Record_Type (8, [(Int_Type (Some 1, {signed = true; precision = 32}));
                  (Bool_Type (Some 2));
                  (String_Type (Some 3));
                  (Array_Type (Some 4,

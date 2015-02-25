@@ -50,12 +50,18 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
   | Boolean (label_opt, type_ann) ->
     let (label_opt', st') = check_and_generate_name label_opt
     in (Bool_Type label_opt', st')
+  | Integer (label_opt, type_ann) ->
+    let (label_opt', st') = check_and_generate_name label_opt in
+    let metadata = default_int_metadata(*FIXME this should depend on type_ann*)
+    in (Int_Type (label_opt', metadata), st')
+  | IPv4Address label_opt ->
+    let (label_opt', st') = check_and_generate_name label_opt in
+    let metadata = { signed = false; precision = 32 }
+    in (Int_Type (label_opt', metadata), st')
 (*
   | String (label_opt, type_ann)
-  | Integer (label_opt, type_ann)
   | RecordType (label_opt, tys, type_ann)
   | List (label_opt, ty, _, type_ann)
-  | IPv4Address label_opt
   (*We send records, not tuples, over the wire, so tuples
     don't need type annotations.
     Also, tuples get translated into records.*)

@@ -16,6 +16,15 @@ type state =
     symbols : (string * integer) list;
   }
 
+let initial_state =
+  { pragmas = [];
+    type_declarations = [];
+    next_typesymbol = 1;
+    type_symbols = [];
+    next_symbol = 1;
+    symbols = [];
+  }
+
 (*FIXME i'm ignoring annotations for the time being*)
 let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * state) =
   let check_and_resolve_typename type_name =
@@ -93,13 +102,3 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
       let (ty', st_acc') = naasty_of_flick_type st_acc ty
       in (ty' :: tys_acc, st_acc')) tys ([], st')
     in (Record_Type (type_identifier, List.rev tys'), st'')
-
-(*FIXME crude test
-Record_Type (0, [(1, Int_Type {signed = true; precision = 32});
-                 (2, Bool_Type);
-                 (3, String_Type);
-                 (4, Array_Type (Int_Type {signed = false; precision = 64},
-                                 Some 4))])
-|> string_of_naasty_type prog_indentation true
-  |> print_endline
-*)

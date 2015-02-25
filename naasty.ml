@@ -50,6 +50,10 @@ type naasty_type =
   | UserDefined_Type of identifier option * type_identifier
     (*No identifier is provided if the UDT appears in the value type within
     a function type*)
+  | Reference_Type of identifier option * naasty_type
+    (*Pointer type*)
+  | Size_Type of identifier option
+    (*size_t*)
 let rec string_of_naasty_type indent = function
   | Int_Type (id_opt, int_metadata) ->
     let prefix =
@@ -97,6 +101,14 @@ let rec string_of_naasty_type indent = function
   | UserDefined_Type (id_opt, ty_ident) ->
     indn indent ^
     ty_name ty_ident ^
+    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+  | Reference_Type (id_opt, naasty_type) ->
+    indn indent ^
+    string_of_naasty_type indent naasty_type ^ " *" ^
+    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+  | Size_Type id_opt ->
+    indn indent ^
+    "size_t" ^
     bind_opt (fun i -> " " ^ id_name i) "" id_opt
 
 type naasty_expression =

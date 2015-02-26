@@ -37,9 +37,9 @@ let get_channel_len =
 let get_stream_len =
   (["get_stream_len"],
     Fun_Type (-1, Size_Type None, []))
-let bytes_stream_to_channel =
+let bytes_stream_to_channel datatype =
   (["bytes_stream_to_channel";
-    "HadoopDMData";
+    datatype;
     "stream";
     "channel";
     "streamend";
@@ -61,7 +61,7 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
   let substitute' (type_mode : bool) scheme st id f =
     if id >= 0 then (scheme, st)
     else 
-      let local_name = List.nth names (abs id) in
+      let local_name = List.nth names (abs id - 1) in
       let id', st' =
         if not fresh then
           (*Look it up from the state*)
@@ -188,3 +188,13 @@ let gen_serialiser (ty : type_value) : naasty_function =
 
 let gen_deserialiser (ty : type_value) : naasty_function =
   failwith "TODO"
+
+;;
+(*FIXME crude test*)
+fold_map ([], initial_state) (fun st scheme ->
+      instantiate true (fst scheme) st (snd scheme))
+[get_channel_len; get_stream_len; bytes_stream_to_channel "test"]
+|> fst
+|> List.map (string_of_naasty_type 0)
+|> String.concat ";\n"
+|> print_endline

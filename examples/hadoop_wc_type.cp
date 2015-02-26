@@ -17,4 +17,4 @@ type hadoop_wc : record
   value : integer
     { signed = false,
     #endianness = big,
-    byte_size = 4 }
+    byte_size = 8 }

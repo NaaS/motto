@@ -54,6 +54,30 @@ let bytes_stream_to_channel datatype =
               Reference_Type (Some (-5), Char_Type None);
               Reference_Type (Some (-6), Size_Type None);
               Reference_Type (Some (-7), Size_Type None)]))
+let write_bytes_to_channel datatype =
+  (["write_bytes_to_channel";
+    datatype;
+    "channel";
+    "no_bytes"],
+   Fun_Type (-1,
+             Static_Type (None,
+                          Unit_Type),
+             [Reference_Type (None, UserDefined_Type (None, -2));
+              Reference_Type (Some (-3), Char_Type None);
+              Reference_Type (Some (-4), Size_Type None)]))
+let bytes_channel_to_stream =
+  (["bytes_channel_to_stream";
+    "stream";
+    "channel";
+    "bytes_read";
+    "bytes_written"],
+   Fun_Type (-1,
+             Static_Type (None,
+                          Unit_Type),
+             [Reference_Type (Some (-2), Char_Type None);
+              Reference_Type (Some (-3), Char_Type None);
+              Reference_Type (Some (-4), Size_Type None);
+              Reference_Type (Some (-5), Size_Type None)]))
 
 (*Instantiates a naasty_type scheme with a set of names*)
 let rec instantiate (fresh : bool) (names : string list) (st : state)
@@ -193,7 +217,8 @@ let gen_deserialiser (ty : type_value) : naasty_function =
 (*FIXME crude test*)
 fold_map ([], initial_state) (fun st scheme ->
       instantiate true (fst scheme) st (snd scheme))
-[get_channel_len; get_stream_len; bytes_stream_to_channel "test"]
+  [get_channel_len; get_stream_len; bytes_stream_to_channel "test";
+   write_bytes_to_channel "test"; bytes_channel_to_stream]
 |> fst
 |> List.map (string_of_naasty_type 0)
 |> String.concat ";\n"

@@ -54,6 +54,10 @@ type naasty_type =
     (*Pointer type*)
   | Size_Type of identifier option
     (*size_t*)
+  | Static_Type of identifier option * naasty_type
+  | Fun_Type of identifier(*Can't have anonymous functions*) *
+                naasty_type * (*result type*)
+                naasty_type list (*argument types*)
 let rec string_of_naasty_type indent = function
   | Int_Type (id_opt, int_metadata) ->
     let prefix =
@@ -109,6 +113,17 @@ let rec string_of_naasty_type indent = function
     indn indent ^
     "size_t" ^
     bind_opt (fun i -> " " ^ id_name i) "" id_opt
+  | Static_Type (id_opt, naasty_type) ->
+    indn indent ^ "static " ^
+    string_of_naasty_type indent naasty_type ^
+    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+  | Fun_Type (id, res_ty, arg_tys) ->
+    string_of_naasty_type indent res_ty ^
+    " " ^ id_name id ^ " " ^
+    "(" ^
+    String.concat ", "
+      (List.map (string_of_naasty_type no_indent) arg_tys) ^
+    ")"
 
 type naasty_expression =
   | Var of identifier

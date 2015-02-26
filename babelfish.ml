@@ -77,7 +77,6 @@ let update_empty_label label = function
       Reference (Some label, ty)
     else failwith "Cannot set an already-set label"
 
-(*FIXME i'm ignoring annotations for the time being*)
 let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * state) =
   let check_and_resolve_typename type_name =
     if not (List.mem_assoc type_name st.type_symbols) then
@@ -130,11 +129,37 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     let ty' = UserDefined_Type (label_opt', type_name')
     in (ty', st')
   | Boolean (label_opt, type_ann) ->
+    if (type_ann <> []) then
+      failwith "Boolean serialisation annotation not supported"; (*TODO*)
     let (label_opt', st') = check_and_generate_name label_opt
     in (Bool_Type label_opt', st')
   | Integer (label_opt, type_ann) ->
     let (label_opt', st') = check_and_generate_name label_opt in
-    let metadata = default_int_metadata(*FIXME this should depend on type_ann*)
+    let metadata =
+      List.fold_right (fun (name, ann) md ->
+        match ann with
+        | Ann_Int i ->
+          if name = "byte_size" then
+            let bits =
+              match i with
+              | 2 -> 16
+              | 4 -> 32
+              | 8 -> 64
+              | _ -> failwith ("Unsupported integer precision: " ^
+                               string_of_int i ^ " bytes")
+            in { md with precision = bits }
+          else failwith ("Unrecognised integer annotation: " ^ name)
+        | Ann_Ident s ->
+          if name = "signed" then
+            let bool_value =
+              match s with
+              | "true" -> true
+              | "false" -> false
+              | _ -> failwith ("Unrecognised Boolean value: " ^ s)
+            in { md with signed = bool_value }
+          else failwith ("Unrecognised integer annotation: " ^ name)
+        | _ -> failwith ("Unrecognised integer annotation: " ^ name))
+        type_ann default_int_metadata
     in (Int_Type (label_opt', metadata), st')
   | IPv4Address label_opt ->
     let (label_opt', st') = check_and_generate_name label_opt in
@@ -159,7 +184,9 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     let (label_opt', st') = check_and_generate_name label_opt in
     let (ty', st'') = naasty_of_flick_type st' ty
     in (Reference_Type (label_opt', ty'), st'')
-  | RecordType (label_opt, tys, type_ann(*FIXME unused*)) ->
+  | RecordType (label_opt, tys, type_ann) ->
+    if (type_ann <> []) then
+      failwith "Record serialisation annotation not supported"; (*TODO*)
     let (type_identifier, st') = check_and_generate_typename label_opt in
     let (tys', st'') = fold_map ([], st') naasty_of_flick_type tys
     in (Record_Type (type_identifier, List.rev tys'), st'')

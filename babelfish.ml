@@ -26,6 +26,36 @@ let initial_state =
     symbols = [];
   }
 
+type scope =
+  | Type
+  | Term
+let scope_to_str scope =
+  match scope with
+  | Type -> "type"
+  | Term -> "symbol"
+(*For simplicity (and to defend against the possibility that identifiers and
+  type identifiers occupy the same namespace) the lookup is made on both
+  namespaces.*)
+let lookup_name (scope : scope) (st : state) (id : string) : int option =
+  let gen_lookup l =
+    if not (List.mem_assoc id l) then
+      None
+    else Some (List.assoc id l) in
+  let type_lookup = gen_lookup st.type_symbols in
+  let normal_lookup = gen_lookup st.symbols in
+  if type_lookup <> None && normal_lookup <> None then
+    failwith ("Somehow the symbol " ^ id ^ " is being used for both a type and a
+    non-type")
+  else match scope with
+    | Type ->
+      if normal_lookup <> None then
+        failwith "Type symbol was used in term"
+      else type_lookup
+    | Term ->
+      if type_lookup <> None then
+        failwith "Symbol was used in type"
+      else normal_lookup
+
 (*Sets the label of a type unless it's already defined. This is used to bridge
   the gap between Flick and NaaSty, since the latter expects all type
   declarations to be associated with their names, while the former distributes
@@ -79,14 +109,14 @@ let update_empty_label label = function
 
 let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * state) =
   let check_and_resolve_typename type_name =
-    if not (List.mem_assoc type_name st.type_symbols) then
-      failwith ("Undeclared type: " ^ type_name)
-    else List.assoc type_name st.type_symbols in
+    match lookup_name Type st type_name with
+    | None -> failwith ("Undeclared type: " ^ type_name)
+    | Some i -> i in
   let check_and_generate_typename typename_opt =
     match typename_opt with
     | None -> failwith ("Was expecting type name.")
     | Some type_name ->
-      if List.mem_assoc type_name st.type_symbols then
+      if lookup_name Type st type_name <> None then
         (*shadowing is forbidden*)
         failwith ("Already declared type: " ^ type_name)
       else
@@ -99,7 +129,7 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     match label_opt with
     | None -> (None, st)
     | Some s ->
-      if (List.mem_assoc s st.symbols) then
+      if lookup_name Term st s <> None then
         (*shadowing is forbidden*)
         failwith ("Already declared: " ^ s);
       (Some st.next_symbol,

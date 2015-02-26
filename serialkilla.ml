@@ -89,19 +89,16 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
       let id', st' =
         if not fresh then
           (*Look it up from the state*)
-          if type_mode then
-            if not (List.mem_assoc local_name st.type_symbols) then
-              failwith ("Undeclared type: " ^ local_name)
-            else (List.assoc local_name st.type_symbols, st)
-          else
-            if not (List.mem_assoc local_name st.symbols) then
-              failwith ("Undeclared type: " ^ local_name)
-            else (List.assoc local_name st.symbols, st)
+          let scope = if type_mode then Type else Term in
+          match lookup_name scope st local_name with
+          | None ->
+              failwith ("Undeclared " ^ scope_to_str scope ^ ": " ^ local_name)
+          | Some i -> (i, st)
         else
           (*Generate a fresh name and update the state*)
           (*FIXME what to do about shadowing?*)
           if type_mode then
-            if List.mem_assoc local_name st.type_symbols then
+            if lookup_name Type st local_name <> None then
               failwith ("Already declared type: " ^ local_name)
             else
               (st.next_typesymbol,
@@ -110,7 +107,7 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
                  next_typesymbol = 1 + st.next_typesymbol;
                })
           else
-            if List.mem_assoc local_name st.type_symbols then
+            if lookup_name Term st local_name <> None then
               failwith ("Already declared identifier: " ^ local_name)
             else
               (st.next_symbol,

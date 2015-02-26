@@ -90,10 +90,10 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
         (*shadowing is forbidden*)
         failwith ("Already declared type: " ^ type_name)
       else
-        (st.next_symbol,
+        (st.next_typesymbol,
          { st with
-           symbols = (type_name, st.next_symbol) :: st.symbols;
-           next_symbol = 1 + st.next_symbol;
+           symbols = (type_name, st.next_typesymbol) :: st.type_symbols;
+           next_typesymbol = 1 + st.next_typesymbol;
          }) in
   let check_and_generate_name label_opt =
     match label_opt with

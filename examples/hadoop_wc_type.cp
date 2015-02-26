@@ -1,6 +1,9 @@
 ## Main type definition
 
-# Based on https://github.com/NaaS/system/blob/master/naasferatu/front-end/hadoop*.naas
+# Based on
+#   https://github.com/NaaS/system/blob/master/naasferatu/front-end/hadoop*.naas
+# More recent version of target code available at
+#   https://lsds.doc.ic.ac.uk/gitlab/naas/naas-box-system/tree/master/src/applications/hadoop_data_model
 
 type hadoop_wc : record
   # FIXME not sure what a "vlen" is in that example -- i can understand that

@@ -63,7 +63,8 @@ let rec string_of_naasty_type indent = function
     let prefix =
       if int_metadata.signed then "" else "u" in
     let suffix =
-      (*FIXME should limit it to 16, 32, 64 etc*)
+      (*This is checked during translation to make sure it's a sensible
+        value: 16, 32, 64*)
       string_of_int int_metadata.precision in
     indn indent ^
     prefix ^ "int" ^ suffix ^ "_t" ^

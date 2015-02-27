@@ -36,15 +36,16 @@ let scope_to_str scope =
 (*For simplicity (and to defend against the possibility that identifiers and
   type identifiers occupy the same namespace) the lookup is made on both
   namespaces.*)
-let lookup_name (scope : scope) (st : state) (id : string) : int option =
+let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b) list)
+      (type_symbols : ('a * 'b) list) (id_s : string) (id : 'a) : 'b option =
   let gen_lookup l =
     if not (List.mem_assoc id l) then
       None
     else Some (List.assoc id l) in
-  let type_lookup = gen_lookup st.type_symbols in
-  let normal_lookup = gen_lookup st.symbols in
+  let type_lookup = gen_lookup type_symbols in
+  let normal_lookup = gen_lookup symbols in
   if type_lookup <> None && normal_lookup <> None then
-    failwith ("Somehow the symbol " ^ id ^ " is being used for both a type and a
+    failwith ("Somehow the symbol " ^ id_s ^ " is being used for both a type and a
     non-type")
   else match scope with
     | Type ->
@@ -55,6 +56,12 @@ let lookup_name (scope : scope) (st : state) (id : string) : int option =
       if type_lookup <> None then
         failwith "Symbol was used in type"
       else normal_lookup
+
+let lookup_name (scope : scope) (st : state) (id : string) : int option =
+  lookup false scope st.symbols st.type_symbols id id
+let lookup_id (scope : scope) (st : state) (id : int) : string option =
+  lookup true scope (List.map swap st.symbols)
+    (List.map swap st.type_symbols) (string_of_int id) id
 
 (*Sets the label of a type unless it's already defined. This is used to bridge
   the gap between Flick and NaaSty, since the latter expects all type

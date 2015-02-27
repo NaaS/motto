@@ -99,7 +99,6 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
           | Some i -> (i, st)
         else
           (*Generate a fresh name and update the state*)
-          (*FIXME what to do about shadowing?*)
           if type_mode then
             if forbid_shadowing && lookup_name Type st local_name <> None then
               failwith ("Already declared type: " ^ local_name)

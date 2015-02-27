@@ -142,7 +142,7 @@ let loop filename () =
   (*FIXME this next block is very rudimentary*)
   print_endline "Starting translated program";
   result
-  |> Babelfish.naasty_of_flick_program
+  |> Translation.naasty_of_flick_program
   |> fst (*NOTE discarding state*)
   |> Naasty_aux.string_of_naasty_program Naasty_aux.prog_indentation
   |> print_endline;

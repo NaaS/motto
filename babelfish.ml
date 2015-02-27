@@ -93,9 +93,6 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
   | List (_, _, _, _) ->
     (*Lists can be turned into arrays*)
     failwith "Unsupported"
-  | Tuple (_, _) ->
-    (*Tuples can be turned into records*)
-    failwith "Unsupported"
   | Dictionary (label_opt, type_name) ->
     failwith "TODO -- link to dictionary provided by libNaaS" (*TODO*)
   | Empty -> failwith "Cannot translate empty type"
@@ -104,6 +101,9 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     (*We cannot have values of type "void" in the target, we can only type
       functions with such a type.*)
     (Unit_Type, st)
+  | Tuple (_, _) ->
+    (*Tuples can be turned into records*)
+    failwith "Unsupported"
   | UserDefinedType (label_opt, type_name) ->
     let type_name' = check_and_resolve_typename type_name in
     let (label_opt', st') = check_and_generate_name label_opt in

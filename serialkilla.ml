@@ -9,6 +9,7 @@ open Naasty
 open Naasty_aux
 open Babelfish
 open State
+open State_aux
 
 (*Thrown when we try to generate a de/serialiser for a type that cannot be
   serialised -- either because of its nature (e.g., unit) or because it lacks
@@ -103,10 +104,10 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
             if forbid_shadowing && lookup_name Type st local_name <> None then
               failwith ("Already declared type: " ^ local_name)
             else
-              (st.next_typesymbol,
+              (st.next_symbol,
                { st with
-                 symbols = (local_name, st.next_typesymbol) :: st.type_symbols;
-                 next_typesymbol = 1 + st.next_typesymbol;
+                 type_symbols = (local_name, st.next_symbol) :: st.type_symbols;
+                 next_symbol = 1 + st.next_symbol;
                })
           else
             if forbid_shadowing && lookup_name Term st local_name <> None then
@@ -114,7 +115,7 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
             else
               (st.next_symbol,
                { st with
-                 symbols = (local_name, st.next_symbol) :: st.symbols;
+                 term_symbols = (local_name, st.next_symbol) :: st.term_symbols;
                  next_symbol = 1 + st.next_symbol;
                })
       in (f id', st') in
@@ -218,7 +219,9 @@ fold_map ([], initial_state) (fun st scheme ->
       instantiate true (fst scheme) st (snd scheme))
   [get_channel_len; get_stream_len; bytes_stream_to_channel "test";
    write_bytes_to_channel "test"; bytes_channel_to_stream]
-|> fst
-|> List.map (string_of_naasty_type 0)
-|> String.concat ";\n"
+|> (fun (tys, st) ->
+  let st_s = state_to_str false st in
+  let res_s = List.map (string_of_naasty_type ~st_opt:(Some st) 0) tys
+    |> String.concat ";\n" in
+  st_s ^ res_s)
 |> print_endline

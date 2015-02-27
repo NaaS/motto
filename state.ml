@@ -43,7 +43,9 @@ let scope_to_str scope =
   type identifiers occupy the same namespace) the lookup is made on both
   namespaces.*)
 let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b) list)
-      (type_symbols : ('a * 'b) list) (id_s : string) (id : 'a) : 'b option =
+      (type_symbols : ('a * 'b) list)
+      (id_to_str : 'a -> string) (res_to_str : 'b -> string)
+      (id : 'a) : 'b option =
   let gen_lookup l =
     if not (List.mem_assoc id l) then
       None
@@ -51,23 +53,34 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b) list)
   let type_lookup = gen_lookup type_symbols in
   let normal_lookup = gen_lookup symbols in
   if type_lookup <> None && normal_lookup <> None then
-    failwith ("Somehow the symbol " ^ id_s ^ " is being used for both a type and a non-type")
+    failwith ("Somehow the symbol " ^ id_to_str id ^
+              " is being used for both a type and a non-type")
   else match scope with
     | Type ->
-      if normal_lookup <> None then
-        failwith "Type symbol was used in term"
-      else type_lookup
+      begin
+        match normal_lookup with
+        | None -> type_lookup
+        | Some idx ->
+          failwith ("Type symbol " ^ id_to_str id ^
+                    " was used in term, getting idx " ^
+                    res_to_str idx)
+      end
     | Term ->
-      if type_lookup <> None then
-        failwith "Symbol was used in type"
-      else normal_lookup
+      begin
+        match type_lookup with
+        | None -> normal_lookup
+        | Some idx ->
+          failwith ("Symbol " ^ id_to_str id ^
+                    " was used in type, getting idx " ^
+                    res_to_str idx)
+      end
 
 (*Lookup functions for names and indices*)
 let lookup_name (scope : scope) (st : state) (id : string) : int option =
-  lookup false scope st.symbols st.type_symbols id id
+  lookup false scope st.symbols st.type_symbols (fun x -> x) string_of_int id
 let lookup_id (scope : scope) (st : state) (id : int) : string option =
   lookup true scope (List.map swap st.symbols)
-    (List.map swap st.type_symbols) (string_of_int id) id
+    (List.map swap st.type_symbols) string_of_int (fun x -> x) id
 
 (*Given a name, it returns the same name if it is fresh (wrt types and symbols)
   otherwise it modifies it to be fresh.*)

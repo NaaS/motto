@@ -126,8 +126,7 @@ let gen_deserialiser (ty : type_value) : naasty_function =
 (*FIXME crude test*)
 fold_map ([], initial_state) (fun st scheme ->
       instantiate true scheme.identifiers st scheme.scheme)
-  [get_channel_len; get_stream_len; bytes_stream_to_channel "test";
-   write_bytes_to_channel "test"; bytes_channel_to_stream]
+  (instantiate_data_model "test")
 |> (fun (tys, st) ->
   let st_s = state_to_str false st in
   let res_s = List.map (string_of_naasty_type ~st_opt:(Some st) 0) tys

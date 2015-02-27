@@ -56,11 +56,33 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b) list)
         failwith "Symbol was used in type"
       else normal_lookup
 
+(*Lookup functions for names and indices*)
 let lookup_name (scope : scope) (st : state) (id : string) : int option =
   lookup false scope st.symbols st.type_symbols id id
 let lookup_id (scope : scope) (st : state) (id : int) : string option =
   lookup true scope (List.map swap st.symbols)
     (List.map swap st.type_symbols) (string_of_int id) id
+
+(*Given a name, it returns the same name if it is fresh (wrt types and symbols)
+  otherwise it modifies it to be fresh.*)
+let mk_fresh_name (st : state) (id : string) : string =
+  let i = ref "_" in
+  let normal_lookup = ref (lookup_name Term st id) in
+  let type_lookup = ref (lookup_name Type st id) in
+  while !normal_lookup <> None || !type_lookup <> None do
+    normal_lookup := lookup_name Term st (id ^ !i);
+    type_lookup := lookup_name Type st (id ^ !i);
+    i := !i ^ "_";
+  done;
+  id ^ !i
+
+(*Ensures that a name is fresh wrt the state.*)
+let ensure_fresh_name (st : state) (id : string) : string =
+  let normal_lookup = lookup_name Term st id in
+  let type_lookup = lookup_name Type st id in
+  if normal_lookup <> None || type_lookup <> None then
+    failwith ("Name '" ^ id ^ "' is not fresh")
+  else id
 
 (*Sets the label of a type unless it's already defined. This is used to bridge
   the gap between Flick and NaaSty, since the latter expects all type

@@ -89,4 +89,3 @@ let ensure_fresh_name (st : state) (id : string) : string =
   if normal_lookup <> None || type_lookup <> None then
     failwith ("Name '" ^ id ^ "' is not fresh")
   else id
-

@@ -100,23 +100,31 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
         else
           (*Generate a fresh name and update the state*)
           if type_mode then
-            if forbid_shadowing && lookup_name Type st local_name <> None then
-              failwith ("Already declared type: " ^ local_name)
-            else
+            match lookup_name Type st local_name with
+            | None ->
               (st.next_symbol,
                { st with
                  type_symbols = (local_name, st.next_symbol) :: st.type_symbols;
                  next_symbol = 1 + st.next_symbol;
                })
+            | Some idx ->
+              if forbid_shadowing then
+                failwith ("Already declared type: " ^ local_name)
+              else
+                (idx, st)
           else
-            if forbid_shadowing && lookup_name Term st local_name <> None then
-              failwith ("Already declared identifier: " ^ local_name)
-            else
+            match lookup_name Term st local_name with
+            | None ->
               (st.next_symbol,
                { st with
                  term_symbols = (local_name, st.next_symbol) :: st.term_symbols;
                  next_symbol = 1 + st.next_symbol;
                })
+            | Some idx ->
+              if forbid_shadowing then
+                failwith ("Already declared identifier: " ^ local_name)
+              else
+                (idx, st)
       in (f id', st') in
   let substitute (type_mode : bool) scheme st id_opt f =
     match id_opt with

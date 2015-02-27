@@ -7,6 +7,7 @@ open General
 open Crisp_syntax
 open Naasty
 open Babelfish
+open State
 
 (*Thrown when we try to generate a de/serialiser for a type that cannot be
   serialised -- either because of its nature (e.g., unit) or because it lacks

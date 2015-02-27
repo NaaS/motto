@@ -144,7 +144,7 @@ let loop filename () =
   result
   |> Babelfish.naasty_of_flick_program
   |> fst (*NOTE discarding state*)
-  |> Naasty.string_of_naasty_program Naasty.prog_indentation
+  |> Naasty_aux.string_of_naasty_program Naasty_aux.prog_indentation
   |> print_endline;
   print_endline "Finished translated program"
 

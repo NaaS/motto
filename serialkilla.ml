@@ -6,6 +6,7 @@
 open General
 open Crisp_syntax
 open Naasty
+open Naasty_aux
 open Babelfish
 open State
 

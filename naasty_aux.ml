@@ -6,6 +6,7 @@
 open General
 open Crisp_syntax
 open Naasty
+open State
 
 
 let prog_indentation = 0
@@ -15,10 +16,23 @@ let default_indentation = 2
 (* NOTE in the basic pretty-printing functions below we don't terminate with
         semicolons, since these functions could be used compositionally.*)
 
-let ty_name i = "ty_" ^ string_of_int i
-let id_name i = "id_" ^ string_of_int i
+let resolve_idx (scope : scope) (prefix : string) (st_opt : state option) (i : int) =
+  match st_opt with
+  | None -> prefix ^ string_of_int i
+  | Some st ->
+    begin
+      match lookup_id scope st i with
+      | None -> failwith ("Could not resolve idx " ^ string_of_int i ^ " in " ^
+                          scope_to_str scope ^ " scope")
+      | Some name -> name
+    end
+let ty_prefix = "ty_"
+let ty_name = resolve_idx Type ty_prefix
+let id_prefix = "id_"
+let id_name = resolve_idx Term id_prefix
 
-let rec string_of_naasty_type ?st_opt:(st_opt = None) indent = function
+let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
+  function
   | Int_Type (id_opt, int_metadata) ->
     let prefix =
       if int_metadata.signed then "" else "u" in
@@ -28,15 +42,15 @@ let rec string_of_naasty_type ?st_opt:(st_opt = None) indent = function
       string_of_int int_metadata.precision in
     indn indent ^
     prefix ^ "int" ^ suffix ^ "_t" ^
-    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+    bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
   | Bool_Type id_opt ->
     indn indent ^
     "bool" ^
-    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+    bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
   | Char_Type id_opt ->
     indn indent ^
     "char" ^ (*FIXME signed vs unsigned?*)
-    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+    bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
     (*FIXME representation of string might lend itself better to C-style
       strings, to play nice with de/serialisers.*)
   | Array_Type (id_opt, naasty_type, array_size) ->
@@ -47,62 +61,62 @@ let rec string_of_naasty_type ?st_opt:(st_opt = None) indent = function
     in indn indent ^
     (*FIXME notation might be wrong -- the brackets enclosing the size might
             need to appear to the right of the variable name.*)
-    string_of_naasty_type no_indent naasty_type ^
-    bind_opt (fun i -> " " ^ id_name i) "" id_opt ^ "[" ^ size ^ "]"
+    string_of_naasty_type ~st_opt no_indent naasty_type ^
+    bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt ^ "[" ^ size ^ "]"
   (*Tuples will be encoded as records*)
   | Record_Type (ty_ident, fields) ->
     (*Record types won't appear nested -- instead, the nested record will be
       pulled up to a global scope as a separate record type.*)
     let body =
       List.map (fun s ->
-        string_of_naasty_type (indent + default_indentation) s ^ ";")
+        string_of_naasty_type ~st_opt (indent + default_indentation) s ^ ";")
        fields
       |> String.concat "\n"
     in indn indent ^ "typedef " ^
     "struct " ^
     "{\n" ^ body ^ "\n" ^ indn indent ^ "}" ^
-    " " ^ ty_name ty_ident
+    " " ^ ty_name st_opt ty_ident
   | Unit_Type -> indn indent ^ "void"
   | UserDefined_Type (id_opt, ty_ident) ->
     indn indent ^
-    ty_name ty_ident ^
-    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+    ty_name st_opt ty_ident ^
+    bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
   | Reference_Type (id_opt, naasty_type) ->
-    string_of_naasty_type indent naasty_type ^ " *" ^
-    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+    string_of_naasty_type ~st_opt indent naasty_type ^ " *" ^
+    bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
   | Size_Type id_opt ->
     indn indent ^
     "size_t" ^
-    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+    bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
   | Static_Type (id_opt, naasty_type) ->
     indn indent ^ "static " ^
-    string_of_naasty_type indent naasty_type ^
-    bind_opt (fun i -> " " ^ id_name i) "" id_opt
+    string_of_naasty_type ~st_opt indent naasty_type ^
+    bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
   | Fun_Type (id, res_ty, arg_tys) ->
-    string_of_naasty_type indent res_ty ^
-    " " ^ id_name id ^ " " ^
+    string_of_naasty_type ~st_opt indent res_ty ^
+    " " ^ id_name st_opt id ^ " " ^
     "(" ^
     String.concat ", "
-      (List.map (string_of_naasty_type no_indent) arg_tys) ^
+      (List.map (string_of_naasty_type ~st_opt no_indent) arg_tys) ^
     ")"
 
-let rec string_of_naasty_expression = function
+let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = function
   | Int_Value i -> string_of_int i
   | Plus (e1, e2) ->
-    "(" ^ string_of_naasty_expression e1 ^ ") + (" ^
-    string_of_naasty_expression e2 ^ ")"
-  | Var id -> id_name id
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") + (" ^
+    string_of_naasty_expression ~st_opt e2 ^ ")"
+  | Var id -> id_name st_opt id
 
-let rec string_of_naasty_statement indent = function
+let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) indent = function
   | Declaration ty ->
     (*NOTE assuming that types can only be defined globally,
            but they can be used in local variable declarations.*)
-    string_of_naasty_type indent ty
+    string_of_naasty_type ~st_opt indent ty
   | Seq (stmt1, stmt2) ->
-    string_of_naasty_statement indent stmt1 ^ ";\n" ^
-    string_of_naasty_statement indent stmt2
+    string_of_naasty_statement ~st_opt indent stmt1 ^ ";\n" ^
+    string_of_naasty_statement ~st_opt indent stmt2
   | Assign (id, e) ->
-    indn indent ^ id_name id ^ " = " ^ string_of_naasty_expression e
+    indn indent ^ id_name st_opt id ^ " = " ^ string_of_naasty_expression ~st_opt e
 (*
   | For of (identifier * naasty_expression * naasty_statement) *
            naasty_statement
@@ -115,24 +129,24 @@ let rec string_of_naasty_statement indent = function
   | ReadFromChan of identifier * identifier
 *)
   | Return e ->
-    indn indent ^ "return (" ^ string_of_naasty_expression e ^ ")"
+    indn indent ^ "return (" ^ string_of_naasty_expression ~st_opt e ^ ")"
 
-let string_of_naasty_function indent (f_id, arg_types, res_type, body) =
+let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent (f_id, arg_types, res_type, body) =
   let arg_types_s =
-   List.map (string_of_naasty_type indent) arg_types
+   List.map (string_of_naasty_type ~st_opt indent) arg_types
    |> String.concat ", " in
-  string_of_naasty_type indent res_type ^ " " ^ id_name f_id ^ " " ^
+  string_of_naasty_type ~st_opt indent res_type ^ " " ^ id_name st_opt f_id ^ " " ^
     "(" ^ arg_types_s ^ ") {\n" ^
-    string_of_naasty_statement (indent + default_indentation) body ^ ";\n" ^
+    string_of_naasty_statement ~st_opt (indent + default_indentation) body ^ ";\n" ^
     "}"
 
-let string_of_naasty_declaration indent = function
-  | Type_Decl naasty_type -> string_of_naasty_type indent naasty_type
-  | Fun_Decl naasty_function -> string_of_naasty_function indent naasty_function
-  | Stmt naasty_statement -> string_of_naasty_statement indent naasty_statement
+let string_of_naasty_declaration ?st_opt:((st_opt : state option) = None) indent = function
+  | Type_Decl naasty_type -> string_of_naasty_type ~st_opt indent naasty_type
+  | Fun_Decl naasty_function -> string_of_naasty_function ~st_opt indent naasty_function
+  | Stmt naasty_statement -> string_of_naasty_statement ~st_opt indent naasty_statement
 
-let string_of_naasty_program indent prog =
-  List.map (string_of_naasty_declaration indent) prog
+let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent prog =
+  List.map (string_of_naasty_declaration ~st_opt indent) prog
   |> String.concat ";\n"
 
 ;;

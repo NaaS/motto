@@ -33,3 +33,5 @@ let fold_map (z : 'b list * 'c) (f : 'c -> 'a -> 'b * 'c)
   List.fold_right (fun ty (tys_acc, st_acc) ->
     let (ty', st_acc') = f st_acc ty
     in (ty' :: tys_acc, st_acc')) l z
+
+let swap (x, y) = (y, x)

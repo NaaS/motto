@@ -128,36 +128,10 @@ let rec parse_and_print lexbuf =
     parse_and_print lexbuf
 *)
 
-let loop filename () =
+let parse filename =
   let inx = In_channel.create filename in
   let lexbuf = Lexing.from_channel inx in
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
   let result = parse_and_print lexbuf in
     In_channel.close inx;
-  print_endline "Starting source program";
   result
-  |> Crisp_syntax.program_to_string
-  |> print_endline;
-  print_endline "Finished source program";
-(*FIXME this next block is very rudimentary
-  print_endline "Starting translated program";
-  result
-  |> Translation.naasty_of_flick_program
-  |> fst (*NOTE discarding state*)
-  |> Naasty_aux.string_of_naasty_program Naasty_aux.prog_indentation
-  |> print_endline;
-  print_endline "Finished translated program"
-*)
-  result
-
-(*
-let loop filename () =
-  let inx = In_channel.create filename in
-  let lexbuf = Lexing.from_channel inx in
-  lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
-  let result = Crisp_parser.program Crisp_lexer.main lexbuf in
-  In_channel.close inx;
-  result
-  ;;
-*)
-

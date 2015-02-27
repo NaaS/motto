@@ -9,6 +9,34 @@ open Crisp_syntax
 open Crisp_parser
 open Crisp_parse
 
+let loop filename () =
+  print_endline "Starting source program";
+  parse filename
+  |> Crisp_syntax.program_to_string
+  |> print_endline;
+  print_endline "Finished source program";
+(*FIXME this next block is very rudimentary
+  print_endline "Starting translated program";
+  result
+  |> Translation.naasty_of_flick_program
+  |> fst (*NOTE discarding state*)
+  |> Naasty_aux.string_of_naasty_program Naasty_aux.prog_indentation
+  |> print_endline;
+  print_endline "Finished translated program"
+*)
+;;
+
+(*
+let loop filename () =
+  let inx = In_channel.create filename in
+  let lexbuf = Lexing.from_channel inx in
+  lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
+  let result = Crisp_parser.program Crisp_lexer.main lexbuf in
+  In_channel.close inx;
+  result
+  ;;
+*)
+
 let lex_looper filename () =
   let inx = In_channel.create filename in
   let lexbuf = Lexing.from_channel inx in
@@ -153,7 +181,7 @@ let test_whole_dir testdir =
          ending = String.sub filename
                     ~pos:(filename_length - ending_length)
                     ~len:ending_length then
-        ignore(test (testdir ^ "/" ^ filename))
+        test (testdir ^ "/" ^ filename)
       else ()
     done
   with End_of_file ->
@@ -169,5 +197,5 @@ if Array.length Sys.argv = 1 then
   end
 else
   for i = 1 to Array.length Sys.argv - 1 do
-    ignore(test Sys.argv.(i))
+    test Sys.argv.(i)
   done

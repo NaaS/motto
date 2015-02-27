@@ -148,6 +148,7 @@ let loop filename () =
   |> print_endline;
   print_endline "Finished translated program"
 *)
+  result
 
 (*
 let loop filename () =

@@ -153,7 +153,7 @@ let test_whole_dir testdir =
          ending = String.sub filename
                     ~pos:(filename_length - ending_length)
                     ~len:ending_length then
-        test (testdir ^ "/" ^ filename)
+        ignore(test (testdir ^ "/" ^ filename))
       else ()
     done
   with End_of_file ->
@@ -169,5 +169,5 @@ if Array.length Sys.argv = 1 then
   end
 else
   for i = 1 to Array.length Sys.argv - 1 do
-    test Sys.argv.(i)
+    ignore(test Sys.argv.(i))
   done

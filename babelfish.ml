@@ -45,8 +45,7 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b) list)
   let type_lookup = gen_lookup type_symbols in
   let normal_lookup = gen_lookup symbols in
   if type_lookup <> None && normal_lookup <> None then
-    failwith ("Somehow the symbol " ^ id_s ^ " is being used for both a type and a
-    non-type")
+    failwith ("Somehow the symbol " ^ id_s ^ " is being used for both a type and a non-type")
   else match scope with
     | Type ->
       if normal_lookup <> None then

@@ -22,11 +22,9 @@ type translated_type =
     deserialiser : naasty_function option }
 
 type data_model_component =
-  {
-    name : string;
+  { name : string;
     identifiers : string list;
-    scheme : naasty_type;
-  }
+    scheme : naasty_type }
 
 (*
   Based on

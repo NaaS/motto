@@ -8,6 +8,11 @@ open Crisp_syntax
 open Naasty
 
 
+(*If forbid_shadowing then names can only be declared once. This could be overly
+  restrictive for normal use. If not forbid_shadowing, then the intermediate
+  language's names become handled in a hashcons-like way.*)
+let forbid_shadowing = false
+
 type state =
   { pragmas : string list;
     type_declarations : naasty_type list;
@@ -144,8 +149,7 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     match typename_opt with
     | None -> failwith ("Was expecting type name.")
     | Some type_name ->
-      if lookup_name Type st type_name <> None then
-        (*shadowing is forbidden*)
+      if forbid_shadowing && lookup_name Type st type_name <> None then
         failwith ("Already declared type: " ^ type_name)
       else
         (st.next_typesymbol,
@@ -157,8 +161,7 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     match label_opt with
     | None -> (None, st)
     | Some s ->
-      if lookup_name Term st s <> None then
-        (*shadowing is forbidden*)
+      if forbid_shadowing && lookup_name Term st s <> None then
         failwith ("Already declared: " ^ s);
       (Some st.next_symbol,
        { st with

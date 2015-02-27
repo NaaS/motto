@@ -98,7 +98,7 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
           (*Generate a fresh name and update the state*)
           (*FIXME what to do about shadowing?*)
           if type_mode then
-            if lookup_name Type st local_name <> None then
+            if forbid_shadowing && lookup_name Type st local_name <> None then
               failwith ("Already declared type: " ^ local_name)
             else
               (st.next_typesymbol,
@@ -107,7 +107,7 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
                  next_typesymbol = 1 + st.next_typesymbol;
                })
           else
-            if lookup_name Term st local_name <> None then
+            if forbid_shadowing && lookup_name Term st local_name <> None then
               failwith ("Already declared identifier: " ^ local_name)
             else
               (st.next_symbol,

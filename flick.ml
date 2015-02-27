@@ -30,26 +30,37 @@ let cfg : configuration ref = ref {
 let next_arg : arg_params option ref = ref None in
 let arg_idx = ref 1 in
 
-while !arg_idx < Array.length Sys.argv - 1 do
-  match Sys.argv.(!arg_idx) with
-  | "--max_task_cost" -> failwith "Unsupported feature" (*TODO*)
-  | "--cost_function_file" -> failwith "Unsupported feature" (*TODO*)
-  | "-o" ->
-    if !next_arg <> None then
-      failwith ("Was expecting a parameter value before " ^ Sys.argv.(!arg_idx))
-    else next_arg := Some OutputDir
-  | s ->
-    match !next_arg with
-    | None ->
-      cfg := { !cfg with source_file = Some s }
-    | Some OutputDir ->
-      cfg := { !cfg with output_directory = Some s }
+while !arg_idx < Array.length Sys.argv do
+  let handle_arg idx =
+    match Sys.argv.(idx) with
+    | "--max_task_cost" -> failwith "Unsupported feature" (*TODO*)
+    | "--cost_function_file" -> failwith "Unsupported feature" (*TODO*)
+    | "-o" ->
+      if !next_arg <> None then
+        failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
+      else next_arg := Some OutputDir
+    | s ->
+      match !next_arg with
+      | None ->
+        cfg := { !cfg with source_file = Some s }
+      | Some OutputDir ->
+        cfg := { !cfg with output_directory = Some s };
+        next_arg := None
+  in
+  handle_arg !arg_idx;
+  arg_idx := !arg_idx + 1
 done;
 
 match !cfg.source_file, !cfg.output_directory with
 | Some source_file, Some output_directory ->
   Crisp_parse.parse source_file
+(*
   |> Translation.naasty_of_flick_program
+  |> fst (*NOTE discarding state*)
+  |> Naasty_aux.string_of_naasty_program Naasty_aux.prog_indentation
+*)
+  |> Crisp_syntax.program_to_string
+  |> print_endline;
 
 | _ ->
   begin

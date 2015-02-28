@@ -122,6 +122,8 @@ let gen_serialiser (ty : type_value) : naasty_function =
 let gen_deserialiser (ty : type_value) : naasty_function =
   failwith "TODO"
 
+(*FIXME this kind of code seems beyond the scope of this module, so i'll
+        probably move the code elsewhere later.*)
 (*
    1. Given a parsed Flick program
    (1b. here would segment the process into possibly several processes, and

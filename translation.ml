@@ -9,11 +9,14 @@ open Naasty
 open State
 
 
+exception Translation of string * type_value
+
 (*Sets the label of a type unless it's already defined. This is used to bridge
   the gap between Flick and NaaSty, since the latter expects all type
   declarations to be associated with their names, while the former distributes
   this a bit (the name is stored in a type record).*)
-let update_empty_label label = function
+let update_empty_label label (ty : type_value) =
+  match ty with
   | UserDefinedType (label_opt, type_name) ->
     if label_opt = None then
       UserDefinedType (Some label, type_name)
@@ -115,33 +118,35 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     let (label_opt', st') = check_and_generate_name label_opt
     in (Bool_Type label_opt', st')
   | Integer (label_opt, type_ann) ->
-    let (label_opt', st') = check_and_generate_name label_opt in
-    let metadata =
-      List.fold_right (fun (name, ann) md ->
-        match ann with
-        | Ann_Int i ->
-          if name = "byte_size" then
-            let bits =
-              match i with
-              | 2 -> 16
-              | 4 -> 32
-              | 8 -> 64
-              | _ -> failwith ("Unsupported integer precision: " ^
-                               string_of_int i ^ " bytes")
-            in { md with precision = bits }
-          else failwith ("Unrecognised integer annotation: " ^ name)
-        | Ann_Ident s ->
-          if name = "signed" then
-            let bool_value =
-              match s with
-              | "true" -> true
-              | "false" -> false
-              | _ -> failwith ("Unrecognised Boolean value: " ^ s)
-            in { md with signed = bool_value }
-          else failwith ("Unrecognised integer annotation: " ^ name)
-        | _ -> failwith ("Unrecognised integer annotation: " ^ name))
-        type_ann default_int_metadata
-    in (Int_Type (label_opt', metadata), st')
+    if type_ann = [] then raise (Translation ("No annotation given", ty))
+    else
+      let (label_opt', st') = check_and_generate_name label_opt in
+      let metadata =
+        List.fold_right (fun (name, ann) md ->
+          match ann with
+          | Ann_Int i ->
+            if name = "byte_size" then
+              let bits =
+                match i with
+                | 2 -> 16
+                | 4 -> 32
+                | 8 -> 64
+                | _ -> failwith ("Unsupported integer precision: " ^
+                                 string_of_int i ^ " bytes")
+              in { md with precision = bits }
+            else failwith ("Unrecognised integer annotation: " ^ name)
+          | Ann_Ident s ->
+            if name = "signed" then
+              let bool_value =
+                match s with
+                | "true" -> true
+                | "false" -> false
+                | _ -> failwith ("Unrecognised Boolean value: " ^ s)
+              in { md with signed = bool_value }
+            else failwith ("Unrecognised integer annotation: " ^ name)
+          | _ -> failwith ("Unrecognised integer annotation: " ^ name))
+          type_ann default_int_metadata
+      in (Int_Type (label_opt', metadata), st')
   | IPv4Address label_opt ->
     let (label_opt', st') = check_and_generate_name label_opt in
     let metadata = { signed = false; precision = 32 }
@@ -171,7 +176,6 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     let (type_identifier, st') = check_and_generate_typename label_opt in
     let (tys', st'') = fold_map ([], st') naasty_of_flick_type tys
     in (Record_Type (type_identifier, List.rev tys'), st'')
-
 
 let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   (naasty_declaration * state) =

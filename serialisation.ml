@@ -122,6 +122,31 @@ let gen_serialiser (ty : type_value) : naasty_function =
 let gen_deserialiser (ty : type_value) : naasty_function =
   failwith "TODO"
 
+(*
+   1. Given a parsed Flick program
+   (1b. here would segment the process into possibly several processes, and
+   specify which is the main one)
+   2. form a project, splitting it into separate files, and keep track of
+      inclusions
+   3. translate each file into one or more naasty programs
+      for type:
+        traverse AST
+        get type declaration
+        attempt to translate it
+        then generate datamodel for it, completing the struct definition
+        then generate the code for the datamodel, completing the serialiser
+   ?. need to keep track of names? in what way?
+   4. generate task graph
+*)
+
+let translate_serialise_save = failwith "TODO"
+(*
+  |> Translation.naasty_of_flick_program
+  |> fst (*NOTE discarding state*)
+  |> Naasty_aux.string_of_naasty_program Naasty_aux.prog_indentation
+  |> print_endline;
+*)
+
 ;;
 (*FIXME crude test*)
 fold_map ([], initial_state) (fun st scheme ->

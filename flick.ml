@@ -3,16 +3,6 @@
    Nik Sultana, Cambridge University Computer Lab, February 2015
 *)
 
-open General
-open Crisp_syntax
-open Naasty
-open Naasty_aux
-open Translation
-open State
-open State_aux
-open Serialisation
-;;
-
 type configuration =
   { source_file : string option;
     output_directory : string option;
@@ -54,14 +44,7 @@ done;
 match !cfg.source_file, !cfg.output_directory with
 | Some source_file, Some output_directory ->
   Crisp_parse.parse source_file
-(*
-  |> Translation.naasty_of_flick_program
-  |> fst (*NOTE discarding state*)
-  |> Naasty_aux.string_of_naasty_program Naasty_aux.prog_indentation
-*)
-  |> Crisp_syntax.program_to_string
-  |> print_endline;
-
+  |> Serialisation.translate_serialise_save
 | _ ->
   begin
     failwith "Output directory and input file need to be specified";

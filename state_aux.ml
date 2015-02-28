@@ -9,10 +9,10 @@ open Naasty_aux
 
 
 let state_to_str (resolve : bool)
-      ({pragmas; type_declarations; next_symbol;
+      ({pragma_inclusions; type_declarations; next_symbol;
         type_symbols; term_symbols} as st: state) =
   let st_opt = if resolve then Some st else None in
-  "pragmas : [" ^ String.concat ", " pragmas ^ "]" ^ "\n" ^
+  "pragma_inclusions : [" ^ String.concat ", " pragma_inclusions ^ "]" ^ "\n" ^
   "type_declarations : [" ^
   String.concat ", " (List.map (string_of_naasty_type ~st_opt:st_opt
                                   prog_indentation) type_declarations) ^ "]" ^ "\n" ^

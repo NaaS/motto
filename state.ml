@@ -15,7 +15,7 @@ open Naasty
 let forbid_shadowing = false
 
 type state =
-  { pragmas : string list;
+  { pragma_inclusions : string list;
     type_declarations : naasty_type list;
     next_symbol : integer;
     type_symbols : (string * integer) list;
@@ -23,7 +23,7 @@ type state =
   }
 
 let initial_state =
-  { pragmas = [];
+  { pragma_inclusions = [];
     type_declarations = [];
     next_symbol = 1;
     type_symbols = [];

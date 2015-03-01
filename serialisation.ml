@@ -6,8 +6,6 @@
 open General
 open Crisp_syntax
 open Naasty
-open Naasty_aux
-open Translation
 
 (*Thrown when we try to generate a de/serialiser for a type that cannot be
   serialised -- either because of its nature (e.g., unit) or because it lacks
@@ -185,11 +183,11 @@ let translate_serialise_save parsed_flick_file = failwith "TODO"
 ;;
 (*FIXME crude test*)
 fold_map ([], State.initial_state) (fun st scheme ->
-      instantiate true scheme.identifiers st scheme.scheme)
+      Naasty_aux.instantiate true scheme.identifiers st scheme.scheme)
   (instantiate_data_model "test")
 |> (fun (tys, st) ->
   let st_s = State_aux.state_to_str false st in
-  let res_s = List.map (string_of_naasty_type ~st_opt:(Some st) 0) tys
+  let res_s = List.map (Naasty_aux.string_of_naasty_type ~st_opt:(Some st) 0) tys
     |> String.concat ";\n" in
   st_s ^ res_s)
 |> print_endline

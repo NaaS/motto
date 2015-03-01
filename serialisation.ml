@@ -139,6 +139,11 @@ let gen_deserialiser (ty : type_value) : naasty_function =
         then generate the code for the datamodel, completing the serialiser
    ?. need to keep track of names? in what way?
    4. generate task graph
+
+   Handling exceptions:
+   - arithmetic: overflow, division by zero
+   - channels: breakages of channels
+   - out of memory
 *)
 
 let translate_serialise_save = failwith "TODO"

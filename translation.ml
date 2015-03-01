@@ -192,5 +192,5 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   | Include filename ->
     (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
 
-let naasty_of_flick_program (p : program) : (naasty_program * state) =
-  fold_map ([], initial_state) naasty_of_flick_toplevel_decl p
+let naasty_of_flick_program ?st:((st : state) = initial_state) (p : program) : (naasty_program * state) =
+  fold_map ([], st) naasty_of_flick_toplevel_decl p

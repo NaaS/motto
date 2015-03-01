@@ -157,9 +157,12 @@ let rec expand_includes (p : Crisp_syntax.program) =
   order stable. That is, if we rewrite the program to contain the types, then
   the functions, then the processes, then all existing dependencies should
   continue to be satisified. (Originally, types, functions and processes can be
-  given in any order as long as usual scoping rules are satisfied.)*)
+  given in any order as long as usual scoping rules are satisfied.)
+  Then chop source file into different units, collecting declarations of the
+  same kind*)
 let split_declaration_kinds (p : Crisp_syntax.program) :
-  Crisp_syntax.toplevel_decl list * Crisp_syntax.toplevel_decl list * Crisp_syntax.toplevel_decl list =
+  Crisp_project.compilation_unit * Crisp_project.compilation_unit *
+  Crisp_project.compilation_unit =
   List.fold_right (fun decl (types, functions, processes) ->
     match decl with
     | Type _ -> (decl :: types, functions, processes)
@@ -169,9 +172,13 @@ let split_declaration_kinds (p : Crisp_syntax.program) :
       failwith "Inclusions should have been expanded before reaching this point.")
     p ([], [], [])
   |> (fun (types, functions, processes) ->
-      (List.rev types, List.rev functions, List.rev processes))
+    ({ Crisp_project.name = "types";
+       Crisp_project.content = List.rev types },
+     { Crisp_project.name = "functions";
+       Crisp_project.content = List.rev functions },
+     { Crisp_project.name = "processes";
+       Crisp_project.content = List.rev processes }))
 
-(*Chop source file into different units, according to the declaration*)
 let translate_serialise_save parsed_flick_file = failwith "TODO"
 (*
   |> Translation.naasty_of_flick_program

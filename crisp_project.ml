@@ -5,8 +5,6 @@
 
 type compilation_unit =
   { name : string;
-    (*NOTE overlap of "inclusions" with state.inclusions*)
-    inclusions : string list;
     content : Crisp_syntax.program }
 
 let filename_of_compilationunit (cu : compilation_unit) : string =

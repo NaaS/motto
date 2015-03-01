@@ -183,7 +183,17 @@ let split_declaration_kinds (p : Crisp_syntax.program) :
   file.*)
 let translate_type_compilation_unit
       (types_unit : Crisp_project.compilation_unit) :
-  Naasty_project.compilation_unit list = []
+  Naasty_project.compilation_unit list =
+  List.fold_right (fun (ty : Crisp_syntax.toplevel_decl) acc ->
+    { Naasty_project.name = Crisp_syntax_aux.name_of_type ty;
+      (*FIXME need to do this again, but for Cpp unit-type*)
+      Naasty_project.unit_type = Naasty_project.Header;
+      Naasty_project.inclusions = [];
+      Naasty_project.content =
+        (*FIXME discarding state information!*)
+        fst (Translation.naasty_of_flick_program [ty])
+    } :: acc)
+    types_unit.Crisp_project.content []
 
 (*FIXME currently ignoring functions and processes*)
 let translate_serialise_stringify
@@ -195,12 +205,6 @@ let translate_serialise_stringify
     (cu.Naasty_project.name, Naasty_project.string_of_compilationunit cu) in
   translate_type_compilation_unit types_unit
   |> List.map stringify_compilation_unit
-(*
-  |> Translation.naasty_of_flick_program
-  |> fst (*NOTE discarding state*)
-  |> Naasty_aux.string_of_naasty_program Naasty_aux.prog_indentation
-  |> print_endline;
-*)
 
 ;;
 (*FIXME crude test*)

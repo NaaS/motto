@@ -142,15 +142,19 @@ let gen_deserialiser (ty : type_value) : naasty_function =
    - out of memory
 *)
 
-let rec expand_includes (p : Crisp_syntax.program) =
-  List.fold_right (fun decl acc ->
-    match decl with
-    | Include source_file -> (*FIXME probably should search inside some set of
-                                     include directories, given using -I
-                                     parameter to the compiler.*)
-      let inclusion = Crisp_parse.parse source_file
-      in expand_includes inclusion @ acc
-    | _ -> acc) p []
+let expand_includes (p : Crisp_syntax.program) =
+  let rec expand_includes' (p : Crisp_syntax.program) =
+    List.fold_right (fun decl acc ->
+      match decl with
+      | Include source_file -> (*FIXME probably should search inside some set of
+                                       include directories, given using -I
+                                       parameter to the compiler.*)
+        let inclusion =
+          Crisp_parse.parse source_file
+          |> List.rev
+        in expand_includes' inclusion @ acc
+      | _ -> decl :: acc) p []
+  in List.rev (expand_includes' p)
 
 (*Given a program whose Includes have been expanded out, separate out the
   declarations of types, processes, and functions -- but keep their relative

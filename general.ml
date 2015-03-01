@@ -35,3 +35,12 @@ let fold_map (z : 'b list * 'c) (f : 'c -> 'a -> 'b * 'c)
     in (ty' :: tys_acc, st_acc')) l z
 
 let swap (x, y) = (y, x)
+
+(*FIXME this currently simply prints files out; doesn't write them to the file
+  system*)
+let write_files (file_contents : (string * string) list) : unit =
+  List.fold_right (fun (filename, contents) _ ->
+    print_endline ("<<Starting " ^ filename);
+    print_endline contents;
+    print_endline (">>Finished " ^ filename))
+    file_contents ()

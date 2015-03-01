@@ -179,7 +179,22 @@ let split_declaration_kinds (p : Crisp_syntax.program) :
      { Crisp_project.name = "processes";
        Crisp_project.content = List.rev processes }))
 
-let translate_serialise_save parsed_flick_file = failwith "TODO"
+(*Every type becomes 2 compilation units in NaaSty: a header file and a code
+  file.*)
+let translate_type_compilation_unit
+      (types_unit : Crisp_project.compilation_unit) :
+  Naasty_project.compilation_unit list = []
+
+(*FIXME currently ignoring functions and processes*)
+let translate_serialise_stringify
+      ((types_unit, functions_unit, processes_unit) :
+         Crisp_project.compilation_unit *
+         Crisp_project.compilation_unit *
+         Crisp_project.compilation_unit) =
+  let stringify_compilation_unit (cu : Naasty_project.compilation_unit) =
+    (cu.Naasty_project.name, Naasty_project.string_of_compilationunit cu) in
+  translate_type_compilation_unit types_unit
+  |> List.map stringify_compilation_unit
 (*
   |> Translation.naasty_of_flick_program
   |> fst (*NOTE discarding state*)

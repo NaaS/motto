@@ -45,7 +45,9 @@ match !cfg.source_file, !cfg.output_directory with
 | Some source_file, Some output_directory ->
   Crisp_parse.parse source_file
   |> Serialisation.expand_includes
-  |> Serialisation.translate_serialise_save
+  |> Serialisation.split_declaration_kinds
+  |> Serialisation.translate_serialise_stringify
+  |> General.write_files
 | _ ->
   begin
     failwith "Output directory and input file need to be specified";

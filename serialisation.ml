@@ -206,7 +206,8 @@ let translate_serialise_stringify
          Crisp_project.compilation_unit *
          Crisp_project.compilation_unit) =
   let stringify_compilation_unit (cu : Naasty_project.compilation_unit) =
-    (cu.Naasty_project.name, Naasty_project.string_of_compilationunit cu) in
+    (Naasty_project.filename_of_compilationunit cu,
+     Naasty_project.string_of_compilationunit cu) in
   translate_type_compilation_unit types_unit
   |> List.map stringify_compilation_unit
 

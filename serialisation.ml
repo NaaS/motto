@@ -8,8 +8,6 @@ open Crisp_syntax
 open Naasty
 open Naasty_aux
 open Translation
-open State
-open State_aux
 
 (*Thrown when we try to generate a de/serialiser for a type that cannot be
   serialised -- either because of its nature (e.g., unit) or because it lacks
@@ -156,6 +154,25 @@ let rec expand_includes (p : Crisp_syntax.program) =
       in expand_includes inclusion @ acc
     | _ -> acc) p []
 
+(*Given a program whose Includes have been expanded out, separate out the
+  declarations of types, processes, and functions -- but keep their relative
+  order stable. That is, if we rewrite the program to contain the types, then
+  the functions, then the processes, then all existing dependencies should
+  continue to be satisified. (Originally, types, functions and processes can be
+  given in any order as long as usual scoping rules are satisfied.)*)
+let split_declaration_kinds (p : Crisp_syntax.program) :
+  Crisp_syntax.toplevel_decl list * Crisp_syntax.toplevel_decl list * Crisp_syntax.toplevel_decl list =
+  List.fold_right (fun decl (types, functions, processes) ->
+    match decl with
+    | Type _ -> (decl :: types, functions, processes)
+    | Process _ -> (types, functions, decl :: processes)
+    | Function _ -> (types, decl :: functions, processes)
+    | Include _ ->
+      failwith "Inclusions should have been expanded before reaching this point.")
+    p ([], [], [])
+  |> (fun (types, functions, processes) ->
+      (List.rev types, List.rev functions, List.rev processes))
+
 (*Chop source file into different units, according to the declaration*)
 let translate_serialise_save parsed_flick_file = failwith "TODO"
 (*
@@ -167,11 +184,11 @@ let translate_serialise_save parsed_flick_file = failwith "TODO"
 
 ;;
 (*FIXME crude test*)
-fold_map ([], initial_state) (fun st scheme ->
+fold_map ([], State.initial_state) (fun st scheme ->
       instantiate true scheme.identifiers st scheme.scheme)
   (instantiate_data_model "test")
 |> (fun (tys, st) ->
-  let st_s = state_to_str false st in
+  let st_s = State_aux.state_to_str false st in
   let res_s = List.map (string_of_naasty_type ~st_opt:(Some st) 0) tys
     |> String.concat ";\n" in
   st_s ^ res_s)

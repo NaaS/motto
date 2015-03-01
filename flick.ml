@@ -44,6 +44,7 @@ done;
 match !cfg.source_file, !cfg.output_directory with
 | Some source_file, Some output_directory ->
   Crisp_parse.parse source_file
+  |> Serialisation.expand_includes
   |> Serialisation.translate_serialise_save
 | _ ->
   begin

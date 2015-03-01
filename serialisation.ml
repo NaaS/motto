@@ -146,7 +146,18 @@ let gen_deserialiser (ty : type_value) : naasty_function =
    - out of memory
 *)
 
-let translate_serialise_save = failwith "TODO"
+let rec expand_includes (p : Crisp_syntax.program) =
+  List.fold_right (fun decl acc ->
+    match decl with
+    | Include source_file -> (*FIXME probably should search inside some set of
+                                     include directories, given using -I
+                                     parameter to the compiler.*)
+      let inclusion = Crisp_parse.parse source_file
+      in expand_includes inclusion @ acc
+    | _ -> acc) p []
+
+(*Chop source file into different units, according to the declaration*)
+let translate_serialise_save parsed_flick_file = failwith "TODO"
 (*
   |> Translation.naasty_of_flick_program
   |> fst (*NOTE discarding state*)

@@ -203,14 +203,14 @@ let translate_type_compilation_unit (st : state)
 
 (*FIXME currently ignoring functions and processes*)
 let translate_serialise_stringify
-      ((types_unit, functions_unit, processes_unit) :
-         Crisp_project.compilation_unit *
-         Crisp_project.compilation_unit *
-         Crisp_project.compilation_unit) =
+  (st : State.state)
+  ((types_unit, functions_unit, processes_unit) :
+     Crisp_project.compilation_unit *
+     Crisp_project.compilation_unit *
+     Crisp_project.compilation_unit) =
   let stringify_compilation_unit (st : state) (cu : Naasty_project.compilation_unit) =
     (Naasty_project.filename_of_compilationunit cu,
      Naasty_project.string_of_compilationunit ~st_opt:(Some st) cu) in
-  let st(*FIXME make parameter*) = initial_state in
   let (translated_type_units, st') =
     translate_type_compilation_unit st types_unit in
   State_aux.state_to_str true st' |> print_endline; (*FIXME debug line*)

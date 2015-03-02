@@ -46,7 +46,7 @@ match !cfg.source_file, !cfg.output_directory with
   Crisp_parse.parse source_file
   |> Serialisation.expand_includes
   |> Serialisation.split_declaration_kinds
-  |> Serialisation.translate_serialise_stringify
+  |> Serialisation.translate_serialise_stringify State.initial_state
   |> General.write_files
 | _ ->
   begin

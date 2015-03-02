@@ -4,6 +4,7 @@
 *)
 
 open General
+open State
 open Crisp_syntax
 open Naasty
 
@@ -185,19 +186,20 @@ let split_declaration_kinds (p : Crisp_syntax.program) :
 
 (*Every type becomes 2 compilation units in NaaSty: a header file and a code
   file.*)
-let translate_type_compilation_unit
+let translate_type_compilation_unit (st : state)
       (types_unit : Crisp_project.compilation_unit) :
-  Naasty_project.compilation_unit list =
-  List.fold_right (fun (ty : Crisp_syntax.toplevel_decl) acc ->
-    { Naasty_project.name = Crisp_syntax_aux.name_of_type ty;
-      (*FIXME need to do this again, but for Cpp unit-type*)
-      Naasty_project.unit_type = Naasty_project.Header;
-      Naasty_project.inclusions = [];
-      Naasty_project.content =
-        (*FIXME discarding state information!*)
-        fst (Translation.naasty_of_flick_program [ty])
-    } :: acc)
-    types_unit.Crisp_project.content []
+  Naasty_project.compilation_unit list * state =
+  fold_map ([], st)
+    (fun (st' : state) (ty : Crisp_syntax.toplevel_decl) ->
+       let (translated, st'') =
+         Translation.naasty_of_flick_program ~st:st' [ty] in
+       ({Naasty_project.name = Crisp_syntax_aux.name_of_type ty;
+         (*FIXME need to do this again, but for Cpp unit-type*)
+         Naasty_project.unit_type = Naasty_project.Header;
+         Naasty_project.inclusions = [];
+         Naasty_project.content = translated},
+        st''))
+    types_unit.Crisp_project.content
 
 (*FIXME currently ignoring functions and processes*)
 let translate_serialise_stringify
@@ -205,11 +207,14 @@ let translate_serialise_stringify
          Crisp_project.compilation_unit *
          Crisp_project.compilation_unit *
          Crisp_project.compilation_unit) =
-  let stringify_compilation_unit (cu : Naasty_project.compilation_unit) =
+  let stringify_compilation_unit (st : state) (cu : Naasty_project.compilation_unit) =
     (Naasty_project.filename_of_compilationunit cu,
-     Naasty_project.string_of_compilationunit cu) in
-  translate_type_compilation_unit types_unit
-  |> List.map stringify_compilation_unit
+     Naasty_project.string_of_compilationunit ~st_opt:(Some st) cu) in
+  let st(*FIXME make parameter*) = initial_state in
+  let (translated_type_units, st') =
+    translate_type_compilation_unit st types_unit in
+  State_aux.state_to_str true st' |> print_endline; (*FIXME debug line*)
+  List.map (stringify_compilation_unit st') translated_type_units
 
 ;;
 (*FIXME crude test*)
@@ -217,7 +222,7 @@ fold_map ([], State.initial_state) (fun st scheme ->
       Naasty_aux.instantiate true scheme.identifiers st scheme.scheme)
   (instantiate_data_model "test")
 |> (fun (tys, st) ->
-  let st_s = State_aux.state_to_str false st in
+  let st_s = State_aux.state_to_str true st in
   let res_s = List.map (Naasty_aux.string_of_naasty_type ~st_opt:(Some st) 0) tys
     |> String.concat ";\n" in
   st_s ^ res_s)

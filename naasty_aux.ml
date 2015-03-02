@@ -273,6 +273,15 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
       fold_map ([], st'') (instantiate fresh names) arg_tys in
     (Fun_Type (id', res_ty', arg_tys'), st''')
 
+(*Takes a record type specification and adds fields to the end, in order.
+  This is used to extend a type specification to fit the data model.*)
+let add_fields_to_record (decl : naasty_declaration)
+      (additional_tys : naasty_type list) : naasty_declaration =
+  match decl with
+  | Type_Decl (Record_Type (ty_id, tys)) ->
+    Type_Decl (Record_Type (ty_id, tys @ additional_tys))
+  | _ -> failwith "Tried to add fields to non-record."
+
 ;;
 (*FIXME crude test*)
 [

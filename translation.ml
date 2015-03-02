@@ -197,7 +197,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     let (ty', st') =
       update_empty_label ty_decl.type_name ty_decl.type_value
       |> naasty_of_flick_type st
-    in (Type_Decl ty', st)
+    in (Type_Decl ty', st')
   | Function fn_decl ->
     (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
   | Process (process_name, process_type, process_body) ->

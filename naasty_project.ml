@@ -36,15 +36,17 @@ let filename_of_compilationunit (cu : compilation_unit) : string =
 let string_of_compilationunit ?st_opt:((st_opt : State.state option) = None)
       (cu : compilation_unit) : string =
   let inclusions =
-    List.map (fun s -> "#include " ^ s ^ "\n") cu.inclusions
-    |> String.concat "" in
+    let pre_inclusions =
+      List.map (fun s -> "#include " ^ s ^ "\n") cu.inclusions
+      |> String.concat "" in
+    if pre_inclusions = "" then pre_inclusions else pre_inclusions ^ "\n" in
   let prefix, suffix =
     match cu.unit_type with
     | Header ->
       let def_name =
         (*FIXME we don't check if def-names are unique*)
         "__" ^ String.uppercase cu.name ^ "_H_"
-      in ("#ifndef " ^ def_name ^ "\n#define " ^ def_name ^ "\n", "\n#endif")
+      in "#ifndef " ^ def_name ^ "\n#define " ^ def_name ^ "\n\n", "\n\n#endif"
     | Cpp -> ("", "") in
   let body =
     Naasty_aux.string_of_naasty_program ~st_opt Naasty_aux.prog_indentation

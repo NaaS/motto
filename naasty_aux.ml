@@ -90,7 +90,7 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
     bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
   | Static_Type (id_opt, naasty_type) ->
     indn indent ^ "static " ^
-    string_of_naasty_type ~st_opt indent naasty_type ^
+    string_of_naasty_type ~st_opt no_indent naasty_type ^
     bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
   | Fun_Type (id, res_ty, arg_tys) ->
     string_of_naasty_type ~st_opt indent res_ty ^

@@ -191,14 +191,22 @@ let translate_type_compilation_unit (st : state)
   Naasty_project.compilation_unit list * state =
   fold_map ([], st)
     (fun (st' : state) (ty : Crisp_syntax.toplevel_decl) ->
+       let name = Crisp_syntax_aux.name_of_type ty in
        let (translated, st'') =
          Translation.naasty_of_flick_program ~st:st' [ty] in
-       ({Naasty_project.name = Crisp_syntax_aux.name_of_type ty;
+       let (data_model_instance, st''') =
+         fold_map ([], st'') (fun st scheme ->
+           Naasty_aux.instantiate true scheme.identifiers st scheme.scheme)
+           (instantiate_data_model name) in
+       ({Naasty_project.name = name;
          (*FIXME need to do this again, but for Cpp unit-type*)
          Naasty_project.unit_type = Naasty_project.Header;
          Naasty_project.inclusions = [];
-         Naasty_project.content = translated},
-        st''))
+         Naasty_project.content =
+           [Naasty_aux.add_fields_to_record (the_single translated)
+              data_model_instance]
+        },
+        st'''))
     types_unit.Crisp_project.content
 
 (*FIXME currently ignoring functions and processes*)

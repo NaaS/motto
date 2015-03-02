@@ -36,6 +36,11 @@ let fold_map (z : 'b list * 'c) (f : 'c -> 'a -> 'b * 'c)
 
 let swap (x, y) = (y, x)
 
+let the_single l =
+  match l with
+  | [x] -> x
+  | _ -> failwith "Tried to treat non-singleton list as a singleton."
+
 (*FIXME this currently simply prints files out; doesn't write them to the file
   system*)
 let write_files (file_contents : (string * string) list) : unit =

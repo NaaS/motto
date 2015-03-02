@@ -201,7 +201,15 @@ let translate_type_compilation_unit (st : state)
        ({Naasty_project.name = name;
          (*FIXME need to do this again, but for Cpp unit-type*)
          Naasty_project.unit_type = Naasty_project.Header;
-         Naasty_project.inclusions = [];
+         (*FIXME currently hardcoded, but this list of inclusions could be
+                 extended based on an analysis of the code in the module.*)
+         Naasty_project.inclusions =
+           ["<stdint.h>";
+            "<iostream>";
+            "<assert.h>";
+            "<exception>";
+            "\"TaskBuffer.h\"";
+            "\"applications/NaasData.h\""];
          Naasty_project.content =
            [Naasty_aux.add_fields_to_record (the_single translated)
               data_model_instance]

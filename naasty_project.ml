@@ -36,8 +36,8 @@ let filename_of_compilationunit (cu : compilation_unit) : string =
 let string_of_compilationunit ?st_opt:((st_opt : State.state option) = None)
       (cu : compilation_unit) : string =
   let inclusions =
-    List.map (fun s -> "#include " ^ s ^ "") cu.inclusions
-    |> String.concat "\n" in
+    List.map (fun s -> "#include " ^ s ^ "\n") cu.inclusions
+    |> String.concat "" in
   let prefix, suffix =
     match cu.unit_type with
     | Header ->
@@ -49,6 +49,6 @@ let string_of_compilationunit ?st_opt:((st_opt : State.state option) = None)
   let body =
     Naasty_aux.string_of_naasty_program ~st_opt Naasty_aux.prog_indentation
       cu.content
-  in prefix ^ body ^ suffix
+  in prefix ^ inclusions ^ body ^ suffix
 
 type project = compilation_unit list

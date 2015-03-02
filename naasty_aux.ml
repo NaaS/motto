@@ -146,8 +146,12 @@ let string_of_naasty_declaration ?st_opt:((st_opt : state option) = None) indent
   | Stmt naasty_statement -> string_of_naasty_statement ~st_opt indent naasty_statement
 
 let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent prog =
-  List.map (string_of_naasty_declaration ~st_opt indent) prog
-  |> String.concat ";\n"
+  prog
+  |> List.map
+       (fun decl ->
+          string_of_naasty_declaration ~st_opt indent decl
+          |> fun s -> s ^ ";")
+  |> String.concat "\n"
 
 (*Instantiates a naasty_type scheme with a set of names*)
 let rec instantiate (fresh : bool) (names : string list) (st : state)

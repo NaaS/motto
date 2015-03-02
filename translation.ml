@@ -70,27 +70,40 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     | Some i -> i in
   let check_and_generate_typename typename_opt =
     match typename_opt with
-    | None -> failwith ("Was expecting type name.")
+    | None -> failwith "Was expecting type name."
     | Some type_name ->
-      if forbid_shadowing && lookup_name Type st type_name <> None then
-        failwith ("Already declared type: " ^ type_name)
-      else
-        (st.next_symbol,
-         { st with
-           type_symbols = (type_name, st.next_symbol) :: st.type_symbols;
-           next_symbol = 1 + st.next_symbol;
-         }) in
+      begin
+        match lookup_name Type st type_name with
+        | None ->
+          (st.next_symbol,
+           { st with
+             type_symbols = (type_name, st.next_symbol) :: st.type_symbols;
+             next_symbol = 1 + st.next_symbol;
+           })
+        | Some idx ->
+          if forbid_shadowing then
+            failwith ("Already declared type: " ^ type_name)
+          else
+            (idx, st)
+      end in
   let check_and_generate_name label_opt =
     match label_opt with
     | None -> (None, st)
-    | Some s ->
-      if forbid_shadowing && lookup_name Term st s <> None then
-        failwith ("Already declared: " ^ s);
-      (Some st.next_symbol,
-       { st with
-         term_symbols = (s, st.next_symbol) :: st.term_symbols;
-         next_symbol = 1 + st.next_symbol;
-       }) in
+    | Some local_name ->
+      begin
+        match lookup_name Term st local_name with
+        | None ->
+          (Some st.next_symbol,
+           { st with
+             term_symbols = (local_name, st.next_symbol) :: st.term_symbols;
+             next_symbol = 1 + st.next_symbol;
+           })
+        | Some idx ->
+          if forbid_shadowing then
+            failwith ("Already declared identifier: " ^ local_name)
+          else
+            (Some idx, st)
+      end in
   match ty with
   | Disjoint_Union (_, _) -> failwith "Unsupported"
   | List (_, _, _, _) ->

@@ -75,13 +75,7 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     | Some type_name ->
       begin
         match lookup_name Type st type_name with
-        | None ->
-          (*FIXME replace this with call to extend_scope_unsafe*)
-          (st.next_symbol,
-           { st with
-             type_symbols = (type_name, st.next_symbol) :: st.type_symbols;
-             next_symbol = 1 + st.next_symbol;
-           })
+        | None -> State_aux.extend_scope_unsafe Type st type_name
         | Some idx ->
           if forbid_shadowing then
             failwith ("Already declared type: " ^ type_name)
@@ -95,12 +89,8 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
       begin
         match lookup_name Term st identifier with
         | None ->
-          (*FIXME replace this with call to extend_scope_unsafe*)
-          (Some st.next_symbol,
-           { st with
-             term_symbols = (identifier, st.next_symbol) :: st.term_symbols;
-             next_symbol = 1 + st.next_symbol;
-           })
+          let (idx, st') = State_aux.extend_scope_unsafe Term st identifier
+          in (Some idx, st')
         | Some idx ->
           if forbid_shadowing then
             failwith ("Already declared identifier: " ^ identifier)

@@ -64,6 +64,46 @@ let update_empty_label label (ty : type_value) =
       Reference (Some label, ty)
     else failwith "Cannot set an already-set label"
 
+let update_empty_identifier (idx : identifier) (ty : naasty_type) =
+  match ty with
+  | Int_Type (id_opt, int_metadata) ->
+    if id_opt = None then
+      Int_Type (Some idx, int_metadata)
+    else failwith "Cannot set an already-set index"
+  | Bool_Type id_opt ->
+    if id_opt = None then
+      Bool_Type (Some idx)
+    else failwith "Cannot set an already-set index"
+  | Char_Type id_opt ->
+    if id_opt = None then
+      Char_Type (Some idx)
+    else failwith "Cannot set an already-set index"
+  | Array_Type (id_opt, naasty_type, array_size) ->
+    if id_opt = None then
+      Array_Type (Some idx, naasty_type, array_size)
+    else failwith "Cannot set an already-set index"
+  | Record_Type (ty_ident, fields) ->
+    failwith "Cannot update index of this type."
+  | Unit_Type -> ty
+  | UserDefined_Type (id_opt, ty_ident) ->
+    if id_opt = None then
+      UserDefined_Type (Some idx, ty_ident)
+    else failwith "Cannot set an already-set index"
+  | Reference_Type (id_opt, naasty_type) ->
+    if id_opt = None then
+      Reference_Type (Some idx, naasty_type)
+    else failwith "Cannot set an already-set index"
+  | Size_Type id_opt ->
+    if id_opt = None then
+      Size_Type (Some idx)
+    else failwith "Cannot set an already-set index"
+  | Static_Type (id_opt, naasty_type) ->
+    if id_opt = None then
+      Static_Type (Some idx, naasty_type)
+    else failwith "Cannot set an already-set index"
+  | Fun_Type (_, _, _) ->
+    failwith "Cannot update index of this type."
+
 let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * state) =
   let check_and_resolve_typename type_name =
     match lookup_name Type st type_name with
@@ -236,17 +276,22 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   | Function fn_decl ->
     (*FIXME might need to prefix function names with namespace, within the
             function body*)
-    let (name, arg_tys, res_ty) =
-      (fn_decl.fn_name,
-       [],Unit_Type(*FIXME extract these from fn_decl.fn_params*)) in
+    let ((chans, arg_tys), res_tys) =
+      Crisp_syntax_aux.extract_function_types fn_decl.fn_params in
+    (*FIXME currently not translating chans*)
+    let (n_arg_tys, st') =
+      fold_map ([], st) naasty_of_flick_type arg_tys in
+    let (n_res_ty, st'') =
+      the_single res_tys (*FIXME assuming that a single type is returned*)
+      |> naasty_of_flick_type st' in
     let (_, result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
-    (*FIXME need to add type declaration for result_idx, which should be the
-            same as res_ty.*)
-    let result_idx_ty = Unit_Type in
-    let (statmts, ctxt, waiting) = ([], [], [result_idx]) in
+    (*Add type declaration for result_idx, which should be the same as res_ty
+      since result_idx will carry the value that's computed in this function.*)
+    let init_ctxt = [update_empty_identifier result_idx n_res_ty] in
+    let (statmts, ctxt, waiting) = ([], init_ctxt, [result_idx]) in
     let (body, st') = naasty_of_flick_expr st fn_decl.fn_body statmts ctxt waiting in
-    let fn_idx = the (lookup_name Term st name)
-    in (Fun_Decl (fn_idx, arg_tys, res_ty,
+    let fn_idx = the (lookup_name Term st fn_decl.fn_name)
+    in (Fun_Decl (fn_idx, n_arg_tys, n_res_ty,
                 (*Add "Return result_idx" to end of function body*)
                   Seq (body, Return (Var result_idx))),
         st')

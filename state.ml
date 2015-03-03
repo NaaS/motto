@@ -75,9 +75,9 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b) list)
 
 (*Lookup functions for names and indices. Note that (string) names are used for
 identifiers in the Crisp AST, but (numeric) indices are used in the NaaSty AST.*)
-let lookup_name (scope : scope) (st : state) (id : string) : int option =
+let lookup_name (scope : scope) (st : state) (id : string) : identifier option =
   lookup false scope st.term_symbols st.type_symbols (fun x -> x) string_of_int id
-let lookup_id (scope : scope) (st : state) (id : int) : string option =
+let lookup_id (scope : scope) (st : state) (id : identifier) : string option =
   lookup true scope (List.map swap st.term_symbols)
     (List.map swap st.type_symbols) string_of_int (fun x -> x) id
 

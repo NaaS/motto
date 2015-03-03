@@ -21,7 +21,8 @@ type state =
     (*NOTE that we don't track the definitions of types in the mapping below;
            that wouldn't be a bad idea.*)
     type_symbols : (string * integer) list;
-    (*NOTE we don't track the types in the mapping below; that wouldn't be a bad idea*)
+    (*NOTE we don't track the types in the mapping below; that wouldn't be a bad
+           idea. Essentially it would turn this into a symbol table.*)
     term_symbols : (string * integer) list;
   }
 

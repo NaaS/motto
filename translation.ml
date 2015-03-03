@@ -234,8 +234,11 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       |> naasty_of_flick_type st
     in (Type_Decl ty', st')
   | Function fn_decl ->
-    let (statmts, ctxt, waiting) = ([], [], [])(*FIXME need suitable initial values*) in
+    let (_, result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
+    let (statmts, ctxt, waiting) = ([], [(*FIXME need to add type declaration
+                                           for result_idx*)], [result_idx]) in
     let (body, st') = naasty_of_flick_expr st fn_decl.fn_body statmts ctxt waiting in
+    (*FIXME add "Return result_idx" to end of program*)
     let (name, arg_tys, res_ty) =
       (fn_decl.fn_name,
        [],Unit_Type(*FIXME extract these from fn_decl.fn_params*))

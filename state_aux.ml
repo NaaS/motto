@@ -25,3 +25,15 @@ let state_to_str (resolve : bool)
                      (List.map (fun (s, i) -> "(" ^ s ^ ", " ^ string_of_int
                               i ^ ")")
                      term_symbols) ^ "]" ^ "\n"
+
+(*Adds a fresh identifier to the scope, based on a specific prefix, to which
+  we concatenate a numeric suffix/index*)
+let mk_fresh (scope : scope) (id : string) (min_idx : int) (st : state) :
+  string * Naasty.identifier * state =
+  if min_idx < 0 then
+    failwith "min_idx must be non-negative"
+  else
+    let idx = ref min_idx in
+    while (lookup_name scope st (id ^ string_of_int !idx)) do
+      idx := 1 + !idx
+    done

@@ -41,6 +41,11 @@ let the_single l =
   | [x] -> x
   | _ -> failwith "Tried to treat non-singleton list as a singleton."
 
+let the x_opt =
+  match x_opt with
+  | Some x -> x
+  | None -> failwith "Mistakenly assumed that an optional value contains a value."
+
 (*FIXME this currently simply prints files out; doesn't write them to the file
   system*)
 let write_files (file_contents : (string * string) list) : unit =

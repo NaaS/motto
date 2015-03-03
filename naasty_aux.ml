@@ -282,6 +282,13 @@ let add_fields_to_record (decl : naasty_declaration)
     Type_Decl (Record_Type (ty_id, tys @ additional_tys))
   | _ -> failwith "Tried to add fields to non-record."
 
+let rec concat (sts : naasty_statement list) : naasty_statement =
+  match sts with
+  | [] -> failwith "Statement concat must be applied to at least one statement."
+  | [s] -> s
+  | [s1; s2] -> Seq (s1, s2)
+  | s1 :: s2 :: rest -> Seq (s1, Seq (s2, concat rest))
+
 ;;
 (*FIXME crude test*)
 [

@@ -18,7 +18,10 @@ type state =
   { pragma_inclusions : string list;
     type_declarations : naasty_type list;
     next_symbol : integer;
+    (*NOTE that we don't track the definitions of types in the mapping below;
+           that wouldn't be a bad idea.*)
     type_symbols : (string * integer) list;
+    (*NOTE we don't track the types in the mapping below; that wouldn't be a bad idea*)
     term_symbols : (string * integer) list;
   }
 

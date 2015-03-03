@@ -282,6 +282,7 @@ let add_fields_to_record (decl : naasty_declaration)
     Type_Decl (Record_Type (ty_id, tys @ additional_tys))
   | _ -> failwith "Tried to add fields to non-record."
 
+(*Concats a list of statements into the smallest equivalent sequence of statements*)
 let rec concat (sts : naasty_statement list) : naasty_statement =
   match sts with
   | [] -> failwith "Statement concat must be applied to at least one statement."
@@ -289,6 +290,7 @@ let rec concat (sts : naasty_statement list) : naasty_statement =
   | [s1; s2] -> Seq (s1, s2)
   | s1 :: s2 :: rest -> Seq (s1, Seq (s2, concat rest))
 
+(*Assigns to a collection of variables the value from another variable*)
 let lift_assign (recipients : identifier list) (definiens : identifier) :
   naasty_statement list =
   List.map (fun recipient -> Assign (recipient, Var definiens)) recipients

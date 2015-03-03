@@ -73,7 +73,8 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b) list)
                     res_to_str idx)
       end
 
-(*Lookup functions for names and indices*)
+(*Lookup functions for names and indices. Note that (string) names are used for
+identifiers in the Crisp AST, but (numeric) indices are used in the NaaSty AST.*)
 let lookup_name (scope : scope) (st : state) (id : string) : int option =
   lookup false scope st.term_symbols st.type_symbols (fun x -> x) string_of_int id
 let lookup_id (scope : scope) (st : state) (id : int) : string option =

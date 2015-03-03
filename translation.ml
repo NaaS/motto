@@ -234,17 +234,22 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       |> naasty_of_flick_type st
     in (Type_Decl ty', st')
   | Function fn_decl ->
-    let (_, result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
-    let (statmts, ctxt, waiting) = ([], [(*FIXME need to add type declaration
-                                           for result_idx*)], [result_idx]) in
-    let (body, st') = naasty_of_flick_expr st fn_decl.fn_body statmts ctxt waiting in
-    (*FIXME add "Return result_idx" to end of program*)
+    (*FIXME might need to prefix function names with namespace, within the
+            function body*)
     let (name, arg_tys, res_ty) =
       (fn_decl.fn_name,
-       [],Unit_Type(*FIXME extract these from fn_decl.fn_params*))
-      (*FIXME might need to prefix function name with namespace*) in
+       [],Unit_Type(*FIXME extract these from fn_decl.fn_params*)) in
+    let (_, result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
+    (*FIXME need to add type declaration for result_idx, which should be the
+            same as res_ty.*)
+    let result_idx_ty = Unit_Type in
+    let (statmts, ctxt, waiting) = ([], [], [result_idx]) in
+    let (body, st') = naasty_of_flick_expr st fn_decl.fn_body statmts ctxt waiting in
     let fn_idx = the (lookup_name Term st name)
-    in (Fun_Decl (fn_idx, arg_tys, res_ty, body), st')
+    in (Fun_Decl (fn_idx, arg_tys, res_ty,
+                (*Add "Return result_idx" to end of function body*)
+                  Seq (body, Return (Var result_idx))),
+        st')
   | Process (process_name, process_type, process_body) ->
     (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
   | Include filename ->

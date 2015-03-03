@@ -289,6 +289,10 @@ let rec concat (sts : naasty_statement list) : naasty_statement =
   | [s1; s2] -> Seq (s1, s2)
   | s1 :: s2 :: rest -> Seq (s1, Seq (s2, concat rest))
 
+let lift_assign (recipients : identifier list) (definiens : identifier) :
+  naasty_statement list =
+  List.map (fun recipient -> Assign (recipient, Var definiens)) recipients
+
 ;;
 (*FIXME crude test*)
 [

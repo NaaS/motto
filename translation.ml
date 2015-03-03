@@ -6,6 +6,7 @@
 open General
 open Crisp_syntax
 open Naasty
+open Naasty_aux
 open State
 
 
@@ -75,6 +76,7 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
       begin
         match lookup_name Type st type_name with
         | None ->
+          (*FIXME replace this with call to extend_scope_unsafe*)
           (st.next_symbol,
            { st with
              type_symbols = (type_name, st.next_symbol) :: st.type_symbols;
@@ -89,18 +91,19 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
   let check_and_generate_name label_opt =
     match label_opt with
     | None -> (None, st)
-    | Some local_name ->
+    | Some identifier ->
       begin
-        match lookup_name Term st local_name with
+        match lookup_name Term st identifier with
         | None ->
+          (*FIXME replace this with call to extend_scope_unsafe*)
           (Some st.next_symbol,
            { st with
-             term_symbols = (local_name, st.next_symbol) :: st.term_symbols;
+             term_symbols = (identifier, st.next_symbol) :: st.term_symbols;
              next_symbol = 1 + st.next_symbol;
            })
         | Some idx ->
           if forbid_shadowing then
-            failwith ("Already declared identifier: " ^ local_name)
+            failwith ("Already declared identifier: " ^ identifier)
           else
             (Some idx, st)
       end in
@@ -190,6 +193,48 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     let (tys', st'') = fold_map ([], st') naasty_of_flick_type tys
     in (Record_Type (type_identifier, List.rev tys'), st'')
 
+(* Based on "Translation from Flick to IR" in
+   https://github.com/NaaS/system/blob/master/crisp/flick/flick.tex
+
+   Translates a Flick expression into a NaaSty statement -- the first line of
+   which will be a declaration of a fresh variable that will hold the
+   expression's value, and the last line of which will be an assignment to that
+   variable.
+   It also returns the updated state -- containing mappings between variable
+   indices and names.
+
+   Parameters:
+     e: expression to translate
+   The other parameters provide context for the translation:
+     st: state
+     sts_acc: list of statements accumulated so far during the translation.
+       list is ordered in the intended execution sequence.
+     ctxt_acc: list of fresh variables (and their types) added to the scope so
+       far. list is ordered in the reverse order of the variables' addition to
+       the scope.
+     assign_acc: list of naasty variables to which we should assign the value
+       of the current expression. list is ordered in the reverse order to which
+       a variable was "subscribed" to the value of this expression.
+*)
+let rec naasty_of_flick_expr (st : state) (e : expression)
+          (sts_acc : naasty_statement list) (ctxt_acc : naasty_type list)
+          (assign_acc : identifier list) : (naasty_statement * state) =
+  let check_and_resolve_name identifier =
+    match lookup_name Term st identifier with
+    | None -> failwith ("Undeclared identifier: " ^ identifier)
+    | Some i -> i in
+  match e with
+  | Variable value_name ->
+    if assign_acc = [] then
+      failwith "assign_acc should not be empty at this point."
+    else
+      let translated =
+        check_and_resolve_name value_name
+        |> lift_assign assign_acc
+        |> Naasty_aux.concat
+      in (translated, st)
+  | _ -> failwith "TODO"
+
 let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   (naasty_declaration * state) =
   match tl with
@@ -199,7 +244,14 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       |> naasty_of_flick_type st
     in (Type_Decl ty', st')
   | Function fn_decl ->
-    (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
+    let (statmts, ctxt, waiting) = ([], [], [])(*FIXME need suitable initial values*) in
+    let (body, st') = naasty_of_flick_expr st fn_decl.fn_body statmts ctxt waiting in
+    let (name, arg_tys, res_ty) =
+      (fn_decl.fn_name,
+       [],Unit_Type(*FIXME extract these from fn_decl.fn_params*))
+      (*FIXME might need to prefix function name with namespace*) in
+    let fn_idx = the (lookup_name Term st name)
+    in (Fun_Decl (fn_idx, arg_tys, res_ty, body), st')
   | Process (process_name, process_type, process_body) ->
     (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
   | Include filename ->

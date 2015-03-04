@@ -15,7 +15,10 @@ where `output_directory` is the name of the directory (that doesn't yet
 exist) that's intended to hold the compiler's output.
 The compiler will create `output_directory` and deposit the output files there,
 where they can be compiled and linked using a C++ toolchain.
-For testing, I'm currently using `examples/hadoop_wc_type.cp` as `source_file`.
+
+For testing, I'm currently using the following as `source_file`:
+* `examples/hadoop_wc_type.cp`
+* `tests/simple_function.cp`
 
 To run the parser regression tests:
 ```

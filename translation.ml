@@ -235,20 +235,26 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
 
    Parameters:
      e: expression to translate
-   The other parameters provide context for the translation:
-     st: state
-     sts_acc: list of statements accumulated so far during the translation.
-       list is ordered in the intended execution sequence.
-     ctxt_acc: list of fresh variables (and their types) added to the scope so
-       far. list is ordered in the reverse order of the variables' addition to
-       the scope.
-     assign_acc: list of naasty variables to which we should assign the value
-       of the current expression. list is ordered in the reverse order to which
-       a variable was "subscribed" to the value of this expression.
+     The other parameters provide context for the translation:
+       st: state.
+       sts_acc: the program accumulated so far during the translation.
+       ctxt_acc: list of fresh variables (and their types) added to the scope so
+         far. list is ordered in the reverse order of the variables' addition to
+         the scope.
+       assign_acc: list of naasty variables to which we should assign the value
+         of the current expression. list is ordered in the reverse order to which
+         a variable was "subscribed" to the value of this expression.
+   Returned: sts_acc sequentially composed with the translated e,
+             possibly extended ctxt_acc,
+             possibly extended assign_acc,
+             possibly extended st
 *)
 let rec naasty_of_flick_expr (st : state) (e : expression)
-          (sts_acc : naasty_statement list) (ctxt_acc : naasty_type list)
-          (assign_acc : identifier list) : (naasty_statement * state) =
+          (sts_acc : naasty_statement) (ctxt_acc : naasty_type list)
+          (assign_acc : identifier list) : (naasty_statement *
+                                            naasty_type list (*ctxt_acc*) *
+                                            identifier list (*assign_acc*) *
+                                            state) =
   let check_and_resolve_name identifier =
     match lookup_name Term st identifier with
     | None -> failwith ("Undeclared identifier: " ^ identifier)
@@ -256,33 +262,38 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   match e with
   | Variable value_name ->
     if assign_acc = [] then
+      (*We're expecting this variable to be assigned to something -- and that
+        something should have been in assign_acc*)
       failwith "assign_acc should not be empty at this point."
     else
       let translated =
         Var (check_and_resolve_name value_name)
         |> lift_assign assign_acc
         |> Naasty_aux.concat
-      in (translated, st)
+      in (mk_seq sts_acc translated, ctxt_acc,
+          [](*Having assigned to assign_accs, we can forget them.*),
+          st)
   | Seq (e1, e2) ->
-    let (nstmt, st') = naasty_of_flick_expr st e1 [] [] []
-    in naasty_of_flick_expr st e2 (sts_acc @ [nstmt](*FIXME inefficient*)) ctxt_acc assign_acc
+    let (sts_acc', ctxt_acc', assign_acc', st') = naasty_of_flick_expr st e1 sts_acc ctxt_acc assign_acc
+    in naasty_of_flick_expr st' e2 sts_acc' ctxt_acc' assign_acc'
   | True
   | False ->
       let translated =
         lift_assign assign_acc (Bool_Value (e = True))
         |> Naasty_aux.concat
-      in (translated, st)
+      in (mk_seq sts_acc translated, ctxt_acc, assign_acc, st)
   | Crisp_syntax.And (b1, b2) ->
     let (_, b1_result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
-    let (b1_nstmt, st'') = naasty_of_flick_expr st' b1 [] [] [b1_result_idx] in
+    let (sts_acc', ctxt_acc', assign_acc', st'') = naasty_of_flick_expr st' b1 sts_acc ctxt_acc
+                             (b1_result_idx :: assign_acc) in
     let (_, b2_result_idx, st''') = State_aux.mk_fresh Term "x_" b1_result_idx st'' in
-    let (b2_nstmt, st4) = naasty_of_flick_expr st''' b1 [] [] [b2_result_idx] in
+    let (sts_acc'', ctxt_acc'', assign_acc'', st4) =
+      naasty_of_flick_expr st''' b2 sts_acc' ctxt_acc'
+                             (b2_result_idx :: assign_acc') in
     let and_nstmt =
-      lift_assign assign_acc (Naasty.And (Var b1_result_idx, Var b2_result_idx)) in
-    let translated =
-      [b1_nstmt; b2_nstmt] @ and_nstmt
+      lift_assign assign_acc (Naasty.And (Var b1_result_idx, Var b2_result_idx))
       |> Naasty_aux.concat
-    in (translated, st4)
+    in (mk_seq sts_acc'' and_nstmt, ctxt_acc'', assign_acc'', st4)
 (*
   | Or (b1, b2) ->
   | Not b' ->
@@ -308,17 +319,24 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     let (n_res_ty, st'') =
       the_single res_tys (*FIXME assuming that a single type is returned*)
       |> naasty_of_flick_type st' in
-    let (_, result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
+    let (_, result_idx, st''') = State_aux.mk_fresh Term "x_" 0 st'' in
     (*Add type declaration for result_idx, which should be the same as res_ty
       since result_idx will carry the value that's computed in this function.*)
     let init_ctxt = [update_empty_identifier result_idx n_res_ty] in
-    let (statmts, ctxt, waiting) = ([], init_ctxt, [result_idx]) in
-    let (body, st') = naasty_of_flick_expr st fn_decl.fn_body statmts ctxt waiting in
-    let fn_idx = the (lookup_name Term st fn_decl.fn_name)
+    let (init_statmt, ctxt, waiting) = (Skip, init_ctxt, [result_idx]) in
+    let (body, ctxt', waiting', st4) = naasty_of_flick_expr st''' fn_decl.fn_body init_statmt ctxt waiting in
+
+    (*There shouldn't be any more waiting variables at this point, they should
+      all have been assigned something.*)
+    assert (waiting' = []);
+
+    (*FIXME here should use ctxt' to create the declarations prefixing the
+            function body*)
+    let fn_idx = the (lookup_name Term st4 fn_decl.fn_name)
     in (Fun_Decl (fn_idx, n_arg_tys, n_res_ty,
                 (*Add "Return result_idx" to end of function body*)
                   Seq (body, Return (Var result_idx))),
-        st')
+        st4)
   | Process (process_name, process_type, process_body) ->
     (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
   | Include filename ->

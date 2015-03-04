@@ -259,7 +259,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       failwith "assign_acc should not be empty at this point."
     else
       let translated =
-        check_and_resolve_name value_name
+        Var (check_and_resolve_name value_name)
         |> lift_assign assign_acc
         |> Naasty_aux.concat
       in (translated, st)

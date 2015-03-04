@@ -290,10 +290,10 @@ let rec concat (sts : naasty_statement list) : naasty_statement =
   | [s1; s2] -> Seq (s1, s2)
   | s1 :: s2 :: rest -> Seq (s1, Seq (s2, concat rest))
 
-(*Assigns to a collection of variables the value from another variable*)
-let lift_assign (recipients : identifier list) (definiens : identifier) :
+(*Assigns to a collection of variables the value of an expression*)
+let lift_assign (recipients : identifier list) (definiens : naasty_expression) :
   naasty_statement list =
-  List.map (fun recipient -> Assign (recipient, Var definiens)) recipients
+  List.map (fun recipient -> Assign (recipient, definiens)) recipients
 
 ;;
 (*FIXME crude test*)

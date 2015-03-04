@@ -276,13 +276,15 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   | Seq (e1, e2) ->
     let (sts_acc', ctxt_acc', assign_acc', st') = naasty_of_flick_expr st e1 sts_acc ctxt_acc assign_acc
     in naasty_of_flick_expr st' e2 sts_acc' ctxt_acc' assign_acc'
+
   | True
   | False ->
       let translated =
         lift_assign assign_acc (Bool_Value (e = True))
         |> Naasty_aux.concat
       in (mk_seq sts_acc translated, ctxt_acc, assign_acc, st)
-  | Crisp_syntax.And (b1, b2) ->
+  | Crisp_syntax.And (b1, b2)
+  | Crisp_syntax.Or (b1, b2) ->
     let (_, b1_result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') = naasty_of_flick_expr st' b1 sts_acc ctxt_acc
                              (b1_result_idx :: assign_acc) in
@@ -290,14 +292,26 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let (sts_acc'', ctxt_acc'', assign_acc'', st4) =
       naasty_of_flick_expr st''' b2 sts_acc' ctxt_acc'
                              (b2_result_idx :: assign_acc') in
-    let and_nstmt =
-      lift_assign assign_acc (Naasty.And (Var b1_result_idx, Var b2_result_idx))
+    let translated =
+      match e with
+      | Crisp_syntax.And (_, _) ->
+        Naasty.And (Var b1_result_idx, Var b2_result_idx)
+      | Crisp_syntax.Or (_, _) ->
+        Naasty.Or (Var b1_result_idx, Var b2_result_idx)
+      | _ -> failwith "Impossible" in
+    let nstmt =
+      lift_assign assign_acc translated
       |> Naasty_aux.concat
-    in (mk_seq sts_acc'' and_nstmt, ctxt_acc'', assign_acc'', st4)
-(*
-  | Or (b1, b2) ->
-  | Not b' ->
-*)
+    in (mk_seq sts_acc'' nstmt, ctxt_acc'', assign_acc'', st4)
+  | Not b ->
+    let (_, b_result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
+    let (sts_acc', ctxt_acc', assign_acc', st'') = naasty_of_flick_expr st' b sts_acc ctxt_acc
+                             (b_result_idx :: assign_acc) in
+    let not_nstmt =
+      lift_assign assign_acc (Naasty.Not (Var b_result_idx))
+      |> Naasty_aux.concat
+    in (mk_seq sts_acc' not_nstmt, ctxt_acc', assign_acc', st'')
+
   | _ -> failwith "TODO"
 
 let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :

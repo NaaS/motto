@@ -1,14 +1,6 @@
 (*
    Templates related to the data model designed by Richard Clegg.
    Nik Sultana, Cambridge University Computer Lab, March 2015
-
-   In these templates, indices have the following meaning:
-   * positive indices: not used in the templates, since those will be used as
-     identifiers.
-   * negative indices: these are placeholders for parameters to be supplied in a
-     list; an index's absolute value serves as the index for that list, to get
-     the identifier we want from that list.
-   * 0: this is a placeholder for a fresh name.
 *)
 
 open General

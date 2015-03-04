@@ -155,66 +155,11 @@ let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent pro
           |> fun s -> s ^ ";")
   |> String.concat "\n"
 
-(*Extends a scope by adding a mapping between a name and an index.
-  NOTE we don't check for clashes! thus the _unsafe prefix*)
-let extend_scope_unsafe (scope : scope) (st : state) (id : string) : Naasty.identifier * state =
-  match scope with
-  | Type ->
-    (st.next_symbol,
-     { st with
-       type_symbols = (id, st.next_symbol) :: st.type_symbols;
-       next_symbol = 1 + st.next_symbol;
-     })
-  | Term ->
-    (st.next_symbol,
-     { st with
-       term_symbols = (id, st.next_symbol) :: st.term_symbols;
-       next_symbol = 1 + st.next_symbol;
-     })
-  | Both ->
-    if not merge_type_term_scopes then
-      failwith "Cannot simultaneously extend both type and term scopes with the same name."
-    else
-    (st.next_symbol,
-     { st with
-       type_symbols = (id, st.next_symbol) :: st.type_symbols;
-       term_symbols = (id, st.next_symbol) :: st.term_symbols;
-       next_symbol = 1 + st.next_symbol;
-     })
-    
-
-(*Adds a fresh identifier to the scope, based on a specific prefix, to which
-  we concatenate a numeric suffix/index*)
-let mk_fresh (scope : scope) (id : string) (min_idx : int) (st : state) :
-  string * Naasty.identifier * state =
-  if min_idx < 0 then
-    failwith "min_idx must be non-negative"
-  else
-    let idx = ref min_idx in
-    while (lookup_name scope st (id ^ string_of_int !idx) <> None) do
-      idx := 1 + !idx
-    done;
-    let name = id ^ string_of_int !idx in
-    let (idx, st') = extend_scope_unsafe scope st name
-    in (name, idx, st')
-
-(*Instantiates a naasty_type scheme with a set of names.
-  See header comment in Data_model module for what indices in templates mean.*)
-let rec instantiate (freshname_prefix : string option) (fresh : bool)
-     (names : string list) (st : state) (scheme : naasty_type) : naasty_type * state =
-  let substitute' (type_mode : bool) (scheme : naasty_type) st id f =
-    if id > 0 then (scheme, st)
-    else if id = 0 then
-
-
-      match freshname_prefix with
-      | None -> failwith "A freshname_prefix wasn't given, but we encountered placeholder for a fresh name."
-      | Some s ->
-(*
-        let (_, idx, st') = mk_fresh Both s 0 st
-        in (idx, st')
-*)
-        failwith "TODO"
+(*Instantiates a naasty_type scheme with a set of names*)
+let rec instantiate (fresh : bool) (names : string list) (st : state)
+      (scheme : naasty_type) : naasty_type * state =
+  let substitute' (type_mode : bool) scheme st id f =
+    if id >= 0 then (scheme, st)
     else
       let local_name = List.nth names (abs id - 1) in
       let id', st' =
@@ -226,26 +171,28 @@ let rec instantiate (freshname_prefix : string option) (fresh : bool)
               failwith ("Undeclared " ^ scope_to_str scope ^ ": " ^ local_name)
           | Some i -> (i, st)
         else
-
-
           (*Generate a fresh name and update the state*)
           if type_mode then
             match lookup_name Type st local_name with
             | None ->
-              (*We've done the check, so we can use extend_scope_unsafe*)
-              extend_scope_unsafe Type st local_name
+              (st.next_symbol,
+               { st with
+                 type_symbols = (local_name, st.next_symbol) :: st.type_symbols;
+                 next_symbol = 1 + st.next_symbol;
+               })
             | Some idx ->
               if forbid_shadowing then
                 failwith ("Already declared type: " ^ local_name)
               else
                 (idx, st)
           else
-
-
             match lookup_name Term st local_name with
             | None ->
-              (*We've done the check, so we can use extend_scope_unsafe*)
-              extend_scope_unsafe Term st local_name
+              (st.next_symbol,
+               { st with
+                 term_symbols = (local_name, st.next_symbol) :: st.term_symbols;
+                 next_symbol = 1 + st.next_symbol;
+               })
             | Some idx ->
               if forbid_shadowing then
                 failwith ("Already declared identifier: " ^ local_name)
@@ -269,7 +216,7 @@ let rec instantiate (freshname_prefix : string option) (fresh : bool)
       Char_Type (Some id'))
   | Array_Type (id_opt, naasty_type, array_size) ->
     let naasty_type', st' =
-      instantiate freshname_prefix fresh names st naasty_type in
+      instantiate fresh names st naasty_type in
     if naasty_type' = naasty_type then
       begin
         assert (st = st');
@@ -278,12 +225,12 @@ let rec instantiate (freshname_prefix : string option) (fresh : bool)
       end
     else
       Array_Type (id_opt, naasty_type', array_size)
-      |> instantiate freshname_prefix fresh names st'
+      |> instantiate fresh names st'
   | Record_Type (ty_ident, fields) ->
     let ty_ident', st' =
       substitute' true ty_ident st ty_ident (fun x -> x) in
     let fields', st'' =
-      fold_map ([], st') (instantiate freshname_prefix fresh names) fields in
+      fold_map ([], st') (instantiate fresh names) fields in
     (Record_Type (ty_ident', fields'), st'')
   | Unit_Type -> (Unit_Type, st)
   | UserDefined_Type (id_opt, ty_ident) ->
@@ -294,7 +241,7 @@ let rec instantiate (freshname_prefix : string option) (fresh : bool)
       UserDefined_Type (Some id', ty_ident'))
   | Reference_Type (id_opt, naasty_type) ->
     let naasty_type', st' =
-      instantiate freshname_prefix fresh names st naasty_type in
+      instantiate fresh names st naasty_type in
     if naasty_type' = naasty_type then
       begin
         assert (st = st');
@@ -303,13 +250,13 @@ let rec instantiate (freshname_prefix : string option) (fresh : bool)
       end
     else
       Reference_Type (id_opt, naasty_type')
-      |> instantiate freshname_prefix fresh names st'
+      |> instantiate fresh names st'
   | Size_Type id_opt ->
     substitute false scheme st id_opt (fun id' ->
       Size_Type (Some id'))
   | Static_Type (id_opt, naasty_type) ->
     let naasty_type', st' =
-      instantiate freshname_prefix fresh names st naasty_type in
+      instantiate fresh names st naasty_type in
     if naasty_type' = naasty_type then
       begin
         assert (st = st');
@@ -318,14 +265,14 @@ let rec instantiate (freshname_prefix : string option) (fresh : bool)
       end
     else
       Static_Type (id_opt, naasty_type')
-      |> instantiate freshname_prefix fresh names st'
+      |> instantiate fresh names st'
   | Fun_Type (id, res_ty, arg_tys) ->
     let id', st' =
       substitute' false id st id (fun x -> x) in
     let res_ty', st'' =
-      instantiate freshname_prefix fresh names st' res_ty in
+      instantiate fresh names st' res_ty in
     let arg_tys', st''' =
-      fold_map ([], st'') (instantiate freshname_prefix fresh names) arg_tys in
+      fold_map ([], st'') (instantiate fresh names) arg_tys in
     (Fun_Type (id', res_ty', arg_tys'), st''')
 
 (*Takes a record type specification and adds fields to the end, in order.

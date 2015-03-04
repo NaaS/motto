@@ -14,14 +14,6 @@ open Naasty
   language's names become handled in a hashcons-like way.*)
 let forbid_shadowing = false
 
-(*This is a hack around the protection we have for separate namespaces for types
-  and term-level identifiers. The reason for this hack is that I'd need to
-  extend the template language to specify whether the 0 (i.e., fresh name)
-  placeholder should generate a fresh name in Term or Type scope. For the time
-  being, setting this flag will simplify the template language at the cost of
-  some protection!*)
-let merge_type_term_scopes = true
-
 type state =
   { pragma_inclusions : string list;
     type_declarations : naasty_type list;
@@ -45,12 +37,10 @@ let initial_state =
 type scope =
   | Type
   | Term
-  | Both
 let scope_to_str scope =
   match scope with
   | Type -> "type"
   | Term -> "symbol"
-  | Both -> "both"
 (*For simplicity (and to defend against the possibility that identifiers and
   type identifiers occupy the same namespace) the lookup is made on both
   namespaces.*)
@@ -64,23 +54,10 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b) list)
     else Some (List.assoc id l) in
   let type_lookup = gen_lookup type_symbols in
   let normal_lookup = gen_lookup symbols in
-  match type_lookup, normal_lookup with
-  | Some ty_idx, Some te_idx ->
-    if not merge_type_term_scopes then
-      failwith ("Somehow the symbol " ^ id_to_str id ^
-                " is being used for both a type and a non-type.")
-    else if ty_idx <> te_idx then
-      (*Even if we merge the scopes, we expect the index used in both scopes
-        to be the same!*)
-      failwith ("Scope corruption? The symbol " ^ id_to_str id ^
-                " is being used for both a type and a non-type that use different indices.")
-    else
-      begin
-        assert (type_lookup = normal_lookup);
-        type_lookup
-      end
-  | _, _ ->(*FIXME non-idiomatic coding style*)
-    match scope with
+  if type_lookup <> None && normal_lookup <> None then
+    failwith ("Somehow the symbol " ^ id_to_str id ^
+              " is being used for both a type and a non-type")
+  else match scope with
     | Type ->
       begin
         match normal_lookup with
@@ -99,7 +76,6 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b) list)
                     " was used in type, getting idx " ^
                     res_to_str idx)
       end
-    | Both -> None (*Since the lookup fails in either the Type or Term scope.*)
 
 (*Lookup functions for names and indices. Note that (string) names are used for
 identifiers in the Crisp AST, but (numeric) indices are used in the NaaSty AST.*)

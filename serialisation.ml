@@ -117,7 +117,24 @@ let translate_type_compilation_unit (st : state)
         st'''))
     types_unit.Crisp_project.content
 
-(*FIXME currently ignoring functions and processes*)
+let translate_function_compilation_unit (st : state)
+      (functions_unit : Crisp_project.compilation_unit) :
+  Naasty_project.compilation_unit list * state =
+  fold_map ([], st)
+    (fun (st' : state) (flick_f : Crisp_syntax.toplevel_decl) ->
+       let name = "functions"(*FIXME extract name?*) in
+       let (translated, st'') =
+         Translation.naasty_of_flick_program ~st:st' [flick_f] in
+       ({Naasty_project.name = name;
+         Naasty_project.unit_type = Naasty_project.Cpp;
+         Naasty_project.inclusions =
+           [(*FIXME*)];
+         Naasty_project.content = translated
+        },
+        st''))
+    functions_unit.Crisp_project.content
+
+(*FIXME currently ignoring processes*)
 let translate_serialise_stringify
   (st : State.state)
   ((types_unit, functions_unit, processes_unit) :
@@ -129,8 +146,11 @@ let translate_serialise_stringify
      Naasty_project.string_of_compilationunit ~st_opt:(Some st) cu) in
   let (translated_type_units, st') =
     translate_type_compilation_unit st types_unit in
-  State_aux.state_to_str true st' |> print_endline; (*FIXME debug line*)
-  List.map (stringify_compilation_unit st') translated_type_units
+  let (translated_function_units, st'') =
+    translate_function_compilation_unit st' functions_unit in
+  State_aux.state_to_str true st'' |> print_endline; (*FIXME debug line*)
+  List.map (stringify_compilation_unit st'')
+    (translated_type_units @ translated_function_units)
 
 ;;
 (*FIXME crude test*)

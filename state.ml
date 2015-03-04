@@ -109,3 +109,13 @@ let update_symbol_type (id : identifier) (ty : naasty_type)
     type_symbols = type_symbols_transf st.type_symbols;
     term_symbols = term_symbols_transf st.term_symbols;
   }
+
+let lookup_symbol_type (id : identifier)
+      (scope : scope) (st : state) : naasty_type option =
+  let generic_lookup =
+    List.fold_right (fun (_, idx, ty_opt) acc ->
+      if id = idx then ty_opt
+      else acc) in
+  match scope with
+  | Term -> generic_lookup st.term_symbols None
+  | Type -> generic_lookup st.type_symbols None

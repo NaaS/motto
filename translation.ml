@@ -15,98 +15,6 @@ let require_annotations = false
 exception Translation_type of string * type_value
 exception Translation_expr of string * expression
 
-(*Sets the label of a type unless it's already defined. This is used to bridge
-  the gap between Flick and NaaSty, since the latter expects all type
-  declarations to be associated with their names, while the former distributes
-  this a bit (the name is stored in a type record).*)
-let update_empty_label label (ty : type_value) =
-  match ty with
-  | UserDefinedType (label_opt, type_name) ->
-    if label_opt = None then
-      UserDefinedType (Some label, type_name)
-    else failwith "Cannot set an already-set label"
-  | String (label_opt, type_annotation) ->
-    if label_opt = None then
-      String (Some label, type_annotation)
-    else failwith "Cannot set an already-set label"
-  | Integer (label_opt, type_annotation) ->
-    if label_opt = None then
-      Integer (Some label, type_annotation)
-    else failwith "Cannot set an already-set label"
-  | Boolean (label_opt, type_annotation) ->
-    if label_opt = None then
-      Boolean (Some label, type_annotation)
-    else failwith "Cannot set an already-set label"
-  | RecordType (label_opt, tys, type_annotation) ->
-    if label_opt = None then
-      RecordType (Some label, tys, type_annotation)
-    else failwith "Cannot set an already-set label"
-  | Disjoint_Union (label_opt, tys) ->
-    if label_opt = None then
-      Disjoint_Union (Some label, tys)
-    else failwith "Cannot set an already-set label"
-  | List (label_opt, ty, dep_idx_opt, type_annotation) ->
-    if label_opt = None then
-      List (Some label, ty, dep_idx_opt, type_annotation)
-    else failwith "Cannot set an already-set label"
-  | Empty -> Empty
-  | IPv4Address label_opt ->
-    if label_opt = None then
-      IPv4Address (Some label)
-    else failwith "Cannot set an already-set label"
-  | Tuple (label_opt, tys) ->
-    if label_opt = None then
-      Tuple (Some label, tys)
-    else failwith "Cannot set an already-set label"
-  | Dictionary (label_opt, ty) ->
-    if label_opt = None then
-      Dictionary (Some label, ty)
-    else failwith "Cannot set an already-set label"
-  | Reference (label_opt, ty) ->
-    if label_opt = None then
-      Reference (Some label, ty)
-    else failwith "Cannot set an already-set label"
-
-let update_empty_identifier (idx : identifier) (ty : naasty_type) =
-  match ty with
-  | Int_Type (id_opt, int_metadata) ->
-    if id_opt = None then
-      Int_Type (Some idx, int_metadata)
-    else failwith "Cannot set an already-set index"
-  | Bool_Type id_opt ->
-    if id_opt = None then
-      Bool_Type (Some idx)
-    else failwith "Cannot set an already-set index"
-  | Char_Type id_opt ->
-    if id_opt = None then
-      Char_Type (Some idx)
-    else failwith "Cannot set an already-set index"
-  | Array_Type (id_opt, naasty_type, array_size) ->
-    if id_opt = None then
-      Array_Type (Some idx, naasty_type, array_size)
-    else failwith "Cannot set an already-set index"
-  | Record_Type (ty_ident, fields) ->
-    failwith "Cannot update index of this type."
-  | Unit_Type -> ty
-  | UserDefined_Type (id_opt, ty_ident) ->
-    if id_opt = None then
-      UserDefined_Type (Some idx, ty_ident)
-    else failwith "Cannot set an already-set index"
-  | Reference_Type (id_opt, naasty_type) ->
-    if id_opt = None then
-      Reference_Type (Some idx, naasty_type)
-    else failwith "Cannot set an already-set index"
-  | Size_Type id_opt ->
-    if id_opt = None then
-      Size_Type (Some idx)
-    else failwith "Cannot set an already-set index"
-  | Static_Type (id_opt, naasty_type) ->
-    if id_opt = None then
-      Static_Type (Some idx, naasty_type)
-    else failwith "Cannot set an already-set index"
-  | Fun_Type (_, _, _) ->
-    failwith "Cannot update index of this type."
-
 let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * state) =
   let check_and_resolve_typename type_name =
     match lookup_name Type st type_name with
@@ -431,7 +339,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   match tl with
   | Type ty_decl ->
     let (ty', st') =
-      update_empty_label ty_decl.type_name ty_decl.type_value
+      Crisp_syntax_aux.update_empty_label ty_decl.type_name ty_decl.type_value
       |> naasty_of_flick_type st
     in (Type_Decl ty', st')
   | Function fn_decl ->
@@ -457,8 +365,16 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       all have been assigned something.*)
     assert (waiting' = []);
 
-    (*FIXME here should use ctxt' to create the declarations prefixing the
-            function body*)
+    let body' =
+      List.fold_right (fun idx stmt ->
+        let ty =
+          match lookup_symbol_type idx Term(*all ctxt symbols are term-level*)
+                  st4 with
+          | None -> failwith ("Couldn't resolve type of ctxt idx " ^
+                              string_of_int idx)
+          | Some ty -> ty
+        in mk_seq (Declaration ty) stmt) ctxt' body in
+
     let (fn_idx, st5) =
       if is_fresh fn_decl.fn_name st4 then
         extend_scope_unsafe Term st4 ~ty_opt:None(*FIXME put function's type here?*) fn_decl.fn_name
@@ -467,7 +383,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
 
     in (Fun_Decl (fn_idx, n_arg_tys, n_res_ty,
                 (*Add "Return result_idx" to end of function body*)
-                  Seq (body, Return (Var result_idx))),
+                  Seq (body', Return (Var result_idx))),
         st5)
   | Process (process_name, process_type, process_body) ->
     (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)

@@ -31,6 +31,60 @@ let ty_name = resolve_idx Type ty_prefix
 let id_prefix = "id_"
 let id_name = resolve_idx Term id_prefix
 
+(*Extract identifier from a type*)
+let idx_of_naasty_type = function
+  | Int_Type (id_opt, _) -> id_opt
+  | Bool_Type id_opt -> id_opt
+  | Char_Type id_opt -> id_opt
+  | Array_Type (id_opt, _, _) -> id_opt
+  | Record_Type (ty_ident, _) -> Some ty_ident
+  | Unit_Type -> failwith "Unit type cannot have idx"
+  | UserDefined_Type (id_opt, _) -> id_opt
+  | Reference_Type (id_opt, _) -> id_opt
+  | Size_Type id_opt -> id_opt
+  | Static_Type (id_opt, _) -> id_opt
+  | Fun_Type (id, _, _) -> Some id
+
+let update_empty_identifier (idx : identifier) (ty : naasty_type) =
+  match ty with
+  | Int_Type (id_opt, int_metadata) ->
+    if id_opt = None then
+      Int_Type (Some idx, int_metadata)
+    else failwith "Cannot set an already-set index"
+  | Bool_Type id_opt ->
+    if id_opt = None then
+      Bool_Type (Some idx)
+    else failwith "Cannot set an already-set index"
+  | Char_Type id_opt ->
+    if id_opt = None then
+      Char_Type (Some idx)
+    else failwith "Cannot set an already-set index"
+  | Array_Type (id_opt, naasty_type, array_size) ->
+    if id_opt = None then
+      Array_Type (Some idx, naasty_type, array_size)
+    else failwith "Cannot set an already-set index"
+  | Record_Type (ty_ident, fields) ->
+    failwith "Cannot update index of this type."
+  | Unit_Type -> ty
+  | UserDefined_Type (id_opt, ty_ident) ->
+    if id_opt = None then
+      UserDefined_Type (Some idx, ty_ident)
+    else failwith "Cannot set an already-set index"
+  | Reference_Type (id_opt, naasty_type) ->
+    if id_opt = None then
+      Reference_Type (Some idx, naasty_type)
+    else failwith "Cannot set an already-set index"
+  | Size_Type id_opt ->
+    if id_opt = None then
+      Size_Type (Some idx)
+    else failwith "Cannot set an already-set index"
+  | Static_Type (id_opt, naasty_type) ->
+    if id_opt = None then
+      Static_Type (Some idx, naasty_type)
+    else failwith "Cannot set an already-set index"
+  | Fun_Type (_, _, _) ->
+    failwith "Cannot update index of this type."
+
 let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
   function
   | Int_Type (id_opt, int_metadata) ->
@@ -158,17 +212,23 @@ let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent pro
 (*Extends a scope by adding a mapping between a name and an index.
   NOTE we don't check for clashes! thus the _unsafe prefix*)
 let extend_scope_unsafe (scope : scope) (st : state) ?ty_opt:(ty_opt = None) (id : string) : Naasty.identifier * state =
+  let ty_opt' =
+    (*If we're given a type, but it isn't associated with a variable index, then
+      update the type to associate it with the index we have.*)
+    if ty_opt <> None && idx_of_naasty_type (the ty_opt) = None then
+      Some (update_empty_identifier st.next_symbol (the ty_opt))
+    else ty_opt in
   match scope with
   | Type ->
     (st.next_symbol,
      { st with
-       type_symbols = (id, st.next_symbol, ty_opt) :: st.type_symbols;
+       type_symbols = (id, st.next_symbol, ty_opt') :: st.type_symbols;
        next_symbol = 1 + st.next_symbol;
      })
   | Term ->
     (st.next_symbol,
      { st with
-       term_symbols = (id, st.next_symbol, ty_opt) :: st.term_symbols;
+       term_symbols = (id, st.next_symbol, ty_opt') :: st.term_symbols;
        next_symbol = 1 + st.next_symbol;
      })
 

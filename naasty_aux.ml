@@ -295,6 +295,14 @@ let lift_assign (recipients : identifier list) (definiens : naasty_expression) :
   naasty_statement list =
   List.map (fun recipient -> Assign (recipient, definiens)) recipients
 
+(*Sequentially composed two statements but eliminate any Skip steps*)
+let mk_seq (s1 : naasty_statement) (s2 : naasty_statement) : naasty_statement =
+  match s1, s2 with
+  | Skip, Skip -> Skip
+  | Skip, _ -> s2
+  | _, Skip -> s1
+  | _, _ -> Seq (s1, s2)
+
 ;;
 (*FIXME crude test*)
 [

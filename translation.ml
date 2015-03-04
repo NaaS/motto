@@ -115,7 +115,7 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     | Some type_name ->
       begin
         match lookup_name Type st type_name with
-        | None -> State_aux.extend_scope_unsafe Type st type_name
+        | None -> extend_scope_unsafe Type st type_name
         | Some idx ->
           if forbid_shadowing then
             failwith ("Already declared type: " ^ type_name)
@@ -129,7 +129,7 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
       begin
         match lookup_name Term st identifier with
         | None ->
-          let (idx, st') = State_aux.extend_scope_unsafe Term st identifier
+          let (idx, st') = extend_scope_unsafe Term st identifier
           in (Some idx, st')
         | Some idx ->
           if forbid_shadowing then
@@ -292,12 +292,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   | Times (e1, e2)
   | Mod (e1, e2)
   | Quotient (e1, e2) ->
-    let (_, e1_result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
+    let (_, e1_result_idx, st') = mk_fresh Term "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
       naasty_of_flick_expr st' e1 sts_acc ctxt_acc(*FIXME extend with type of e1_result_idx*)
                              (e1_result_idx :: assign_acc) in
     let (_, e2_result_idx, st''') =
-      State_aux.mk_fresh Term "x_" e1_result_idx st'' in
+      mk_fresh Term "x_" e1_result_idx st'' in
     let (sts_acc'', ctxt_acc'', assign_acc'', st4) =
       naasty_of_flick_expr st''' e2 sts_acc' ctxt_acc'(*FIXME extend with type of e2_result_idx*)
         (e2_result_idx :: assign_acc') in
@@ -328,7 +328,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     in (mk_seq sts_acc'' nstmt, ctxt_acc'', assign_acc'', st4)
   | Not e
   | Abs e ->
-    let (_, e_result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
+    let (_, e_result_idx, st') = mk_fresh Term "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
       naasty_of_flick_expr st' e sts_acc ctxt_acc(*FIXME extend with type of e_result_idx*)
         (e_result_idx :: assign_acc) in
@@ -365,7 +365,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     let (n_res_ty, st'') =
       the_single res_tys (*FIXME assuming that a single type is returned*)
       |> naasty_of_flick_type st' in
-    let (_, result_idx, st''') = State_aux.mk_fresh Term "x_" 0 st'' in
+    let (_, result_idx, st''') = mk_fresh Term "x_" 0 st'' in
     (*Add type declaration for result_idx, which should be the same as res_ty
       since result_idx will carry the value that's computed in this function.*)
     let init_ctxt = [update_empty_identifier result_idx n_res_ty] in

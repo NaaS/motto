@@ -155,6 +155,38 @@ let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent pro
           |> fun s -> s ^ ";")
   |> String.concat "\n"
 
+(*Extends a scope by adding a mapping between a name and an index.
+  NOTE we don't check for clashes! thus the _unsafe prefix*)
+let extend_scope_unsafe (scope : scope) (st : state) (id : string) : Naasty.identifier * state =
+  match scope with
+  | Type ->
+    (st.next_symbol,
+     { st with
+       type_symbols = (id, st.next_symbol, None) :: st.type_symbols;
+       next_symbol = 1 + st.next_symbol;
+     })
+  | Term ->
+    (st.next_symbol,
+     { st with
+       term_symbols = (id, st.next_symbol, None) :: st.term_symbols;
+       next_symbol = 1 + st.next_symbol;
+     })
+
+(*Adds a fresh identifier to the scope, based on a specific prefix, to which
+  we concatenate a numeric suffix/index*)
+let mk_fresh (scope : scope) (id : string) (min_idx : int) (st : state) :
+  string * Naasty.identifier * state =
+  if min_idx < 0 then
+    failwith "min_idx must be non-negative"
+  else
+    let idx = ref min_idx in
+    while (lookup_name scope st (id ^ string_of_int !idx) <> None) do
+      idx := 1 + !idx
+    done;
+    let name = id ^ string_of_int !idx in
+    let (idx, st') = extend_scope_unsafe scope st name
+    in (name, idx, st')
+
 (*Instantiates a naasty_type scheme with a set of names*)
 let rec instantiate (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_type) : naasty_type * state =
@@ -177,12 +209,7 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
           if type_mode then
             match lookup_name Type st local_name with
             | None ->
-              (*FIXME use extend_scope_unsafe*)
-              (st.next_symbol,
-               { st with
-                 type_symbols = (local_name, st.next_symbol, None) :: st.type_symbols;
-                 next_symbol = 1 + st.next_symbol;
-               })
+              extend_scope_unsafe Type st local_name
             | Some idx ->
               if forbid_shadowing then
                 failwith ("Already declared type: " ^ local_name)
@@ -191,12 +218,7 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
           else
             match lookup_name Term st local_name with
             | None ->
-              (*FIXME use extend_scope_unsafe*)
-              (st.next_symbol,
-               { st with
-                 term_symbols = (local_name, st.next_symbol, None) :: st.term_symbols;
-                 next_symbol = 1 + st.next_symbol;
-               })
+              extend_scope_unsafe Term st local_name
             | Some idx ->
               if forbid_shadowing then
                 failwith ("Already declared identifier: " ^ local_name)

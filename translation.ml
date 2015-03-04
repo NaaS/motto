@@ -263,6 +263,30 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         |> lift_assign assign_acc
         |> Naasty_aux.concat
       in (translated, st)
+  | Seq (e1, e2) ->
+    let (nstmt, st') = naasty_of_flick_expr st e1 [] [] []
+    in naasty_of_flick_expr st e2 (sts_acc @ [nstmt](*FIXME inefficient*)) ctxt_acc assign_acc
+  | True
+  | False ->
+      let translated =
+        lift_assign assign_acc (Bool_Value (e = True))
+        |> Naasty_aux.concat
+      in (translated, st)
+  | Crisp_syntax.And (b1, b2) ->
+    let (_, b1_result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
+    let (b1_nstmt, st'') = naasty_of_flick_expr st' b1 [] [] [b1_result_idx] in
+    let (_, b2_result_idx, st''') = State_aux.mk_fresh Term "x_" b1_result_idx st'' in
+    let (b2_nstmt, st4) = naasty_of_flick_expr st''' b1 [] [] [b2_result_idx] in
+    let and_nstmt =
+      lift_assign assign_acc (Naasty.And (Var b1_result_idx, Var b2_result_idx)) in
+    let translated =
+      [b1_nstmt; b2_nstmt] @ and_nstmt
+      |> Naasty_aux.concat
+    in (translated, st4)
+(*
+  | Or (b1, b2) ->
+  | Not b' ->
+*)
   | _ -> failwith "TODO"
 
 let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :

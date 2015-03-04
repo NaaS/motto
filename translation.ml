@@ -329,7 +329,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   | Minus (e1, e2)
   | Times (e1, e2)
   | Mod (e1, e2)
-  | Quotient (e1, e2) ->
+  | Quotient (e1, e2)
+  | Plus (e1, e2) ->
     let ty1, ty2 =
       match e with
       | Crisp_syntax.And (_, _)
@@ -343,7 +344,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | Minus (_, _)
       | Times (_, _)
       | Mod (_, _)
-      | Quotient (_, _) ->
+      | Quotient (_, _)
+      | Plus (_, _) ->
         let int_ty =
           Int_Type (None, default_int_metadata(*FIXME this should be resolvable
                                                 later, when we know more about
@@ -381,6 +383,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         Naasty.Mod (Var e1_result_idx, Var e2_result_idx)
       | Quotient (_, _) ->
         Naasty.Quotient (Var e1_result_idx, Var e2_result_idx)
+      | Plus (_, _) ->
+        Naasty.Plus (Var e1_result_idx, Var e2_result_idx)
       | _ -> failwith "Impossible" in
     let nstmt =
       lift_assign assign_acc translated

@@ -454,11 +454,16 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
 
     (*FIXME here should use ctxt' to create the declarations prefixing the
             function body*)
-    let fn_idx = the (lookup_name Term st4 fn_decl.fn_name)
+    let (fn_idx, st5) =
+      if is_fresh fn_decl.fn_name st4 then
+        extend_scope_unsafe Term st4 ~ty_opt:None(*FIXME put function's type here?*) fn_decl.fn_name
+      else
+        failwith ("Function name " ^ fn_decl.fn_name ^ " isn't fresh.")
+
     in (Fun_Decl (fn_idx, n_arg_tys, n_res_ty,
                 (*Add "Return result_idx" to end of function body*)
                   Seq (body, Return (Var result_idx))),
-        st4)
+        st5)
   | Process (process_name, process_type, process_body) ->
     (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
   | Include filename ->

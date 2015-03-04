@@ -17,13 +17,13 @@ let forbid_shadowing = false
 type state =
   { pragma_inclusions : string list;
     type_declarations : naasty_type list;
-    next_symbol : integer;
+    next_symbol : identifier;
     (*NOTE that we don't track the definitions of types in the mapping below;
            that wouldn't be a bad idea.*)
-    type_symbols : (string * integer) list;
+    type_symbols : (string * identifier) list;
     (*NOTE we don't track the types in the mapping below; that wouldn't be a bad
            idea. Essentially it would turn this into a symbol table.*)
-    term_symbols : (string * integer) list;
+    term_symbols : (string * identifier) list;
   }
 
 let initial_state =

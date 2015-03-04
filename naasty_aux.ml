@@ -159,7 +159,9 @@ let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent pro
 let rec instantiate (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_type) : naasty_type * state =
   let substitute' (type_mode : bool) scheme st id f =
-    if id >= 0 then (scheme, st)
+    if id > 0 then (scheme, st)
+    else if id = 0 then
+      failwith "Template placeholder cannot be 0 -- this value is undefined."
     else
       let local_name = List.nth names (abs id - 1) in
       let id', st' =

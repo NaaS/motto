@@ -292,12 +292,34 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   | Times (e1, e2)
   | Mod (e1, e2)
   | Quotient (e1, e2) ->
-    let (_, e1_result_idx, st') = mk_fresh Term "x_" 0 st in
+    let ty1, ty2 =
+      match e with
+      | Crisp_syntax.And (_, _)
+      | Crisp_syntax.Or (_, _) ->
+        Bool_Type None, Bool_Type None
+
+      | Equals (_, _) (*FIXME for time being we assume that only numbers can be
+                              compared for equality*)
+      | GreaterThan (_, _)
+      | LessThan (_, _)
+      | Minus (_, _)
+      | Times (_, _)
+      | Mod (_, _)
+      | Quotient (_, _) ->
+        let int_ty =
+          Int_Type (None, default_int_metadata(*FIXME this should be resolvable
+                                                later, when we know more about
+                                                where this function will be called
+                                                from and what kind of numbers it
+                                                uses?*))
+        in int_ty, int_ty
+      | _ -> failwith "Impossible" in
+    let (_, e1_result_idx, st') = mk_fresh Term ~ty_opt:(Some ty1) "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
       naasty_of_flick_expr st' e1 sts_acc ctxt_acc(*FIXME extend with type of e1_result_idx*)
                              (e1_result_idx :: assign_acc) in
     let (_, e2_result_idx, st''') =
-      mk_fresh Term "x_" e1_result_idx st'' in
+      mk_fresh Term ~ty_opt:(Some ty2) "x_" e1_result_idx st'' in
     let (sts_acc'', ctxt_acc'', assign_acc'', st4) =
       naasty_of_flick_expr st''' e2 sts_acc' ctxt_acc'(*FIXME extend with type of e2_result_idx*)
         (e2_result_idx :: assign_acc') in
@@ -328,7 +350,18 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     in (mk_seq sts_acc'' nstmt, ctxt_acc'', assign_acc'', st4)
   | Not e
   | Abs e ->
-    let (_, e_result_idx, st') = mk_fresh Term "x_" 0 st in
+    let ty =
+      match e with
+      | Not _ ->
+        Bool_Type None
+      | Abs _ ->
+        Int_Type (None, default_int_metadata(*FIXME this should be resolvable
+                                              later, when we know more about
+                                              where this function will be called
+                                              from and what kind of numbers it
+                                              uses?*))
+      | _ -> failwith "Impossible" in
+    let (_, e_result_idx, st') = mk_fresh Term ~ty_opt:(Some ty) "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
       naasty_of_flick_expr st' e sts_acc ctxt_acc(*FIXME extend with type of e_result_idx*)
         (e_result_idx :: assign_acc) in
@@ -365,7 +398,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     let (n_res_ty, st'') =
       the_single res_tys (*FIXME assuming that a single type is returned*)
       |> naasty_of_flick_type st' in
-    let (_, result_idx, st''') = mk_fresh Term "x_" 0 st'' in
+    let (_, result_idx, st''') = mk_fresh Term ~ty_opt:(Some n_res_ty) "x_" 0 st'' in
     (*Add type declaration for result_idx, which should be the same as res_ty
       since result_idx will carry the value that's computed in this function.*)
     let init_ctxt = [update_empty_identifier result_idx n_res_ty] in

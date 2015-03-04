@@ -287,7 +287,11 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   | Or (e1, e2)
   | Equals (e1, e2)
   | GreaterThan (e1, e2)
-  | LessThan (e1, e2) ->
+  | LessThan (e1, e2)
+  | Minus (e1, e2)
+  | Times (e1, e2)
+  | Mod (e1, e2)
+  | Quotient (e1, e2) ->
     let (_, e1_result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
       naasty_of_flick_expr st' e1 sts_acc ctxt_acc(*FIXME extend with type of e1_result_idx*)
@@ -296,30 +300,47 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       State_aux.mk_fresh Term "x_" e1_result_idx st'' in
     let (sts_acc'', ctxt_acc'', assign_acc'', st4) =
       naasty_of_flick_expr st''' e2 sts_acc' ctxt_acc'(*FIXME extend with type of e2_result_idx*)
-                             (e2_result_idx :: assign_acc') in
+        (e2_result_idx :: assign_acc') in
     let translated =
       match e with
       | Crisp_syntax.And (_, _) ->
         Naasty.And (Var e1_result_idx, Var e2_result_idx)
       | Crisp_syntax.Or (_, _) ->
         Naasty.Or (Var e1_result_idx, Var e2_result_idx)
-      | Equals (e1, e2) ->
+      | Equals (_, _) ->
         Naasty.Equals (Var e1_result_idx, Var e2_result_idx)
-      | GreaterThan (e1, e2) ->
+      | GreaterThan (_, _) ->
         Naasty.GreaterThan (Var e1_result_idx, Var e2_result_idx)
-      | LessThan (e1, e2) ->
+      | LessThan (_, _) ->
         Naasty.LessThan (Var e1_result_idx, Var e2_result_idx)
+      | Minus (_, _) ->
+        Naasty.Minus (Var e1_result_idx, Var e2_result_idx)
+      | Times (_, _) ->
+        Naasty.Times (Var e1_result_idx, Var e2_result_idx)
+      | Mod (_, _) ->
+        Naasty.Mod (Var e1_result_idx, Var e2_result_idx)
+      | Quotient (_, _) ->
+        Naasty.Quotient (Var e1_result_idx, Var e2_result_idx)
       | _ -> failwith "Impossible" in
     let nstmt =
       lift_assign assign_acc translated
       |> Naasty_aux.concat
     in (mk_seq sts_acc'' nstmt, ctxt_acc'', assign_acc'', st4)
-  | Not b ->
-    let (_, b_result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
-    let (sts_acc', ctxt_acc', assign_acc', st'') = naasty_of_flick_expr st' b sts_acc ctxt_acc
-                             (b_result_idx :: assign_acc) in
+  | Not e
+  | Abs e ->
+    let (_, e_result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
+    let (sts_acc', ctxt_acc', assign_acc', st'') =
+      naasty_of_flick_expr st' e sts_acc ctxt_acc(*FIXME extend with type of e_result_idx*)
+        (e_result_idx :: assign_acc) in
+    let translated =
+      match e with
+      | Not _ ->
+        Naasty.Not (Var e_result_idx)
+      | Abs _ ->
+        Naasty.Abs (Var e_result_idx)
+      | _ -> failwith "Impossible" in
     let not_nstmt =
-      lift_assign assign_acc (Naasty.Not (Var b_result_idx))
+      lift_assign assign_acc translated
       |> Naasty_aux.concat
     in (mk_seq sts_acc' not_nstmt, ctxt_acc', assign_acc', st'')
 

@@ -54,6 +54,8 @@ type naasty_expression =
   | Int_Value of int
   | Bool_Value of bool
   | And of naasty_expression * naasty_expression
+  | Or of naasty_expression * naasty_expression
+  | Not of naasty_expression
   | Plus of naasty_expression * naasty_expression
 
 type naasty_statement =

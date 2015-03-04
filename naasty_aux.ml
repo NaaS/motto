@@ -157,24 +157,24 @@ let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent pro
 
 (*Extends a scope by adding a mapping between a name and an index.
   NOTE we don't check for clashes! thus the _unsafe prefix*)
-let extend_scope_unsafe (scope : scope) (st : state) (id : string) : Naasty.identifier * state =
+let extend_scope_unsafe (scope : scope) (st : state) ?ty_opt:(ty_opt = None) (id : string) : Naasty.identifier * state =
   match scope with
   | Type ->
     (st.next_symbol,
      { st with
-       type_symbols = (id, st.next_symbol, None) :: st.type_symbols;
+       type_symbols = (id, st.next_symbol, ty_opt) :: st.type_symbols;
        next_symbol = 1 + st.next_symbol;
      })
   | Term ->
     (st.next_symbol,
      { st with
-       term_symbols = (id, st.next_symbol, None) :: st.term_symbols;
+       term_symbols = (id, st.next_symbol, ty_opt) :: st.term_symbols;
        next_symbol = 1 + st.next_symbol;
      })
 
 (*Adds a fresh identifier to the scope, based on a specific prefix, to which
   we concatenate a numeric suffix/index*)
-let mk_fresh (scope : scope) (id : string) (min_idx : int) (st : state) :
+let mk_fresh (scope : scope) ?ty_opt:(ty_opt = None) (id : string) (min_idx : int) (st : state) :
   string * Naasty.identifier * state =
   if min_idx < 0 then
     failwith "min_idx must be non-negative"
@@ -184,7 +184,7 @@ let mk_fresh (scope : scope) (id : string) (min_idx : int) (st : state) :
       idx := 1 + !idx
     done;
     let name = id ^ string_of_int !idx in
-    let (idx, st') = extend_scope_unsafe scope st name
+    let (idx, st') = extend_scope_unsafe scope st ~ty_opt name
     in (name, idx, st')
 
 (*Instantiates a naasty_type scheme with a set of names*)

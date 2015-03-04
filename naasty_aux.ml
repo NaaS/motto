@@ -187,6 +187,10 @@ let mk_fresh (scope : scope) ?ty_opt:(ty_opt = None) (id : string) (min_idx : in
     let (idx, st') = extend_scope_unsafe scope st ~ty_opt name
     in (name, idx, st')
 
+(*Indicates if a name is fresh in either scope*)
+let is_fresh (id : string) (st : state) : bool =
+  lookup_name Term st id = None && lookup_name Type st id = None
+
 (*Instantiates a naasty_type scheme with a set of names*)
 let rec instantiate (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_type) : naasty_type * state =

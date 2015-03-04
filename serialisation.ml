@@ -19,23 +19,6 @@ type translated_type =
     serialiser : naasty_function option;
     deserialiser : naasty_function option }
 
-(*
-How this works:
-- Given a Flick type we traverse it in the presented order (i.e., in the case of
-   a record we proceed field by field in the given order)
-- We look at each component of the type, starting with the leaves, and at the
-   annotation of each component, to determine ????
-- Variant's aren't supported: they're not used in our use-cases. Adding support
-   for variants (at least for simple matching) isn't hard, it involves matching
-   a token to determine which projection we're working in.
-*)
-let gen_serialiser (ty : type_value) : naasty_function =
-  failwith "TODO"
-
-
-let gen_deserialiser (ty : type_value) : naasty_function =
-  failwith "TODO"
-
 (*FIXME this kind of code seems beyond the scope of this module, so i'll
         probably move the code elsewhere later.*)
 (*

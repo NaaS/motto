@@ -357,12 +357,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let (_, e1_result_idx, st') = mk_fresh Term ~ty_opt:(Some ty1) "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
       naasty_of_flick_expr st' e1 sts_acc (e1_result_idx :: ctxt_acc)
-                             (e1_result_idx :: assign_acc) in
+        [e1_result_idx] in
     let (_, e2_result_idx, st''') =
       mk_fresh Term ~ty_opt:(Some ty2) "x_" e1_result_idx st'' in
     let (sts_acc'', ctxt_acc'', assign_acc'', st4) =
       naasty_of_flick_expr st''' e2 sts_acc' (e2_result_idx :: ctxt_acc')
-        (e2_result_idx :: assign_acc') in
+        [e2_result_idx] in
     let translated =
       match e with
       | Crisp_syntax.And (_, _) ->
@@ -389,7 +389,10 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let nstmt =
       lift_assign assign_acc translated
       |> Naasty_aux.concat
-    in (mk_seq sts_acc'' nstmt, ctxt_acc'', assign_acc'', st4)
+    in
+    assert (assign_acc' = []);
+    assert (assign_acc'' = []);
+    (mk_seq sts_acc'' nstmt, ctxt_acc'', [], st4)
   | Not e
   | Abs e ->
     let ty =
@@ -406,7 +409,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let (_, e_result_idx, st') = mk_fresh Term ~ty_opt:(Some ty) "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
       naasty_of_flick_expr st' e sts_acc (e_result_idx :: ctxt_acc)
-        (e_result_idx :: assign_acc) in
+        [e_result_idx] in
     let translated =
       match e with
       | Not _ ->
@@ -417,7 +420,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let not_nstmt =
       lift_assign assign_acc translated
       |> Naasty_aux.concat
-    in (mk_seq sts_acc' not_nstmt, ctxt_acc', assign_acc', st'')
+    in
+    assert (assign_acc' = []);
+    (mk_seq sts_acc' not_nstmt, ctxt_acc', [], st'')
 
   | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string 0 e, e))
 

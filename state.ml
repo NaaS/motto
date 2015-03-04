@@ -81,3 +81,31 @@ let lookup_name (scope : scope) (st : state) (id : string) : identifier option =
 let lookup_id (scope : scope) (st : state) (id : identifier) : string option =
   lookup true scope (List.map swap_1_2 st.term_symbols)
     (List.map swap_1_2 st.type_symbols) string_of_int (fun x -> x) id
+
+(*Updates the type associated with a symbol in the symbol table*)
+let update_symbol_type (id : identifier) (ty : naasty_type)
+      (scope : scope) (st : state) : state =
+  let generic_transf =
+    List.map (fun (name, idx, ty_opt) ->
+      if id = idx then
+        match ty_opt with
+        | None -> (name, idx, Some ty)
+        | Some ty' ->
+            if ty <> ty' then
+              failwith "Different types associated with same symbol!"
+            (*Here we are being lenient, because we could fail even if we try to
+              assign the same type to the same symbol twice.*)
+            else (name, idx, ty_opt)
+      else (name, idx, ty_opt)) in
+  let type_symbols_transf =
+    match scope with
+    | Term -> fun x -> x
+    | Type -> generic_transf in
+  let term_symbols_transf =
+    match scope with
+    | Type -> fun x -> x
+    | Term -> generic_transf in
+  { st with
+    type_symbols = type_symbols_transf st.type_symbols;
+    term_symbols = term_symbols_transf st.term_symbols;
+  }

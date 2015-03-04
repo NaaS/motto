@@ -81,24 +81,3 @@ let lookup_name (scope : scope) (st : state) (id : string) : identifier option =
 let lookup_id (scope : scope) (st : state) (id : identifier) : string option =
   lookup true scope (List.map swap_1_2 st.term_symbols)
     (List.map swap_1_2 st.type_symbols) string_of_int (fun x -> x) id
-
-(*Given a name, it returns the same name if it is fresh (wrt types and symbols)
-  otherwise it modifies it to be fresh.*)
-let mk_fresh_name (st : state) (id : string) : string =
-  let i = ref "_" in
-  let normal_lookup = ref (lookup_name Term st id) in
-  let type_lookup = ref (lookup_name Type st id) in
-  while !normal_lookup <> None || !type_lookup <> None do
-    normal_lookup := lookup_name Term st (id ^ !i);
-    type_lookup := lookup_name Type st (id ^ !i);
-    i := !i ^ "_";
-  done;
-  id ^ !i
-
-(*Ensures that a name is fresh wrt the state.*)
-let ensure_fresh_name (st : state) (id : string) : string =
-  let normal_lookup = lookup_name Term st id in
-  let type_lookup = lookup_name Type st id in
-  if normal_lookup <> None || type_lookup <> None then
-    failwith ("Name '" ^ id ^ "' is not fresh")
-  else id

@@ -282,14 +282,6 @@ let add_fields_to_record (decl : naasty_declaration)
     Type_Decl (Record_Type (ty_id, tys @ additional_tys))
   | _ -> failwith "Tried to add fields to non-record."
 
-(*Concats a list of statements into the smallest equivalent sequence of statements*)
-let rec concat (sts : naasty_statement list) : naasty_statement =
-  match sts with
-  | [] -> failwith "Statement concat must be applied to at least one statement."
-  | [s] -> s
-  | [s1; s2] -> Seq (s1, s2)
-  | s1 :: s2 :: rest -> Seq (s1, Seq (s2, concat rest))
-
 (*Assigns to a collection of variables the value of an expression*)
 let lift_assign (recipients : identifier list) (definiens : naasty_expression) :
   naasty_statement list =
@@ -302,6 +294,17 @@ let mk_seq (s1 : naasty_statement) (s2 : naasty_statement) : naasty_statement =
   | Skip, _ -> s2
   | _, Skip -> s1
   | _, _ -> Seq (s1, s2)
+
+(*Concats a list of statements into the smallest equivalent sequence of statements*)
+let rec concat (sts : naasty_statement list) : naasty_statement =
+  match sts with
+  | [] -> failwith "Statement concat must be applied to at least one statement."
+  | [s] -> s
+  | [s1; s2] -> mk_seq s1 s2
+  | s1 :: s2 :: rest ->
+    concat rest
+    |> mk_seq s2
+    |> mk_seq s1
 
 ;;
 (*FIXME crude test*)

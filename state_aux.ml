@@ -12,18 +12,22 @@ let state_to_str (resolve : bool)
       ({pragma_inclusions; type_declarations; next_symbol;
         type_symbols; term_symbols} as st: state) =
   let st_opt = if resolve then Some st else None in
+  let str_of_ty_opt ty_opt =
+    match ty_opt with
+    | None -> "?"
+    | Some ty -> string_of_naasty_type ~st_opt:st_opt prog_indentation ty in
   "pragma_inclusions : [" ^ String.concat ", " pragma_inclusions ^ "]" ^ "\n" ^
   "type_declarations : [" ^
   String.concat ", " (List.map (string_of_naasty_type ~st_opt:st_opt
                                   prog_indentation) type_declarations) ^ "]" ^ "\n" ^
   "next_symbol : " ^ string_of_int next_symbol ^ "\n" ^
   "type_symbols : [" ^ String.concat ", "
-                         (List.map (fun (s, i) -> "(" ^ s ^ ", " ^ string_of_int
-                                  i ^ ")")
+                         (List.map (fun (s, i, ty_opt) -> "(" ^ s ^ ", " ^
+                                   string_of_int i ^ ", " ^ str_of_ty_opt ty_opt ^ ")")
                          type_symbols) ^ "]" ^ "\n" ^
   "term_symbols : [" ^ String.concat ", "
-                     (List.map (fun (s, i) -> "(" ^ s ^ ", " ^ string_of_int
-                              i ^ ")")
+                     (List.map (fun (s, i, ty_opt) -> "(" ^ s ^ ", " ^
+                              string_of_int i ^ ", " ^ str_of_ty_opt ty_opt ^ ")")
                      term_symbols) ^ "]" ^ "\n"
 
 (*Extends a scope by adding a mapping between a name and an index.
@@ -33,13 +37,13 @@ let extend_scope_unsafe (scope : scope) (st : state) (id : string) : Naasty.iden
   | Type ->
     (st.next_symbol,
      { st with
-       type_symbols = (id, st.next_symbol) :: st.type_symbols;
+       type_symbols = (id, st.next_symbol, None) :: st.type_symbols;
        next_symbol = 1 + st.next_symbol;
      })
   | Term ->
     (st.next_symbol,
      { st with
-       term_symbols = (id, st.next_symbol) :: st.term_symbols;
+       term_symbols = (id, st.next_symbol, None) :: st.term_symbols;
        next_symbol = 1 + st.next_symbol;
      })
 

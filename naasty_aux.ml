@@ -177,9 +177,10 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
           if type_mode then
             match lookup_name Type st local_name with
             | None ->
+              (*FIXME use extend_scope_unsafe*)
               (st.next_symbol,
                { st with
-                 type_symbols = (local_name, st.next_symbol) :: st.type_symbols;
+                 type_symbols = (local_name, st.next_symbol, None) :: st.type_symbols;
                  next_symbol = 1 + st.next_symbol;
                })
             | Some idx ->
@@ -190,9 +191,10 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
           else
             match lookup_name Term st local_name with
             | None ->
+              (*FIXME use extend_scope_unsafe*)
               (st.next_symbol,
                { st with
-                 term_symbols = (local_name, st.next_symbol) :: st.term_symbols;
+                 term_symbols = (local_name, st.next_symbol, None) :: st.term_symbols;
                  next_symbol = 1 + st.next_symbol;
                })
             | Some idx ->

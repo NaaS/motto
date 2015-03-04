@@ -18,12 +18,8 @@ type state =
   { pragma_inclusions : string list;
     type_declarations : naasty_type list;
     next_symbol : identifier;
-    (*NOTE that we don't track the definitions of types in the mapping below;
-           that wouldn't be a bad idea.*)
-    type_symbols : (string * identifier) list;
-    (*NOTE we don't track the types in the mapping below; that wouldn't be a bad
-           idea. Essentially it would turn this into a symbol table.*)
-    term_symbols : (string * identifier) list;
+    type_symbols : (string * identifier * naasty_type option) list;
+    term_symbols : (string * identifier * naasty_type option) list;
   }
 
 let initial_state =
@@ -44,14 +40,15 @@ let scope_to_str scope =
 (*For simplicity (and to defend against the possibility that identifiers and
   type identifiers occupy the same namespace) the lookup is made on both
   namespaces.*)
-let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b) list)
-      (type_symbols : ('a * 'b) list)
+let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b * 'c) list)
+      (type_symbols : ('a * 'b * 'c) list)
       (id_to_str : 'a -> string) (res_to_str : 'b -> string)
       (id : 'a) : 'b option =
   let gen_lookup l =
-    if not (List.mem_assoc id l) then
+    let l' = List.map (fun (x, y, _) -> (x, y)) l in
+    if not (List.mem_assoc id l') then
       None
-    else Some (List.assoc id l) in
+    else Some (List.assoc id l') in
   let type_lookup = gen_lookup type_symbols in
   let normal_lookup = gen_lookup symbols in
   if type_lookup <> None && normal_lookup <> None then
@@ -82,8 +79,8 @@ identifiers in the Crisp AST, but (numeric) indices are used in the NaaSty AST.*
 let lookup_name (scope : scope) (st : state) (id : string) : identifier option =
   lookup false scope st.term_symbols st.type_symbols (fun x -> x) string_of_int id
 let lookup_id (scope : scope) (st : state) (id : identifier) : string option =
-  lookup true scope (List.map swap st.term_symbols)
-    (List.map swap st.type_symbols) string_of_int (fun x -> x) id
+  lookup true scope (List.map swap_1_2 st.term_symbols)
+    (List.map swap_1_2 st.type_symbols) string_of_int (fun x -> x) id
 
 (*Given a name, it returns the same name if it is fresh (wrt types and symbols)
   otherwise it modifies it to be fresh.*)

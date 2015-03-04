@@ -35,6 +35,7 @@ let fold_map (z : 'b list * 'c) (f : 'c -> 'a -> 'b * 'c)
     in (ty' :: tys_acc, st_acc')) l z
 
 let swap (x, y) = (y, x)
+let swap_1_2 (x, y, z) = (y, x, z)
 
 let the_single l =
   match l with

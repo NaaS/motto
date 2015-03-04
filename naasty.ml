@@ -52,6 +52,8 @@ type naasty_type =
 type naasty_expression =
   | Var of identifier
   | Int_Value of int
+  | Bool_Value of bool
+  | And of naasty_expression * naasty_expression
   | Plus of naasty_expression * naasty_expression
 
 type naasty_statement =

@@ -10,7 +10,10 @@ open Naasty_aux
 open State
 
 
-exception Translation of string * type_value
+let require_annotations = false
+
+exception Translation_type of string * type_value
+exception Translation_expr of string * expression
 
 (*Sets the label of a type unless it's already defined. This is used to bridge
   the gap between Flick and NaaSty, since the latter expects all type
@@ -170,7 +173,8 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
         update_symbol_type idx translated_ty Term st'
     in (translated_ty, st'')
   | Integer (label_opt, type_ann) ->
-    if type_ann = [] then raise (Translation ("No annotation given", ty))
+    if type_ann = [] && require_annotations then
+      raise (Translation_type ("No annotation given", ty))
     else
       let (label_opt', st') = check_and_generate_name label_opt in
       let metadata =
@@ -411,7 +415,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       |> Naasty_aux.concat
     in (mk_seq sts_acc' not_nstmt, ctxt_acc', assign_acc', st'')
 
-  | _ -> failwith "TODO"
+  | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string 0 e, e))
 
 let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   (naasty_declaration * state) =

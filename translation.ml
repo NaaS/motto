@@ -289,11 +289,13 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   | GreaterThan (e1, e2)
   | LessThan (e1, e2) ->
     let (_, e1_result_idx, st') = State_aux.mk_fresh Term "x_" 0 st in
-    let (sts_acc', ctxt_acc', assign_acc', st'') = naasty_of_flick_expr st' e1 sts_acc ctxt_acc
+    let (sts_acc', ctxt_acc', assign_acc', st'') =
+      naasty_of_flick_expr st' e1 sts_acc ctxt_acc(*FIXME extend with type of e1_result_idx*)
                              (e1_result_idx :: assign_acc) in
-    let (_, e2_result_idx, st''') = State_aux.mk_fresh Term "x_" e1_result_idx st'' in
+    let (_, e2_result_idx, st''') =
+      State_aux.mk_fresh Term "x_" e1_result_idx st'' in
     let (sts_acc'', ctxt_acc'', assign_acc'', st4) =
-      naasty_of_flick_expr st''' e2 sts_acc' ctxt_acc'
+      naasty_of_flick_expr st''' e2 sts_acc' ctxt_acc'(*FIXME extend with type of e2_result_idx*)
                              (e2_result_idx :: assign_acc') in
     let translated =
       match e with

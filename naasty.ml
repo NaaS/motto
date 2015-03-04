@@ -60,6 +60,11 @@ type naasty_expression =
   | Equals of naasty_expression * naasty_expression
   | GreaterThan of naasty_expression * naasty_expression
   | LessThan of naasty_expression * naasty_expression
+  | Minus of naasty_expression * naasty_expression
+  | Times of naasty_expression * naasty_expression
+  | Mod of naasty_expression * naasty_expression
+  | Quotient of naasty_expression * naasty_expression
+  | Abs of naasty_expression
 
 type naasty_statement =
     (*Should include function prototypes here?*)

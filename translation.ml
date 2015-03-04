@@ -270,9 +270,11 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
      The other parameters provide context for the translation:
        st: state.
        sts_acc: the program accumulated so far during the translation.
-       ctxt_acc: list of fresh variables (and their types) added to the scope so
+       ctxt_acc: list of indices of fresh variables added to the scope so
          far. list is ordered in the reverse order of the variables' addition to
-         the scope.
+         the scope. this is used to declare these variables before the code in
+         which they will occur; their type information will be obtained from the
+         symbol table.
        assign_acc: list of naasty variables to which we should assign the value
          of the current expression. list is ordered in the reverse order to which
          a variable was "subscribed" to the value of this expression.
@@ -282,9 +284,9 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
              possibly extended st
 *)
 let rec naasty_of_flick_expr (st : state) (e : expression)
-          (sts_acc : naasty_statement) (ctxt_acc : naasty_type list)
+          (sts_acc : naasty_statement) (ctxt_acc : identifier list)
           (assign_acc : identifier list) : (naasty_statement *
-                                            naasty_type list (*ctxt_acc*) *
+                                            identifier list (*ctxt_acc*) *
                                             identifier list (*assign_acc*) *
                                             state) =
   let check_and_resolve_name identifier =
@@ -348,12 +350,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | _ -> failwith "Impossible" in
     let (_, e1_result_idx, st') = mk_fresh Term ~ty_opt:(Some ty1) "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
-      naasty_of_flick_expr st' e1 sts_acc ctxt_acc(*FIXME extend with type of e1_result_idx*)
+      naasty_of_flick_expr st' e1 sts_acc (e1_result_idx :: ctxt_acc)
                              (e1_result_idx :: assign_acc) in
     let (_, e2_result_idx, st''') =
       mk_fresh Term ~ty_opt:(Some ty2) "x_" e1_result_idx st'' in
     let (sts_acc'', ctxt_acc'', assign_acc'', st4) =
-      naasty_of_flick_expr st''' e2 sts_acc' ctxt_acc'(*FIXME extend with type of e2_result_idx*)
+      naasty_of_flick_expr st''' e2 sts_acc' (e2_result_idx :: ctxt_acc')
         (e2_result_idx :: assign_acc') in
     let translated =
       match e with
@@ -395,7 +397,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | _ -> failwith "Impossible" in
     let (_, e_result_idx, st') = mk_fresh Term ~ty_opt:(Some ty) "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
-      naasty_of_flick_expr st' e sts_acc ctxt_acc(*FIXME extend with type of e_result_idx*)
+      naasty_of_flick_expr st' e sts_acc (e_result_idx :: ctxt_acc)
         (e_result_idx :: assign_acc) in
     let translated =
       match e with
@@ -433,8 +435,9 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     let (_, result_idx, st''') = mk_fresh Term ~ty_opt:(Some n_res_ty) "x_" 0 st'' in
     (*Add type declaration for result_idx, which should be the same as res_ty
       since result_idx will carry the value that's computed in this function.*)
-    let init_ctxt = [update_empty_identifier result_idx n_res_ty] in
-    let (init_statmt, ctxt, waiting) = (Skip, init_ctxt, [result_idx]) in
+    let init_ctxt = [result_idx] in
+    let init_assign_acc = [result_idx] in
+    let (init_statmt, ctxt, waiting) = (Skip, init_ctxt, init_assign_acc) in
     let (body, ctxt', waiting', st4) = naasty_of_flick_expr st''' fn_decl.fn_body init_statmt ctxt waiting in
 
     (*There shouldn't be any more waiting variables at this point, they should

@@ -69,6 +69,7 @@ type naasty_statement =
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
   | Return of naasty_expression
+  | Skip
 
 type naasty_function =
   identifier * naasty_type list * naasty_type * naasty_statement

@@ -57,6 +57,9 @@ type naasty_expression =
   | Or of naasty_expression * naasty_expression
   | Not of naasty_expression
   | Plus of naasty_expression * naasty_expression
+  | Equals of naasty_expression * naasty_expression
+  | GreaterThan of naasty_expression * naasty_expression
+  | LessThan of naasty_expression * naasty_expression
 
 type naasty_statement =
     (*Should include function prototypes here?*)

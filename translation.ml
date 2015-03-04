@@ -161,8 +161,14 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
   | Boolean (label_opt, type_ann) ->
     if (type_ann <> []) then
       failwith "Boolean serialisation annotation not supported"; (*TODO*)
-    let (label_opt', st') = check_and_generate_name label_opt
-    in (Bool_Type label_opt', st')
+    let (label_opt', st') = check_and_generate_name label_opt in
+    let translated_ty = Bool_Type label_opt' in
+    let st'' =
+      match label_opt' with
+      | None -> st'
+      | Some idx ->
+        update_symbol_type idx translated_ty Term st'
+    in (translated_ty, st'')
   | Integer (label_opt, type_ann) ->
     if type_ann = [] then raise (Translation ("No annotation given", ty))
     else
@@ -191,12 +197,24 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
               in { md with signed = bool_value }
             else failwith ("Unrecognised integer annotation: " ^ name)
           | _ -> failwith ("Unrecognised integer annotation: " ^ name))
-          type_ann default_int_metadata
-      in (Int_Type (label_opt', metadata), st')
+          type_ann default_int_metadata in
+    let translated_ty = Int_Type (label_opt', metadata) in
+    let st'' =
+      match label_opt' with
+      | None -> st'
+      | Some idx ->
+        update_symbol_type idx translated_ty Term st'
+    in (translated_ty, st'')
   | IPv4Address label_opt ->
     let (label_opt', st') = check_and_generate_name label_opt in
-    let metadata = { signed = false; precision = 32 }
-    in (Int_Type (label_opt', metadata), st')
+    let metadata = { signed = false; precision = 32 } in
+    let translated_ty = Int_Type (label_opt', metadata) in
+    let st'' =
+      match label_opt' with
+      | None -> st'
+      | Some idx ->
+        update_symbol_type idx translated_ty Term st'
+    in (translated_ty, st'')
   | String (label_opt, type_ann) ->
     let (label_opt', st') = check_and_generate_name label_opt in
     let vlen = Undefined (*FIXME determine from type_ann*) in
@@ -210,18 +228,32 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
       | Max _ -> Array_Type (label_opt', Char_Type None, vlen)
       | Dependent _ ->
         (*FIXME as in "Undefined" above, we need stopping conditions.*)
-        Reference_Type (label_opt', Char_Type None)
-    in (container_type, st')
+        Reference_Type (label_opt', Char_Type None) in
+    let st'' =
+      match label_opt' with
+      | None -> st'
+      | Some idx ->
+        update_symbol_type idx container_type Term st'
+    in (container_type, st'')
   | Reference (label_opt, ty) ->
     let (label_opt', st') = check_and_generate_name label_opt in
-    let (ty', st'') = naasty_of_flick_type st' ty
-    in (Reference_Type (label_opt', ty'), st'')
+    let (ty', st'') = naasty_of_flick_type st' ty in
+    let translated_ty = Reference_Type (label_opt', ty') in
+    let st''' =
+      match label_opt' with
+      | None -> st''
+      | Some idx ->
+        update_symbol_type idx translated_ty Term st''
+    in (translated_ty, st''')
   | RecordType (label_opt, tys, type_ann) ->
     if (type_ann <> []) then
       failwith "Record serialisation annotation not supported"; (*TODO*)
     let (type_identifier, st') = check_and_generate_typename label_opt in
-    let (tys', st'') = fold_map ([], st') naasty_of_flick_type tys
-    in (Record_Type (type_identifier, List.rev tys'), st'')
+    let (tys', st'') = fold_map ([], st') naasty_of_flick_type tys in
+    let translated_ty = Record_Type (type_identifier, List.rev tys') in
+    let st''' =
+        update_symbol_type type_identifier translated_ty Type st''
+    in (translated_ty, st''')
 
 (* Based on "Translation from Flick to IR" in
    https://github.com/NaaS/system/blob/master/crisp/flick/flick.tex

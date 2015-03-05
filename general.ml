@@ -26,13 +26,21 @@ let mk_block (indent : int) (f : int -> 'a -> string) (l : 'a list) : string =
   List.fold_right (fun x already ->
     already ^ f indent x) l ""
 
-(*Fold-right that threads another parameter through the fold. I use this for
-  threading a state value.*)
+(*Fold-right that threads another parameter through the fold, and behaving like
+  a map. I use this for threading a state value through a "map".*)
 let fold_map (z : 'b list * 'c) (f : 'c -> 'a -> 'b * 'c)
       (l : 'a list) : ('b list * 'c) =
   List.fold_right (fun ty (tys_acc, st_acc) ->
     let (ty', st_acc') = f st_acc ty
     in (ty' :: tys_acc, st_acc')) l z
+
+(*Fold-right that threads another parameter through the fold. I use this for
+  threading a state value.*)
+let fold_fold (z : 'b * 'c) (f : 'c -> 'a -> 'b -> 'b * 'c)
+      (l : 'a list) : ('b * 'c) =
+  List.fold_right (fun ty (tys_acc, st_acc) ->
+    let (tys_acc', st_acc') = f st_acc ty tys_acc
+    in (tys_acc', st_acc')) l z
 
 let swap (x, y) = (y, x)
 let swap_1_2 (x, y, z) = (y, x, z)

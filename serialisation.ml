@@ -99,23 +99,38 @@ let translate_type_compilation_unit (st : state)
          fold_map ([], st'') (fun st scheme ->
            Naasty_aux.instantiate true scheme.identifiers st scheme.scheme)
            (instantiate_data_model name) in
-       ({Naasty_project.name = name;
-         (*FIXME need to do this again, but for Cpp unit-type*)
-         Naasty_project.unit_type = Naasty_project.Header;
-         (*FIXME currently hardcoded, but this list of inclusions could be
-                 extended based on an analysis of the code in the module.*)
-         Naasty_project.inclusions =
-           ["<stdint.h>";
-            "<iostream>";
-            "<assert.h>";
-            "<exception>";
-            "\"TaskBuffer.h\"";
-            "\"applications/NaasData.h\""];
-         Naasty_project.content =
-           [Naasty_aux.add_fields_to_record (the_single translated)
-              data_model_instance]
-        } :: cunits,
-        st'''))
+       let header_unit =
+         {Naasty_project.name = name;
+          Naasty_project.unit_type = Naasty_project.Header;
+          (*FIXME currently hardcoded, but this list of inclusions could be
+                  extended based on an analysis of the code in the module.*)
+          Naasty_project.inclusions =
+            ["<stdint.h>";
+             "<iostream>";
+             "<assert.h>";
+             "<exception>";
+             "\"TaskBuffer.h\"";
+             "\"applications/NaasData.h\""];
+          Naasty_project.content =
+            [Naasty_aux.add_fields_to_record (the_single translated)
+               data_model_instance]
+        } in
+       let cpp_unit =
+         {Naasty_project.name = name;
+          Naasty_project.unit_type = Naasty_project.Cpp;
+          (*FIXME currently hardcoded, but this list of inclusions could be
+                  extended based on an analysis of the code in the module.*)
+          Naasty_project.inclusions =
+            ["\"" ^ Naasty_project.filename_of_compilationunit header_unit ^ "\"";
+             "\"LinearBuffer.h\"";
+             "<iostream>";
+             "\"utils/ReadWriteData.h\"";
+             "\"applications/NaasData.h\""];
+          Naasty_project.content =
+            [(*FIXME this needs to be instantiated from templates based on the
+                     definition of the type in flick.*)]
+         }
+       in (header_unit :: cpp_unit :: cunits, st'''))
     types_unit.Crisp_project.content
 
 let translate_function_compilation_unit (st : state)

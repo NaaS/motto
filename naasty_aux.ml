@@ -251,12 +251,45 @@ let mk_fresh (scope : scope) ?ty_opt:(ty_opt = None) (id : string) (min_idx : in
 let is_fresh (id : string) (st : state) : bool =
   lookup_name Term st id = None && lookup_name Type st id = None
 
+(*
+  Applies a transformation 'f' to the state-index of a symbol that's in turn
+   indexed in 'names' by a placeholder 'id' -- if 'id' turns out to be a
+   placeholder.
+
+  Parameters:
+   'scheme' is the phrase (type, expression, etc) we are evaluating for whether
+      a substitution should take place. We have no information about this
+      scheme, since at this level we don't need it. Info about the scheme is
+      encapsulated in 'f'.
+   'id' is the identifier we are evaluating for this substitution -- if the
+      substitution goes ahead, then we'll be substitution some value for this
+      identifier. This value will have the same type as 'scheme'. We don't need
+      to know this type, or how the substitution itself will be done -- that is
+      encapsulated in 'f'.
+   'f' carries out the substitution, if we determine that a substitution should
+      take place.
+   'names' is a list of names we'll consult to determine what name a placeholder
+      should get. If selected, a name will be added to a scope (unless it
+      already exists -- unless 'fresh' isn't set to true).
+
+   'type_mode' determines whether the mapped-to name is of Type or Term scope.
+
+   'st' state.
+   'fresh' asserts that each name in 'names' is fresh wrt 'st'
+*)
 let substitute (fresh : bool) (names : string list) (type_mode : bool)
       (scheme : 'a) (st : state) (id : identifier)  (f : identifier -> 'a) : 'a * state =
-  if id > 0 then (scheme, st)
+  if id > 0 then
+    (*Identifier is not a placeholder, so return the scheme unchanged.*)
+    (scheme, st)
   else if id = 0 then
     failwith "Template placeholder cannot be 0 -- this value is undefined."
   else
+    (*The placeholder's value is used to perform a lookup on the list of names
+      provided. The placeholder will be "mapped" to that name -- to be precise,
+      it's mapped to the index (in the state, NOT in the list of names) of
+      that name. If the name doesn't have an index then we create one for it,
+      and update the state.*)
     let local_name = List.nth names (abs id - 1) in
     let id', st' =
       if not fresh then
@@ -288,6 +321,12 @@ let substitute (fresh : bool) (names : string list) (type_mode : bool)
               (idx, st)
     in (f id', st')
 
+(*Optionally applies the 'substitute' function, depending on whether an
+  identifier is provided. Remember that the purpose of 'substitute' is to map a
+  placeholder (which is presented as a form of identifier -- in practice a
+  negative integer) with some other value (type or expression or whatever).
+
+  For the meaning of the parameters, see the definition of 'substitute' above.*)
 let substitute_opt (fresh : bool) (names : string list) (type_mode : bool)
       (scheme : 'a) (st : state) (id_opt : identifier option)
       (f : identifier -> 'a) : 'a * state =

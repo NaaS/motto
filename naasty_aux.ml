@@ -251,58 +251,60 @@ let mk_fresh (scope : scope) ?ty_opt:(ty_opt = None) (id : string) (min_idx : in
 let is_fresh (id : string) (st : state) : bool =
   lookup_name Term st id = None && lookup_name Type st id = None
 
+let substitute' (fresh : bool) (names : string list) (type_mode : bool) scheme st id f =
+  if id > 0 then (scheme, st)
+  else if id = 0 then
+    failwith "Template placeholder cannot be 0 -- this value is undefined."
+  else
+    let local_name = List.nth names (abs id - 1) in
+    let id', st' =
+      if not fresh then
+        (*Look it up from the state*)
+        let scope = if type_mode then Type else Term in
+        match lookup_name scope st local_name with
+        | None ->
+            failwith ("Undeclared " ^ scope_to_str scope ^ ": " ^ local_name)
+        | Some i -> (i, st)
+      else
+        (*Generate a fresh name and update the state*)
+        if type_mode then
+          match lookup_name Type st local_name with
+          | None ->
+            extend_scope_unsafe Type st local_name
+          | Some idx ->
+            if forbid_shadowing then
+              failwith ("Already declared type: " ^ local_name)
+            else
+              (idx, st)
+        else
+          match lookup_name Term st local_name with
+          | None ->
+            extend_scope_unsafe Term st local_name
+          | Some idx ->
+            if forbid_shadowing then
+              failwith ("Already declared identifier: " ^ local_name)
+            else
+              (idx, st)
+    in (f id', st')
+
+let substitute (fresh : bool) (names : string list) (type_mode : bool) scheme st id_opt f =
+  match id_opt with
+  | None -> (scheme, st)
+  | Some id ->
+    substitute' fresh names type_mode scheme st id f
+
 (*Instantiates a naasty_type scheme with a set of names*)
 let rec instantiate_type (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_type) : naasty_type * state =
-  let substitute' (type_mode : bool) scheme st id f =
-    if id > 0 then (scheme, st)
-    else if id = 0 then
-      failwith "Template placeholder cannot be 0 -- this value is undefined."
-    else
-      let local_name = List.nth names (abs id - 1) in
-      let id', st' =
-        if not fresh then
-          (*Look it up from the state*)
-          let scope = if type_mode then Type else Term in
-          match lookup_name scope st local_name with
-          | None ->
-              failwith ("Undeclared " ^ scope_to_str scope ^ ": " ^ local_name)
-          | Some i -> (i, st)
-        else
-          (*Generate a fresh name and update the state*)
-          if type_mode then
-            match lookup_name Type st local_name with
-            | None ->
-              extend_scope_unsafe Type st local_name
-            | Some idx ->
-              if forbid_shadowing then
-                failwith ("Already declared type: " ^ local_name)
-              else
-                (idx, st)
-          else
-            match lookup_name Term st local_name with
-            | None ->
-              extend_scope_unsafe Term st local_name
-            | Some idx ->
-              if forbid_shadowing then
-                failwith ("Already declared identifier: " ^ local_name)
-              else
-                (idx, st)
-      in (f id', st') in
-  let substitute (type_mode : bool) scheme st id_opt f =
-    match id_opt with
-    | None -> (scheme, st)
-    | Some id ->
-        substitute' type_mode scheme st id f
-  in match scheme with
+  match scheme with
   | Int_Type (id_opt, int_metadata) ->
-    substitute false scheme st id_opt (fun id' ->
+    substitute fresh names false scheme st id_opt (fun id' ->
       Int_Type (Some id', int_metadata))
   | Bool_Type id_opt ->
-    substitute false scheme st id_opt (fun id' ->
+    substitute fresh names false scheme st id_opt (fun id' ->
       Bool_Type (Some id'))
   | Char_Type id_opt ->
-    substitute false scheme st id_opt (fun id' ->
+    substitute fresh names false scheme st id_opt (fun id' ->
       Char_Type (Some id'))
   | Array_Type (id_opt, naasty_type, array_size) ->
     let naasty_type', st' =
@@ -310,7 +312,7 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
     if naasty_type' = naasty_type then
       begin
         assert (st = st');
-        substitute false scheme st id_opt (fun id' ->
+        substitute fresh names false scheme st id_opt (fun id' ->
         Array_Type (Some id', naasty_type, array_size))
       end
     else
@@ -318,16 +320,16 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
       |> instantiate_type fresh names st'
   | Record_Type (ty_ident, fields) ->
     let ty_ident', st' =
-      substitute' true ty_ident st ty_ident (fun x -> x) in
+      substitute' fresh names true ty_ident st ty_ident (fun x -> x) in
     let fields', st'' =
       fold_map ([], st') (instantiate_type fresh names) fields in
     (Record_Type (ty_ident', fields'), st'')
   | Unit_Type -> (Unit_Type, st)
   | UserDefined_Type (id_opt, ty_ident) ->
     let ty_ident', st' =
-      substitute' true ty_ident st ty_ident (fun x -> x) in
+      substitute' fresh names true ty_ident st ty_ident (fun x -> x) in
     let scheme' = UserDefined_Type (id_opt, ty_ident') in
-    substitute false scheme' st' id_opt (fun id' ->
+    substitute fresh names false scheme' st' id_opt (fun id' ->
       UserDefined_Type (Some id', ty_ident'))
   | Reference_Type (id_opt, naasty_type) ->
     let naasty_type', st' =
@@ -335,14 +337,14 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
     if naasty_type' = naasty_type then
       begin
         assert (st = st');
-        substitute false scheme st id_opt (fun id' ->
+        substitute fresh names false scheme st id_opt (fun id' ->
         Reference_Type (Some id', naasty_type))
       end
     else
       Reference_Type (id_opt, naasty_type')
       |> instantiate_type fresh names st'
   | Size_Type id_opt ->
-    substitute false scheme st id_opt (fun id' ->
+    substitute fresh names false scheme st id_opt (fun id' ->
       Size_Type (Some id'))
   | Static_Type (id_opt, naasty_type) ->
     let naasty_type', st' =
@@ -350,7 +352,7 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
     if naasty_type' = naasty_type then
       begin
         assert (st = st');
-        substitute false scheme st id_opt (fun id' ->
+        substitute fresh names false scheme st id_opt (fun id' ->
         Static_Type (Some id', naasty_type))
       end
     else
@@ -358,7 +360,7 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
       |> instantiate_type fresh names st'
   | Fun_Type (id, res_ty, arg_tys) ->
     let id', st' =
-      substitute' false id st id (fun x -> x) in
+      substitute' fresh names false id st id (fun x -> x) in
     let res_ty', st'' =
       instantiate_type fresh names st' res_ty in
     let arg_tys', st''' =

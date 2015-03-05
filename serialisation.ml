@@ -89,7 +89,7 @@ let split_declaration_kinds (p : Crisp_syntax.program) :
 let translate_type_compilation_unit (st : state)
       (types_unit : Crisp_project.compilation_unit) :
   Naasty_project.compilation_unit list * state =
-  fold_fold ([], st)
+  fold_couple ([], st)
     (fun (st' : state) (ty : Crisp_syntax.toplevel_decl)
       (cunits : Naasty_project.compilation_unit list) ->
        let name = Crisp_syntax_aux.name_of_type ty in

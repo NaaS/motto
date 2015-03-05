@@ -34,11 +34,11 @@ let get_stream_len =
   { name = "get_stream_len";
     identifiers = ["get_stream_len"];
     scheme = Fun_Type (-1, Size_Type None, [])}
-let bytes_stream_to_channel datatype =
+let bytes_stream_to_channel datatype_name =
   { name = "bytes_stream_to_channel";
     identifiers =
       ["bytes_stream_to_channel";
-       datatype;
+       datatype_name;
        "stream";
        "channel";
        "streamend";
@@ -54,11 +54,11 @@ let bytes_stream_to_channel datatype =
                  Reference_Type (Some (-5), Char_Type None);
                  Reference_Type (Some (-6), Size_Type None);
                  Reference_Type (Some (-7), Size_Type None)])}
-let write_bytes_to_channel datatype =
+let write_bytes_to_channel datatype_name =
   { name = "write_bytes_to_channel";
     identifiers =
       ["write_bytes_to_channel";
-       datatype;
+       datatype_name;
        "channel";
        "no_bytes"];
     scheme =
@@ -88,6 +88,6 @@ let bytes_channel_to_stream =
 (*Instantiates the data model for a particular serialisable datatype.
   This should generate part of the "struct" definition in the resulting C++
   translation of the Flick type. *)
-let instantiate_data_model datatype =
-  [get_channel_len; get_stream_len; bytes_stream_to_channel datatype;
-   write_bytes_to_channel datatype; bytes_channel_to_stream]
+let instantiate_data_model datatype_name =
+  [get_channel_len; get_stream_len; bytes_stream_to_channel datatype_name;
+   write_bytes_to_channel datatype_name; bytes_channel_to_stream]

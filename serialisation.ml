@@ -97,7 +97,7 @@ let translate_type_compilation_unit (st : state)
          Translation.naasty_of_flick_program ~st:st' [ty] in
        let (data_model_instance, st''') =
          fold_map ([], st'') (fun st scheme ->
-           Naasty_aux.instantiate true scheme.identifiers st scheme.scheme)
+           Naasty_aux.instantiate_type true scheme.identifiers st scheme.scheme)
            (instantiate_data_model name) in
        let header_unit =
          {Naasty_project.name = name;
@@ -171,7 +171,7 @@ let translate_serialise_stringify
 ;;
 (*FIXME crude test*)
 fold_map ([], State.initial_state) (fun st scheme ->
-      Naasty_aux.instantiate true scheme.identifiers st scheme.scheme)
+      Naasty_aux.instantiate_type true scheme.identifiers st scheme.scheme)
   (instantiate_data_model "test")
 |> (fun (tys, st) ->
   let st_s = State_aux.state_to_str true st in

@@ -252,7 +252,7 @@ let is_fresh (id : string) (st : state) : bool =
   lookup_name Term st id = None && lookup_name Type st id = None
 
 (*Instantiates a naasty_type scheme with a set of names*)
-let rec instantiate (fresh : bool) (names : string list) (st : state)
+let rec instantiate_type (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_type) : naasty_type * state =
   let substitute' (type_mode : bool) scheme st id f =
     if id > 0 then (scheme, st)
@@ -306,7 +306,7 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
       Char_Type (Some id'))
   | Array_Type (id_opt, naasty_type, array_size) ->
     let naasty_type', st' =
-      instantiate fresh names st naasty_type in
+      instantiate_type fresh names st naasty_type in
     if naasty_type' = naasty_type then
       begin
         assert (st = st');
@@ -315,12 +315,12 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
       end
     else
       Array_Type (id_opt, naasty_type', array_size)
-      |> instantiate fresh names st'
+      |> instantiate_type fresh names st'
   | Record_Type (ty_ident, fields) ->
     let ty_ident', st' =
       substitute' true ty_ident st ty_ident (fun x -> x) in
     let fields', st'' =
-      fold_map ([], st') (instantiate fresh names) fields in
+      fold_map ([], st') (instantiate_type fresh names) fields in
     (Record_Type (ty_ident', fields'), st'')
   | Unit_Type -> (Unit_Type, st)
   | UserDefined_Type (id_opt, ty_ident) ->
@@ -331,7 +331,7 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
       UserDefined_Type (Some id', ty_ident'))
   | Reference_Type (id_opt, naasty_type) ->
     let naasty_type', st' =
-      instantiate fresh names st naasty_type in
+      instantiate_type fresh names st naasty_type in
     if naasty_type' = naasty_type then
       begin
         assert (st = st');
@@ -340,13 +340,13 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
       end
     else
       Reference_Type (id_opt, naasty_type')
-      |> instantiate fresh names st'
+      |> instantiate_type fresh names st'
   | Size_Type id_opt ->
     substitute false scheme st id_opt (fun id' ->
       Size_Type (Some id'))
   | Static_Type (id_opt, naasty_type) ->
     let naasty_type', st' =
-      instantiate fresh names st naasty_type in
+      instantiate_type fresh names st naasty_type in
     if naasty_type' = naasty_type then
       begin
         assert (st = st');
@@ -355,14 +355,14 @@ let rec instantiate (fresh : bool) (names : string list) (st : state)
       end
     else
       Static_Type (id_opt, naasty_type')
-      |> instantiate fresh names st'
+      |> instantiate_type fresh names st'
   | Fun_Type (id, res_ty, arg_tys) ->
     let id', st' =
       substitute' false id st id (fun x -> x) in
     let res_ty', st'' =
-      instantiate fresh names st' res_ty in
+      instantiate_type fresh names st' res_ty in
     let arg_tys', st''' =
-      fold_map ([], st'') (instantiate fresh names) arg_tys in
+      fold_map ([], st'') (instantiate_type fresh names) arg_tys in
     (Fun_Type (id', res_ty', arg_tys'), st''')
 
 (*Takes a record type specification and adds fields to the end, in order.

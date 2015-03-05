@@ -36,6 +36,7 @@ let fold_map (z : 'b list * 'c) (f : 'c -> 'a -> 'b * 'c)
 
 (*Fold-right that threads another parameter through the fold. I use this for
   threading a state value.*)
+(*FIXME still not happy with the name of this function!*)
 let fold_couple (z : 'b * 'c) (f : 'c -> 'a -> 'b -> 'b * 'c)
       (l : 'a list) : ('b * 'c) =
   List.fold_right (fun ty (tys_acc, st_acc) ->

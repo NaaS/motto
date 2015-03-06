@@ -14,6 +14,9 @@ type data_model_component =
     type_scheme : naasty_type;
     function_scheme : naasty_function }
 
+type type_analysis =
+  Naasty.naasty_statement list * string list * identifier
+
 (*
   Based on
    https://lsds.doc.ic.ac.uk/gitlab/naas/naas-box-system/blob/master/src/applications/hadoop_data_model/HadoopDMData.h 
@@ -29,14 +32,40 @@ type data_model_component =
 *)
 let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let name = "get_channel_len" in
+  let identifiers =
+    [name;
+     datatype_name ^ "::get_channel_len";
+     "len";
+     datatype_name;
+     "sizeof";
+    ] in
+  let rec analyse_type ((stmts, names, next_placeholder) as acc : type_analysis) ty : type_analysis =
+    match ty with
+    | RecordType (label_opt, tys, ty_ann) ->
+      (*FIXME probably we should look at ty_ann*)
+      snd(*FIXME code style*) (fold_map ([], acc) (fun acc ty -> ([], analyse_type acc ty)) tys)
+    | String (label_opt, ty_ann) ->
+      begin
+        match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
+        | [] -> failwith "Strings need to be given an indication of size."
+        | [(_, v)] ->
+          begin
+            match v with
+            | Ann_Str _ -> failwith "TODO"
+            | Ann_Int _ -> failwith "TODO"
+            | Ann_Ident s ->
+              let stmt =
+                If1 (GEq (Var next_placeholder, Int_Value 0),
+                     Increment (-3, Var next_placeholder))
+              in (stmt :: stmts, s :: names, next_placeholder - 1)
+          end
+        | _ -> failwith "Too many sizes specified for a string."
+      end
+    | _ -> acc in
+  let body_contents, more_idents, _ =
+    analyse_type ([Skip], [], (List.length identifiers + 1) * (-1)) ty in
   { name = name;
-    identifiers =
-      [name;
-       datatype_name ^ "::get_channel_len";
-       "len";
-       datatype_name;
-       "sizeof";
-      ];
+    identifiers = identifiers @ more_idents;
     type_scheme = Fun_Type (-1, Size_Type None, []);
     function_scheme =
       let fun_name_idx = -2 in
@@ -46,7 +75,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
         [
           Declaration (Size_Type (Some (-3)));
           Assign (-3, Call_Function (-5, [Var (-4)]));
-          (*FIXME fill in the rest of the body*)
+          Naasty_aux.concat body_contents;
           Return (Var (-3))
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);

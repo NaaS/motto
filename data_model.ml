@@ -37,7 +37,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
     identifiers =
       [name;
        datatype_name ^ "::get_channel_len";
-       "x";
+       "len";
       ];
     type_scheme = Fun_Type (-1, Size_Type None, []);
     function_scheme =

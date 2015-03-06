@@ -412,7 +412,10 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
 (*Instantiates a naasty_statement scheme with a set of names*)
 let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_expression) : naasty_expression * state =
-  match scheme with
+  let unary_op_inst e f =
+    let (e', st') = instantiate_expression fresh names st e
+    in (f e', st')
+  in match scheme with
   | Var id ->
     let id', st' =
       substitute fresh names false id st id (fun x -> x)
@@ -420,11 +423,9 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
   | Int_Value _
   | Bool_Value _ -> (scheme, st)
   | Not e ->
-    let (e', st') = instantiate_expression fresh names st e
-    in (Not e', st')
+    unary_op_inst e (fun e' -> Not e')
   | Abs e ->
-    let (e', st') = instantiate_expression fresh names st e
-    in (Abs e', st')
+    unary_op_inst e (fun e' -> Abs e')
   | _ -> failwith "TODO"
 (*
   | And (e1, e2)

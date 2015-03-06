@@ -64,3 +64,9 @@ let update_empty_label label (ty : type_value) =
     if label_opt = None then
       Reference (Some label, ty)
     else failwith "Cannot set an already-set label"
+
+(*Assuming that the given declaration is a type declaration, this function
+  extracts the type being declared.*)
+let the_ty_of_decl = function
+  | Type ty_decl -> ty_decl.type_value
+  | _ -> failwith "Was expecting a type declaration."

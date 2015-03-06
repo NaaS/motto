@@ -114,7 +114,7 @@ let translate_type_compilation_unit (st : state)
           Naasty_project.content =
             [Naasty_aux.add_fields_to_record (the_single translated)
                data_model_instance]
-        } in
+         } in
        let cpp_unit =
          {Naasty_project.name = name;
           Naasty_project.unit_type = Naasty_project.Cpp;

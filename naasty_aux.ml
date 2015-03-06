@@ -185,6 +185,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
 *)
   | Return e ->
     indn indent ^ "return (" ^ string_of_naasty_expression ~st_opt e ^ ")"
+  | Skip -> indn indent ^ "/*skip*/"
   | _ -> failwith "TODO"
 
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent (f_id, arg_types, res_type, body) =

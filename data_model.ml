@@ -30,6 +30,20 @@ let get_channel_len =
   { name = "get_channel_len";
     identifiers = ["get_channel_len"];
     scheme = Fun_Type (-1, Size_Type None, [])}
+
+let get_channel_len_imp (datatype_name : string) (ty : Crisp_syntax.type_value) : naasty_function =
+  let fun_name_idx = -1 in
+  let arg_tys = [] in
+  let ret_ty = Size_Type None in
+  let body =
+    [
+      Declaration (Size_Type (Some (-2)));
+      Assign (-2, Int_Value 0);
+      (*FIXME fill in the rest of the body*)
+      Return (Var (-2))
+    ] |> Naasty_aux.concat
+  in (fun_name_idx, arg_tys, ret_ty, body)
+
 let get_stream_len =
   { name = "get_stream_len";
     identifiers = ["get_stream_len"];

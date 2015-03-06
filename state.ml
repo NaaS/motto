@@ -14,6 +14,10 @@ open Naasty
   language's names become handled in a hashcons-like way.*)
 let forbid_shadowing = false
 
+(*Should types and terms be treated differently -- can types be treated as
+  terms? If no, then the "sizeof" operator becomes very awkward.*)
+let term_type_separation = false
+
 type state =
   { pragma_inclusions : string list;
     type_declarations : naasty_type list;
@@ -60,18 +64,24 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b * 'c) list)
         match normal_lookup with
         | None -> type_lookup
         | Some idx ->
-          failwith ("Type symbol " ^ id_to_str id ^
-                    " was used in term, getting idx " ^
-                    res_to_str idx)
+          if not term_type_separation then
+            type_lookup
+          else
+            failwith ("Type symbol " ^ id_to_str id ^
+                      " was used in term, getting idx " ^
+                      res_to_str idx)
       end
     | Term ->
       begin
         match type_lookup with
         | None -> normal_lookup
         | Some idx ->
-          failwith ("Symbol " ^ id_to_str id ^
-                    " was used in type, getting idx " ^
-                    res_to_str idx)
+          if not term_type_separation then
+            normal_lookup
+          else
+            failwith ("Symbol " ^ id_to_str id ^
+                      " was used in type, getting idx " ^
+                      res_to_str idx)
       end
 
 (*Lookup functions for names and indices. Note that (string) names are used for

@@ -53,7 +53,7 @@ let get_stream_len =
   { name = "get_stream_len";
     identifiers = ["get_stream_len"];
     type_scheme = Fun_Type (-1, Size_Type None, []);
-    function_scheme = failwith "TODO";
+    function_scheme = fun _ -> failwith "TODO";
   }
 
 let bytes_stream_to_channel datatype_name =
@@ -76,7 +76,7 @@ let bytes_stream_to_channel datatype_name =
                  Reference_Type (Some (-5), Char_Type None);
                  Reference_Type (Some (-6), Size_Type None);
                  Reference_Type (Some (-7), Size_Type None)]);
-    function_scheme = failwith "TODO";
+    function_scheme = fun _ -> failwith "TODO";
   }
 
 let write_bytes_to_channel datatype_name =
@@ -93,7 +93,7 @@ let write_bytes_to_channel datatype_name =
                 [Reference_Type (None, UserDefined_Type (None, -2));
                  Reference_Type (Some (-3), Char_Type None);
                  Reference_Type (Some (-4), Size_Type None)]);
-    function_scheme = failwith "TODO";
+    function_scheme = fun _ -> failwith "TODO";
   }
 
 let bytes_channel_to_stream =
@@ -112,7 +112,7 @@ let bytes_channel_to_stream =
                  Reference_Type (Some (-3), Char_Type None);
                  Reference_Type (Some (-4), Size_Type None);
                  Reference_Type (Some (-5), Size_Type None)]);
-    function_scheme = failwith "TODO";
+    function_scheme = fun _ -> failwith "TODO";
   }
 
 (*Instantiates the data model for a particular serialisable datatype.

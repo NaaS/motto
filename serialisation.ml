@@ -95,10 +95,11 @@ let translate_type_compilation_unit (st : state)
        let name = Crisp_syntax_aux.name_of_type decl in
        let (translated, st'') =
          Translation.naasty_of_flick_program ~st:st' [decl] in
-       let (data_model_instance, st''') =
+       let data_model_instance = instantiate_data_model name in
+       let (type_data_model_instance, st''') =
          fold_map ([], st'') (fun st scheme ->
            Naasty_aux.instantiate_type true scheme.identifiers st scheme.type_scheme)
-           (instantiate_data_model name) in
+           data_model_instance in
        let header_unit =
          {Naasty_project.name = name;
           Naasty_project.unit_type = Naasty_project.Header;
@@ -113,14 +114,15 @@ let translate_type_compilation_unit (st : state)
              "\"applications/NaasData.h\""];
           Naasty_project.content =
             [Naasty_aux.add_fields_to_record (the_single translated)
-               data_model_instance]
+               type_data_model_instance]
          } in
 (*<acutelyunderconstruction>*)
-       let (data_model_imp_instance, st4) =
+       let (function_data_model_instance, st4) =
          let the_ty_of_decl = function
            | Type ty_decl -> ty_decl.type_value
            | _ -> failwith "Was expecting a type declaration." in
-         let scheme = get_channel_len.function_scheme name (the_ty_of_decl decl) in
+         let pre_scheme = List.nth data_model_instance 0 in
+         let scheme = pre_scheme.function_scheme (the_ty_of_decl decl) in
          let identifiers = [name ^ "::get_channel_len"; "x"]
          in
            Naasty_aux.instantiate_function true identifiers st''' scheme
@@ -140,7 +142,7 @@ let translate_type_compilation_unit (st : state)
           Naasty_project.content =
             [(*FIXME this needs to be instantiated from templates based on the
                definition of the type in flick.*)
-              Fun_Decl data_model_imp_instance]
+              Fun_Decl function_data_model_instance]
          }
        in (header_unit :: cpp_unit :: cunits, st4))
     types_unit.Crisp_project.content

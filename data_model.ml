@@ -8,13 +8,11 @@ open State
 open Crisp_syntax
 open Naasty
 
-type datatype_name = string
-
 type data_model_component =
   { name : string;
     identifiers : string list;
     type_scheme : naasty_type;
-    function_scheme : datatype_name -> Crisp_syntax.type_value -> naasty_function }
+    function_scheme : Crisp_syntax.type_value -> naasty_function }
 
 (*
   Based on
@@ -29,13 +27,13 @@ type data_model_component =
   size_t get_channel_len();
   size_t get_stream_len();
 *)
-let get_channel_len =
+let get_channel_len (datatype_name : string) =
   let name = "get_channel_len" in
   { name = name;
     identifiers = [name];
     type_scheme = Fun_Type (-1, Size_Type None, []);
     function_scheme =
-      fun (datatype_name : string) (ty : Crisp_syntax.type_value) ->
+      fun (ty : Crisp_syntax.type_value) ->
         let fun_name_idx = -1 in
         let arg_tys = [] in
         let ret_ty = Size_Type None in
@@ -49,14 +47,14 @@ let get_channel_len =
         in (fun_name_idx, arg_tys, ret_ty, body);
   }
 
-let get_stream_len =
+let get_stream_len (datatype_name : string) =
   { name = "get_stream_len";
     identifiers = ["get_stream_len"];
     type_scheme = Fun_Type (-1, Size_Type None, []);
     function_scheme = fun _ -> failwith "TODO";
   }
 
-let bytes_stream_to_channel datatype_name =
+let bytes_stream_to_channel (datatype_name : string) =
   { name = "bytes_stream_to_channel";
     identifiers =
       ["bytes_stream_to_channel";
@@ -79,7 +77,7 @@ let bytes_stream_to_channel datatype_name =
     function_scheme = fun _ -> failwith "TODO";
   }
 
-let write_bytes_to_channel datatype_name =
+let write_bytes_to_channel (datatype_name : string) =
   { name = "write_bytes_to_channel";
     identifiers =
       ["write_bytes_to_channel";
@@ -96,7 +94,7 @@ let write_bytes_to_channel datatype_name =
     function_scheme = fun _ -> failwith "TODO";
   }
 
-let bytes_channel_to_stream =
+let bytes_channel_to_stream (datatype_name : string) =
   { name = "bytes_channel_to_stream";
     identifiers =
       ["bytes_channel_to_stream";
@@ -118,6 +116,9 @@ let bytes_channel_to_stream =
 (*Instantiates the data model for a particular serialisable datatype.
   This should generate part of the "struct" definition in the resulting C++
   translation of the Flick type. *)
-let instantiate_data_model datatype_name =
-  [get_channel_len; get_stream_len; bytes_stream_to_channel datatype_name;
-   write_bytes_to_channel datatype_name; bytes_channel_to_stream]
+let instantiate_data_model (datatype_name : string) =
+  [get_channel_len datatype_name;
+   get_stream_len datatype_name;
+   bytes_stream_to_channel datatype_name;
+   write_bytes_to_channel datatype_name;
+   bytes_channel_to_stream datatype_name]

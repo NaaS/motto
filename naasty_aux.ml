@@ -160,6 +160,11 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") + (" ^
     string_of_naasty_expression ~st_opt e2 ^ ")"
   | Var id -> id_name st_opt id
+  | Call_Function (id, es) ->
+    let arg_s =
+      List.map (string_of_naasty_expression ~st_opt) es
+      |> String.concat ", " in
+    id_name st_opt id ^ " (" ^ arg_s ^ ")"
   | _ -> failwith "TODO"
 
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) indent = function
@@ -441,6 +446,12 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
   | Times (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Times (e1', e2'))
   | Mod (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Mod (e1', e2'))
   | Quotient (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Quotient (e1', e2'))
+  | Call_Function (id, es) ->
+    let id', st' =
+      substitute fresh names false id st id (fun x -> x) in
+    let es', st'' =
+      fold_map ([], st') (instantiate_expression fresh names) es
+    in (Call_Function (id', es'), st'')
 
 (*Instantiates a naasty_statement scheme with a set of names*)
 let rec instantiate_statement (fresh : bool) (names : string list) (st : state)

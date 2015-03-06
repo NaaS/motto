@@ -495,6 +495,11 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
     let (e', st') = instantiate_expression fresh names st e in
     let (stmt1', st'') = instantiate_statement fresh names st' stmt1
     in (If1 (e', stmt1'), st'')
+  | Increment (id, e) ->
+    let id', st' =
+      substitute fresh names false id st id (fun x -> x) in
+    let (e', st'') = instantiate_expression fresh names st' e
+    in (Increment (id', e'), st'')
   | _ -> failwith "TODO"
 
 (*Instantiates a naasty_function scheme with a set of names*)

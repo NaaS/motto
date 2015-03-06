@@ -414,7 +414,11 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_expression) : naasty_expression * state =
   let unary_op_inst e f =
     let (e', st') = instantiate_expression fresh names st e
-    in (f e', st')
+    in (f e', st') in
+  let binary_op_inst e1 e2 f =
+    let (e1', st') = instantiate_expression fresh names st e1 in
+    let (e2', st'') = instantiate_expression fresh names st' e2
+    in (f e1' e2', st'')
   in match scheme with
   | Var id ->
     let id', st' =
@@ -422,23 +426,18 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
     in (Var id', st')
   | Int_Value _
   | Bool_Value _ -> (scheme, st)
-  | Not e ->
-    unary_op_inst e (fun e' -> Not e')
-  | Abs e ->
-    unary_op_inst e (fun e' -> Abs e')
-  | _ -> failwith "TODO"
-(*
-  | And (e1, e2)
-  | Or (e1, e2)
-  | Plus (e1, e2)
-  | Equals (e1, e2)
-  | GreaterThan (e1, e2)
-  | LessThan (e1, e2)
-  | Minus (e1, e2)
-  | Times (e1, e2)
-  | Mod (e1, e2)
-  | Quotient (e1, e2) ->
-*)
+  | Not e -> unary_op_inst e (fun e' -> Not e')
+  | Abs e -> unary_op_inst e (fun e' -> Abs e')
+  | And (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> And (e1', e2'))
+  | Or (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Or (e1', e2'))
+  | Plus (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Plus (e1', e2'))
+  | Equals (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Equals (e1', e2'))
+  | GreaterThan (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> GreaterThan (e1', e2'))
+  | LessThan (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> LessThan (e1', e2'))
+  | Minus (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Minus (e1', e2'))
+  | Times (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Times (e1', e2'))
+  | Mod (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Mod (e1', e2'))
+  | Quotient (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Quotient (e1', e2'))
 
 (*Instantiates a naasty_statement scheme with a set of names*)
 let rec instantiate_statement (fresh : bool) (names : string list) (st : state)

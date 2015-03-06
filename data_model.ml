@@ -12,7 +12,7 @@ type data_model_component =
   { name : string;
     identifiers : string list;
     type_scheme : naasty_type;
-    function_scheme : Crisp_syntax.type_value -> naasty_function }
+    function_scheme : naasty_function }
 
 (*
   Based on
@@ -27,34 +27,35 @@ type data_model_component =
   size_t get_channel_len();
   size_t get_stream_len();
 *)
-let get_channel_len (datatype_name : string) =
+let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let name = "get_channel_len" in
   { name = name;
     identifiers = [name];
     type_scheme = Fun_Type (-1, Size_Type None, []);
     function_scheme =
-      fun (ty : Crisp_syntax.type_value) ->
-        let fun_name_idx = -1 in
-        let arg_tys = [] in
-        let ret_ty = Size_Type None in
-        let body =
-          [
-            Declaration (Size_Type (Some (-2)));
-            Assign (-2, Int_Value 0);
-            (*FIXME fill in the rest of the body*)
-            Return (Var (-2))
-          ] |> Naasty_aux.concat
-        in (fun_name_idx, arg_tys, ret_ty, body);
+      let fun_name_idx = -1 in
+      let arg_tys = [] in
+      let ret_ty = Size_Type None in
+      let body =
+        [
+          Declaration (Size_Type (Some (-2)));
+          Assign (-2, Int_Value 0);
+          (*FIXME fill in the rest of the body*)
+          Return (Var (-2))
+        ] |> Naasty_aux.concat
+      in (fun_name_idx, arg_tys, ret_ty, body);
   }
 
-let get_stream_len (datatype_name : string) =
+let dud_function = (-1, [], Unit_Type, Skip)
+
+let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   { name = "get_stream_len";
     identifiers = ["get_stream_len"];
     type_scheme = Fun_Type (-1, Size_Type None, []);
-    function_scheme = fun _ -> failwith "TODO";
+    function_scheme = dud_function;
   }
 
-let bytes_stream_to_channel (datatype_name : string) =
+let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
   { name = "bytes_stream_to_channel";
     identifiers =
       ["bytes_stream_to_channel";
@@ -74,10 +75,10 @@ let bytes_stream_to_channel (datatype_name : string) =
                  Reference_Type (Some (-5), Char_Type None);
                  Reference_Type (Some (-6), Size_Type None);
                  Reference_Type (Some (-7), Size_Type None)]);
-    function_scheme = fun _ -> failwith "TODO";
+    function_scheme = dud_function;
   }
 
-let write_bytes_to_channel (datatype_name : string) =
+let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
   { name = "write_bytes_to_channel";
     identifiers =
       ["write_bytes_to_channel";
@@ -91,10 +92,10 @@ let write_bytes_to_channel (datatype_name : string) =
                 [Reference_Type (None, UserDefined_Type (None, -2));
                  Reference_Type (Some (-3), Char_Type None);
                  Reference_Type (Some (-4), Size_Type None)]);
-    function_scheme = fun _ -> failwith "TODO";
+    function_scheme = dud_function;
   }
 
-let bytes_channel_to_stream (datatype_name : string) =
+let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_value) =
   { name = "bytes_channel_to_stream";
     identifiers =
       ["bytes_channel_to_stream";
@@ -110,15 +111,15 @@ let bytes_channel_to_stream (datatype_name : string) =
                  Reference_Type (Some (-3), Char_Type None);
                  Reference_Type (Some (-4), Size_Type None);
                  Reference_Type (Some (-5), Size_Type None)]);
-    function_scheme = fun _ -> failwith "TODO";
+    function_scheme = dud_function;
   }
 
 (*Instantiates the data model for a particular serialisable datatype.
   This should generate part of the "struct" definition in the resulting C++
   translation of the Flick type. *)
-let instantiate_data_model (datatype_name : string) =
-  [get_channel_len datatype_name;
-   get_stream_len datatype_name;
-   bytes_stream_to_channel datatype_name;
-   write_bytes_to_channel datatype_name;
-   bytes_channel_to_stream datatype_name]
+let instantiate_data_model (datatype_name : string) (ty : Crisp_syntax.type_value) =
+  [get_channel_len datatype_name ty;
+   get_stream_len datatype_name ty;
+   bytes_stream_to_channel datatype_name ty;
+   write_bytes_to_channel datatype_name ty;
+   bytes_channel_to_stream datatype_name ty]

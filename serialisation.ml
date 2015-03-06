@@ -95,7 +95,7 @@ let translate_type_compilation_unit (st : state)
        let name = Crisp_syntax_aux.name_of_type decl in
        let (translated, st'') =
          Translation.naasty_of_flick_program ~st:st' [decl] in
-       let data_model_instance = instantiate_data_model name in
+       let data_model_instance = instantiate_data_model name (Crisp_syntax_aux.the_ty_of_decl decl) in
        let (type_data_model_instance, st''') =
          fold_map ([], st'') (fun st scheme ->
            Naasty_aux.instantiate_type true scheme.identifiers st scheme.type_scheme)
@@ -118,11 +118,8 @@ let translate_type_compilation_unit (st : state)
          } in
 (*<acutelyunderconstruction>*)
        let (function_data_model_instance, st4) =
-         let the_ty_of_decl = function
-           | Type ty_decl -> ty_decl.type_value
-           | _ -> failwith "Was expecting a type declaration." in
          let pre_scheme = List.nth data_model_instance 0 in
-         let scheme = pre_scheme.function_scheme (the_ty_of_decl decl) in
+         let scheme = pre_scheme.function_scheme in
          let identifiers = [name ^ "::get_channel_len"; "x"]
          in
            Naasty_aux.instantiate_function true identifiers st''' scheme
@@ -181,15 +178,3 @@ let translate_serialise_stringify
   State_aux.state_to_str true st'' |> print_endline; (*FIXME debug line*)
   List.map (stringify_compilation_unit st'')
     (translated_type_units @ translated_function_units)
-
-;;
-(*FIXME crude test*)
-fold_map ([], State.initial_state) (fun st scheme ->
-      Naasty_aux.instantiate_type true scheme.identifiers st scheme.type_scheme)
-  (instantiate_data_model "test")
-|> (fun (tys, st) ->
-  let st_s = State_aux.state_to_str true st in
-  let res_s = List.map (Naasty_aux.string_of_naasty_type ~st_opt:(Some st) 0) tys
-    |> String.concat ";\n" in
-  st_s ^ res_s)
-|> print_endline

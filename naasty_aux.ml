@@ -409,6 +409,24 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
       fold_map ([], st'') (instantiate_type fresh names) arg_tys in
     (Fun_Type (id', res_ty', arg_tys'), st''')
 
+(*Instantiates a naasty_statement scheme with a set of names*)
+let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
+      (scheme : naasty_statement) : naasty_statement * state =
+  match scheme with
+  | Declaration ty ->
+    let (ty', st') = instantiate_type fresh names st ty
+    in (Declaration ty', st')
+  | Seq (stmt1, stmt2) ->
+    let (stmt1', st') = instantiate_statement fresh names st stmt1 in
+    let (stmt2', st'') = instantiate_statement fresh names st' stmt2
+    in (Seq (stmt1', stmt2'), st'')
+(*
+  | Assign (identifier, naasty_expression)
+  | Return naasty_expression
+*)
+  | Skip -> (Skip, st)
+  | _ -> failwith "TODO"
+
 (*Takes a record type specification and adds fields to the end, in order.
   This is used to extend a type specification to fit the data model.*)
 let add_fields_to_record (decl : naasty_declaration)

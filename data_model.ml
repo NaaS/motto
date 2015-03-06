@@ -34,18 +34,22 @@ type data_model_component =
 let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let name = "get_channel_len" in
   { name = name;
-    identifiers = [name];
+    identifiers =
+      [name;
+       name ^ "::get_channel_len";
+       "x";
+      ];
     type_scheme = Fun_Type (-1, Size_Type None, []);
     function_scheme =
-      let fun_name_idx = -1 in
+      let fun_name_idx = -2 in
       let arg_tys = [] in
       let ret_ty = Size_Type None in
       let body =
         [
-          Declaration (Size_Type (Some (-2)));
-          Assign (-2, Int_Value 0);
+          Declaration (Size_Type (Some (-3)));
+          Assign (-3, Int_Value 0);
           (*FIXME fill in the rest of the body*)
-          Return (Var (-2))
+          Return (Var (-3))
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
   }

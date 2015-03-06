@@ -8,10 +8,6 @@ open State
 open Crisp_syntax
 open Naasty
 
-(*FIXME this is used until the rest of the data model's function bodies are
-  implemented*)
-let dud_function = (-1, [], Unit_Type, Skip)
-
 type data_model_component =
   { name : string;
     identifiers : string list;
@@ -58,12 +54,34 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
 
 let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   { name = "get_stream_len";
-    identifiers = ["get_stream_len"];
+    identifiers =
+      ["get_stream_len";
+       datatype_name ^ "::get_stream_len";
+      ];
     type_scheme = Fun_Type (-1, Size_Type None, []);
-    function_scheme = dud_function;
+    function_scheme =
+      let fun_name_idx = -2 in
+      let arg_tys = [] in
+      let ret_ty = Size_Type None in
+      let body =
+        [
+          (*FIXME fill in the rest of the body*)
+          Skip
+        ] |> Naasty_aux.concat
+      in (fun_name_idx, arg_tys, ret_ty, body);
   }
 
 let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
+  let ret_ty =
+    Static_Type (None,
+                 Reference_Type (None,
+                                 UserDefined_Type (None, -2))) in
+  let arg_tys =
+    [Reference_Type (Some (-3), Char_Type None);
+     Reference_Type (Some (-4), Char_Type None);
+     Reference_Type (Some (-5), Char_Type None);
+     Reference_Type (Some (-6), Size_Type None);
+     Reference_Type (Some (-7), Size_Type None)] in
   { name = "bytes_stream_to_channel";
     identifiers =
       ["bytes_stream_to_channel";
@@ -72,54 +90,79 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
        "channel";
        "streamend";
        "bytes_read";
-       "bytes_written"];
+       "bytes_written";
+       datatype_name ^ "::bytes_stream_to_channel";
+      ];
     type_scheme =
       Fun_Type (-1,
-                Static_Type (None,
-                             Reference_Type (None,
-                                             UserDefined_Type (None, -2))),
-                [Reference_Type (Some (-3), Char_Type None);
-                 Reference_Type (Some (-4), Char_Type None);
-                 Reference_Type (Some (-5), Char_Type None);
-                 Reference_Type (Some (-6), Size_Type None);
-                 Reference_Type (Some (-7), Size_Type None)]);
-    function_scheme = dud_function;
+                ret_ty,
+                arg_tys);
+    function_scheme =
+      let fun_name_idx = -8 in
+      let body =
+        [
+          (*FIXME fill in the rest of the body*)
+          Skip
+        ] |> Naasty_aux.concat
+      in (fun_name_idx, arg_tys, ret_ty, body);
   }
 
 let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
+  let ret_ty = Static_Type (None, Unit_Type) in
+  let arg_tys =
+    [Reference_Type (None, UserDefined_Type (None, -2));
+     Reference_Type (Some (-3), Char_Type None);
+     Reference_Type (Some (-4), Size_Type None)] in
   { name = "write_bytes_to_channel";
     identifiers =
       ["write_bytes_to_channel";
        datatype_name;
        "channel";
-       "no_bytes"];
+       "no_bytes";
+       datatype_name ^ "::write_bytes_to_channel";
+      ];
     type_scheme =
       Fun_Type (-1,
-                Static_Type (None,
-                             Unit_Type),
-                [Reference_Type (None, UserDefined_Type (None, -2));
-                 Reference_Type (Some (-3), Char_Type None);
-                 Reference_Type (Some (-4), Size_Type None)]);
-    function_scheme = dud_function;
+                ret_ty,
+                arg_tys);
+    function_scheme =
+      let fun_name_idx = -5 in
+      let body =
+        [
+          (*FIXME fill in the rest of the body*)
+          Skip
+        ] |> Naasty_aux.concat
+      in (fun_name_idx, arg_tys, ret_ty, body);
   }
 
 let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_value) =
+  let ret_ty = Static_Type (None, Unit_Type) in
+  let arg_tys =
+    [Reference_Type (Some (-2), Char_Type None);
+     Reference_Type (Some (-3), Char_Type None);
+     Reference_Type (Some (-4), Size_Type None);
+     Reference_Type (Some (-5), Size_Type None)] in
   { name = "bytes_channel_to_stream";
     identifiers =
       ["bytes_channel_to_stream";
        "stream";
        "channel";
        "bytes_read";
-       "bytes_written"];
+       "bytes_written";
+       datatype_name ^ "::bytes_channel_to_stream";
+      ];
     type_scheme =
       Fun_Type (-1,
-                Static_Type (None,
-                             Unit_Type),
-                [Reference_Type (Some (-2), Char_Type None);
-                 Reference_Type (Some (-3), Char_Type None);
-                 Reference_Type (Some (-4), Size_Type None);
-                 Reference_Type (Some (-5), Size_Type None)]);
-    function_scheme = dud_function;
+                ret_ty,
+                arg_tys);
+    function_scheme =
+      let fun_name_idx = -6 in
+      let body =
+        [
+          (*FIXME fill in the rest of the body*)
+          Skip
+        ] |> Naasty_aux.concat
+      in (fun_name_idx, arg_tys, ret_ty, body);
   }
 
 (*Instantiates the data model for a particular serialisable datatype.

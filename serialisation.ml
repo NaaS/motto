@@ -97,7 +97,7 @@ let translate_type_compilation_unit (st : state)
          Translation.naasty_of_flick_program ~st:st' [decl] in
        let (data_model_instance, st''') =
          fold_map ([], st'') (fun st scheme ->
-           Naasty_aux.instantiate_type true scheme.identifiers st scheme.scheme)
+           Naasty_aux.instantiate_type true scheme.identifiers st scheme.type_scheme)
            (instantiate_data_model name) in
        let header_unit =
          {Naasty_project.name = name;
@@ -115,6 +115,17 @@ let translate_type_compilation_unit (st : state)
             [Naasty_aux.add_fields_to_record (the_single translated)
                data_model_instance]
          } in
+(*<acutelyunderconstruction>*)
+       let (data_model_imp_instance, st4) =
+         let the_ty_of_decl = function
+           | Type ty_decl -> ty_decl.type_value
+           | _ -> failwith "Was expecting a type declaration." in
+         let scheme = get_channel_len.function_scheme name (the_ty_of_decl decl) in
+         let identifiers = [name ^ "::get_channel_len"; "x"]
+         in
+           Naasty_aux.instantiate_function true identifiers st''' scheme
+(*           (instantiate_data_model name)*) in
+(*</acutelyunderconstruction>*)
        let cpp_unit =
          {Naasty_project.name = name;
           Naasty_project.unit_type = Naasty_project.Cpp;
@@ -128,9 +139,10 @@ let translate_type_compilation_unit (st : state)
              "\"applications/NaasData.h\""];
           Naasty_project.content =
             [(*FIXME this needs to be instantiated from templates based on the
-                     definition of the type in flick.*)]
+               definition of the type in flick.*)
+              Fun_Decl data_model_imp_instance]
          }
-       in (header_unit :: cpp_unit :: cunits, st'''))
+       in (header_unit :: cpp_unit :: cunits, st4))
     types_unit.Crisp_project.content
 
 let translate_function_compilation_unit (st : state)
@@ -171,7 +183,7 @@ let translate_serialise_stringify
 ;;
 (*FIXME crude test*)
 fold_map ([], State.initial_state) (fun st scheme ->
-      Naasty_aux.instantiate_type true scheme.identifiers st scheme.scheme)
+      Naasty_aux.instantiate_type true scheme.identifiers st scheme.type_scheme)
   (instantiate_data_model "test")
 |> (fun (tys, st) ->
   let st_s = State_aux.state_to_str true st in

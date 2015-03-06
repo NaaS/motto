@@ -8,10 +8,13 @@ open State
 open Crisp_syntax
 open Naasty
 
+type datatype_name = string
+
 type data_model_component =
   { name : string;
     identifiers : string list;
-    scheme : naasty_type }
+    type_scheme : naasty_type;
+    function_scheme : datatype_name -> Crisp_syntax.type_value -> naasty_function }
 
 (*
   Based on
@@ -27,27 +30,32 @@ type data_model_component =
   size_t get_stream_len();
 *)
 let get_channel_len =
-  { name = "get_channel_len";
-    identifiers = ["get_channel_len"];
-    scheme = Fun_Type (-1, Size_Type None, [])}
-
-let get_channel_len_imp (datatype_name : string) (ty : Crisp_syntax.type_value) : naasty_function =
-  let fun_name_idx = -1 in
-  let arg_tys = [] in
-  let ret_ty = Size_Type None in
-  let body =
-    [
-      Declaration (Size_Type (Some (-2)));
-      Assign (-2, Int_Value 0);
-      (*FIXME fill in the rest of the body*)
-      Return (Var (-2))
-    ] |> Naasty_aux.concat
-  in (fun_name_idx, arg_tys, ret_ty, body)
+  let name = "get_channel_len" in
+  { name = name;
+    identifiers = [name];
+    type_scheme = Fun_Type (-1, Size_Type None, []);
+    function_scheme =
+      fun (datatype_name : string) (ty : Crisp_syntax.type_value) ->
+        let fun_name_idx = -1 in
+        let arg_tys = [] in
+        let ret_ty = Size_Type None in
+        let body =
+          [
+            Declaration (Size_Type (Some (-2)));
+            Assign (-2, Int_Value 0);
+            (*FIXME fill in the rest of the body*)
+            Return (Var (-2))
+          ] |> Naasty_aux.concat
+        in (fun_name_idx, arg_tys, ret_ty, body);
+  }
 
 let get_stream_len =
   { name = "get_stream_len";
     identifiers = ["get_stream_len"];
-    scheme = Fun_Type (-1, Size_Type None, [])}
+    type_scheme = Fun_Type (-1, Size_Type None, []);
+    function_scheme = failwith "TODO";
+  }
+
 let bytes_stream_to_channel datatype_name =
   { name = "bytes_stream_to_channel";
     identifiers =
@@ -58,7 +66,7 @@ let bytes_stream_to_channel datatype_name =
        "streamend";
        "bytes_read";
        "bytes_written"];
-    scheme =
+    type_scheme =
       Fun_Type (-1,
                 Static_Type (None,
                              Reference_Type (None,
@@ -67,7 +75,10 @@ let bytes_stream_to_channel datatype_name =
                  Reference_Type (Some (-4), Char_Type None);
                  Reference_Type (Some (-5), Char_Type None);
                  Reference_Type (Some (-6), Size_Type None);
-                 Reference_Type (Some (-7), Size_Type None)])}
+                 Reference_Type (Some (-7), Size_Type None)]);
+    function_scheme = failwith "TODO";
+  }
+
 let write_bytes_to_channel datatype_name =
   { name = "write_bytes_to_channel";
     identifiers =
@@ -75,13 +86,16 @@ let write_bytes_to_channel datatype_name =
        datatype_name;
        "channel";
        "no_bytes"];
-    scheme =
+    type_scheme =
       Fun_Type (-1,
                 Static_Type (None,
                              Unit_Type),
                 [Reference_Type (None, UserDefined_Type (None, -2));
                  Reference_Type (Some (-3), Char_Type None);
-                 Reference_Type (Some (-4), Size_Type None)])}
+                 Reference_Type (Some (-4), Size_Type None)]);
+    function_scheme = failwith "TODO";
+  }
+
 let bytes_channel_to_stream =
   { name = "bytes_channel_to_stream";
     identifiers =
@@ -90,14 +104,16 @@ let bytes_channel_to_stream =
        "channel";
        "bytes_read";
        "bytes_written"];
-    scheme =
+    type_scheme =
       Fun_Type (-1,
                 Static_Type (None,
                              Unit_Type),
                 [Reference_Type (Some (-2), Char_Type None);
                  Reference_Type (Some (-3), Char_Type None);
                  Reference_Type (Some (-4), Size_Type None);
-                 Reference_Type (Some (-5), Size_Type None)])}
+                 Reference_Type (Some (-5), Size_Type None)]);
+    function_scheme = failwith "TODO";
+  }
 
 (*Instantiates the data model for a particular serialisable datatype.
   This should generate part of the "struct" definition in the resulting C++

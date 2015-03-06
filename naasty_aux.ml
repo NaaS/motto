@@ -410,6 +410,36 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
     (Fun_Type (id', res_ty', arg_tys'), st''')
 
 (*Instantiates a naasty_statement scheme with a set of names*)
+let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
+      (scheme : naasty_expression) : naasty_expression * state =
+  match scheme with
+  | Var id ->
+    let id', st' =
+      substitute fresh names false id st id (fun x -> x)
+    in (Var id', st')
+  | Int_Value _
+  | Bool_Value _ -> (scheme, st)
+  | Not e ->
+    let (e', st') = instantiate_expression fresh names st e
+    in (Not e', st')
+  | Abs e ->
+    let (e', st') = instantiate_expression fresh names st e
+    in (Abs e', st')
+  | _ -> failwith "TODO"
+(*
+  | And (e1, e2)
+  | Or (e1, e2)
+  | Plus (e1, e2)
+  | Equals (e1, e2)
+  | GreaterThan (e1, e2)
+  | LessThan (e1, e2)
+  | Minus (e1, e2)
+  | Times (e1, e2)
+  | Mod (e1, e2)
+  | Quotient (e1, e2) ->
+*)
+
+(*Instantiates a naasty_statement scheme with a set of names*)
 let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_statement) : naasty_statement * state =
   match scheme with
@@ -420,10 +450,14 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
     let (stmt1', st') = instantiate_statement fresh names st stmt1 in
     let (stmt2', st'') = instantiate_statement fresh names st' stmt2
     in (Seq (stmt1', stmt2'), st'')
-(*
-  | Assign (identifier, naasty_expression)
-  | Return naasty_expression
-*)
+  | Assign (id, e) ->
+    let id', st' =
+      substitute fresh names false id st id (fun x -> x) in
+    let (e', st'') = instantiate_expression fresh names st' e
+    in (Assign (id', e'), st'')
+  | Return e ->
+    let (e', st') = instantiate_expression fresh names st e
+    in (Return e', st')
   | Skip -> (Skip, st)
   | _ -> failwith "TODO"
 

@@ -13,7 +13,7 @@ type hadoop_wc : record
     # "size" in bytes
     byte_size = 2 }
   key : string
-    { byte_size = "hadoop_wc.key_len" }
+    { byte_size = key_len }
   value : integer
     { signed = false,
     #endianness = big,

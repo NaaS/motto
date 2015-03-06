@@ -56,6 +56,10 @@ let the x_opt =
   | Some x -> x
   | None -> failwith "Mistakenly assumed that an optional value contains a value."
 
+let concat_pair (l : ('a list * 'b list) list) : 'a list * 'b list =
+  List.fold_right (fun (item : 'a list * 'b list) (acc : 'a list * 'b list) ->
+    (fst item @ fst acc, snd item @ snd acc)) l ([], [])
+
 (*FIXME this currently simply prints files out; doesn't write them to the file
   system*)
 let write_files (file_contents : (string * string) list) : unit =

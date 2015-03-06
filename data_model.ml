@@ -8,6 +8,10 @@ open State
 open Crisp_syntax
 open Naasty
 
+(*FIXME this is used until the rest of the data model's function bodies are
+  implemented*)
+let dud_function = (-1, [], Unit_Type, Skip)
+
 type data_model_component =
   { name : string;
     identifiers : string list;
@@ -45,8 +49,6 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
   }
-
-let dud_function = (-1, [], Unit_Type, Skip)
 
 let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   { name = "get_stream_len";

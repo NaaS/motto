@@ -117,13 +117,10 @@ let translate_type_compilation_unit (st : state)
                type_data_model_instance]
          } in
        let (function_data_model_instance, st4) =
-(*<acutelyunderconstruction>*)
-         let restricted_data_model_instance = [List.nth data_model_instance 0] in
-(*</acutelyunderconstruction>*)
          fold_map ([], st''') (fun st scheme ->
            Naasty_aux.instantiate_function true scheme.identifiers st
              scheme.function_scheme)
-           restricted_data_model_instance in
+           data_model_instance in
        let cpp_unit =
          {Naasty_project.name = name;
           Naasty_project.unit_type = Naasty_project.Cpp;

@@ -77,6 +77,7 @@ type naasty_statement =
   | For of (identifier * naasty_expression * naasty_statement) *
            naasty_statement
   | If of naasty_expression * naasty_statement * naasty_statement
+  | If1 of naasty_expression * naasty_statement
   | Break
   | Continue
   | WriteToChan of identifier * identifier

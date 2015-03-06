@@ -7,7 +7,7 @@
 
 type hadoop_wc : record
   key_len : integer
-    { signed = false,
+    { signed = true,
     # FIXME not sure if the target allows us to specify endianness at present.
     #endianness = big,
     # "size" in bytes

@@ -66,6 +66,7 @@ type naasty_expression =
   | Quotient of naasty_expression * naasty_expression
   | Abs of naasty_expression
   | Call_Function of identifier * naasty_expression list
+  | GEq of naasty_expression * naasty_expression
 
 type naasty_statement =
     (*Should include function prototypes here?*)

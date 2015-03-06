@@ -172,6 +172,8 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
     string_of_naasty_statement ~st_opt indent stmt2
   | Assign (id, e) ->
     indn indent ^ id_name st_opt id ^ " = " ^ string_of_naasty_expression ~st_opt e
+  | Increment (id, e) ->
+    indn indent ^ id_name st_opt id ^ " += " ^ string_of_naasty_expression ~st_opt e
 (*
   | For of (identifier * naasty_expression * naasty_statement) *
            naasty_statement

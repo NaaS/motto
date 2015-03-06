@@ -71,6 +71,7 @@ type naasty_statement =
   | Declaration of naasty_type
   | Seq of naasty_statement * naasty_statement
   | Assign of identifier * naasty_expression
+  | Increment of identifier * naasty_expression
   | For of (identifier * naasty_expression * naasty_statement) *
            naasty_statement
   | If of naasty_expression * naasty_statement * naasty_statement

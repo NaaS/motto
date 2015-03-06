@@ -90,11 +90,11 @@ let translate_type_compilation_unit (st : state)
       (types_unit : Crisp_project.compilation_unit) :
   Naasty_project.compilation_unit list * state =
   fold_couple ([], st)
-    (fun (st' : state) (ty : Crisp_syntax.toplevel_decl)
+    (fun (st' : state) (decl : Crisp_syntax.toplevel_decl)
       (cunits : Naasty_project.compilation_unit list) ->
-       let name = Crisp_syntax_aux.name_of_type ty in
+       let name = Crisp_syntax_aux.name_of_type decl in
        let (translated, st'') =
-         Translation.naasty_of_flick_program ~st:st' [ty] in
+         Translation.naasty_of_flick_program ~st:st' [decl] in
        let (data_model_instance, st''') =
          fold_map ([], st'') (fun st scheme ->
            Naasty_aux.instantiate_type true scheme.identifiers st scheme.scheme)

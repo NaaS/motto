@@ -38,6 +38,8 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       [name;
        datatype_name ^ "::get_channel_len";
        "len";
+       datatype_name;
+       "sizeof";
       ];
     type_scheme = Fun_Type (-1, Size_Type None, []);
     function_scheme =
@@ -47,7 +49,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       let body =
         [
           Declaration (Size_Type (Some (-3)));
-          Assign (-3, Int_Value 0);
+          Assign (-3, Call_Function (-5, [Var (-4)]));
           (*FIXME fill in the rest of the body*)
           Return (Var (-3))
         ] |> Naasty_aux.concat

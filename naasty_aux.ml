@@ -461,6 +461,18 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
   | Skip -> (Skip, st)
   | _ -> failwith "TODO"
 
+(*Instantiates a naasty_function scheme with a set of names*)
+let rec instantiate_function (fresh : bool) (names : string list) (st : state)
+      (scheme : naasty_function) : naasty_function * state =
+  let (id, arg_tys, ret_ty, stmt) = scheme in
+  let id', st' =
+    substitute fresh names false id st id (fun x -> x) in
+  let (arg_tys', st'') =
+    fold_map ([], st') (instantiate_type fresh names) arg_tys in
+  let (ret_ty', st''') = instantiate_type fresh names st'' ret_ty in
+  let (stmt', st4) = instantiate_statement fresh names st''' stmt
+  in ((id', arg_tys', ret_ty', stmt'), st4)
+
 (*Takes a record type specification and adds fields to the end, in order.
   This is used to extend a type specification to fit the data model.*)
 let add_fields_to_record (decl : naasty_declaration)

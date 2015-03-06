@@ -189,13 +189,16 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
   | If (e, stmt1, stmt2) ->
     indn indent ^ "if (" ^ string_of_naasty_expression ~st_opt e ^ ") {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
-    "} else {\n" ^
+    ";\n" ^
+    indn indent ^ "} else {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) stmt2 ^
-    "}"
+    ";\n" ^
+    indn indent ^ "}"
   | If1 (e, stmt1) ->
     indn indent ^ "if (" ^ string_of_naasty_expression ~st_opt e ^ ") {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
-    "}"
+    ";\n" ^
+    indn indent ^ "}"
   | Break -> indn indent ^ "break"
   | Continue -> indn indent ^ "continue"
 (*

@@ -185,8 +185,13 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
 (*
   | For of (identifier * naasty_expression * naasty_statement) *
            naasty_statement
-  | If of naasty_expression * naasty_statement * naasty_statement
 *)
+  | If (e, stmt1, stmt2) ->
+    indn indent ^ "if (" ^ string_of_naasty_expression ~st_opt e ^ ") {\n" ^
+    string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
+    "} else {\n" ^
+    string_of_naasty_statement ~st_opt (indent + indentation) stmt2 ^
+    "}"
   | Break -> indn indent ^ "break"
   | Continue -> indn indent ^ "continue"
 (*
@@ -477,6 +482,11 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
     let (e', st') = instantiate_expression fresh names st e
     in (Return e', st')
   | Skip -> (Skip, st)
+  | If (e, stmt1, stmt2) ->
+    let (e', st') = instantiate_expression fresh names st e in
+    let (stmt1', st'') = instantiate_statement fresh names st' stmt1 in
+    let (stmt2', st''') = instantiate_statement fresh names st'' stmt2
+    in (If (e', stmt1', stmt2'), st''')
   | _ -> failwith "TODO"
 
 (*Instantiates a naasty_function scheme with a set of names*)

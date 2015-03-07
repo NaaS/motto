@@ -30,6 +30,29 @@ type type_analysis =
   size_t get_channel_len();
   size_t get_stream_len();
 *)
+let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc : type_analysis) : type_analysis =
+  match ty with
+  | RecordType (label_opt, tys, ty_ann) ->
+    (*FIXME probably we should look at ty_ann*)
+    List.fold_right analyse_type_getchannellen tys acc
+  | String (label_opt, ty_ann) ->
+    begin
+      match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
+      | [] -> failwith "Strings need to be given an indication of size."
+      | [(_, v)] ->
+        begin
+          match v with
+          | Ann_Str _ -> failwith "TODO"
+          | Ann_Int _ -> failwith "TODO"
+          | Ann_Ident s ->
+            let stmt =
+              If1 (GEq (Var next_placeholder, Int_Value 0),
+                   Increment (-3, Var next_placeholder))
+            in (stmt :: stmts, s :: names, next_placeholder - 1)
+        end
+      | _ -> failwith "Too many sizes specified for a string."
+    end
+  | _ -> acc
 let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let name = "get_channel_len" in
   let identifiers =
@@ -39,31 +62,8 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
      datatype_name;
      "sizeof";
     ] in
-  let rec analyse_type ty ((stmts, names, next_placeholder) as acc : type_analysis) : type_analysis =
-    match ty with
-    | RecordType (label_opt, tys, ty_ann) ->
-      (*FIXME probably we should look at ty_ann*)
-      List.fold_right analyse_type tys acc
-    | String (label_opt, ty_ann) ->
-      begin
-        match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
-        | [] -> failwith "Strings need to be given an indication of size."
-        | [(_, v)] ->
-          begin
-            match v with
-            | Ann_Str _ -> failwith "TODO"
-            | Ann_Int _ -> failwith "TODO"
-            | Ann_Ident s ->
-              let stmt =
-                If1 (GEq (Var next_placeholder, Int_Value 0),
-                     Increment (-3, Var next_placeholder))
-              in (stmt :: stmts, s :: names, next_placeholder - 1)
-          end
-        | _ -> failwith "Too many sizes specified for a string."
-      end
-    | _ -> acc in
   let body_contents, more_idents, _ =
-    analyse_type ty
+    analyse_type_getchannellen ty
       ((*The initial program does nothing*)
         [Skip],
        (*Initially we haven't accumulated any list of names*)

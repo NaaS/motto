@@ -107,7 +107,7 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
     let naas_ty_s =
       Naasty_aux.string_of_naasty_type ~st_opt:(Some st) 0 naas_ty' in
     let stmt =
-      Increment (-3, Call_Function (-5, [Var next_placeholder]));
+      Increment (-3, Call_Function (-5, [Var next_placeholder]))
     in (stmt :: stmts, naas_ty_s :: names, next_placeholder - 1)
   | _ -> acc
 let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =

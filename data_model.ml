@@ -91,15 +91,17 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   }
 
 let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
-  { name = "get_stream_len";
-    identifiers =
-      ["get_stream_len";
-       datatype_name ^ "::get_stream_len";
-       "len";
-       datatype_name;
-       "sizeof";
-       "ReadWriteData::encodeVIntSize";
-      ];
+  let name = "get_stream_len" in
+  let identifiers =
+    [name;
+     datatype_name ^ "::get_stream_len";
+     "len";
+     datatype_name;
+     "sizeof";
+     "ReadWriteData::encodeVIntSize";
+    ] in
+  { name = name;
+    identifiers = identifiers;
     type_scheme = Fun_Type (-1, Size_Type None, []);
     function_scheme =
       let fun_name_idx = -2 in

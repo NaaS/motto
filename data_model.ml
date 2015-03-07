@@ -63,7 +63,14 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       end
     | _ -> acc in
   let body_contents, more_idents, _ =
-    analyse_type ty ([Skip], [], (List.length identifiers + 1) * (-1)) in
+    analyse_type ty
+      ((*The initial program does nothing*)
+        [Skip],
+       (*Initially we haven't accumulated any list of names*)
+        [],
+       (*The next place holder used will depend on how many identifiers we have
+         so far*)
+        (List.length identifiers + 1) * (-1)) in
   { name = name;
     identifiers = identifiers @ more_idents;
     type_scheme = Fun_Type (-1, Size_Type None, []);

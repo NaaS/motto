@@ -84,6 +84,7 @@ type naasty_statement =
   | ReadFromChan of identifier * identifier
   | Return of naasty_expression
   | Skip
+  | Commented of naasty_statement * string
 
 type naasty_function =
   identifier * naasty_type list * naasty_type * naasty_statement

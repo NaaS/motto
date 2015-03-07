@@ -208,6 +208,10 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
   | Return e ->
     indn indent ^ "return (" ^ string_of_naasty_expression ~st_opt e ^ ")"
   | Skip -> indn indent ^ "/*skip*/"
+  | Commented (Skip, comment) ->
+    indn indent ^ "//" ^ comment
+  | Commented (stmt, comment) ->
+    string_of_naasty_statement ~st_opt indent stmt ^ "//" ^ comment
   | _ -> failwith "TODO"
 
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent (f_id, arg_types, res_type, body) =
@@ -503,6 +507,10 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
       substitute fresh names false id st id (fun x -> x) in
     let (e', st'') = instantiate_expression fresh names st' e
     in (Increment (id', e'), st'')
+  | Commented (Skip, _) -> (scheme, st)
+  | Commented (stmt, comment) ->
+    let (stmt', st') = instantiate_statement fresh names st stmt
+    in (Commented (stmt', comment), st')
   | _ -> failwith "TODO"
 
 (*Instantiates a naasty_function scheme with a set of names*)

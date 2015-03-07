@@ -85,6 +85,36 @@ let update_empty_identifier (idx : identifier) (ty : naasty_type) =
   | Fun_Type (_, _, _) ->
     failwith "Cannot update index of this type."
 
+(*Erase the identifier associated with a type. This is useful if we simply want
+  to print out the type (without its associated identifier), such as if we're
+  printing it as a parameter to "sizeof".
+  NOTE we don't do anything exceptional if an identifier is not associated with
+       a type.*)
+let set_empty_identifier (ty : naasty_type) : naasty_type =
+  match ty with
+  | Int_Type (_, int_metadata) ->
+    Int_Type (None, int_metadata)
+  | Bool_Type _ ->
+    Bool_Type None
+  | Char_Type _ ->
+    Char_Type None
+  | Array_Type (_, naasty_type, array_size) ->
+    (*FIXME recurse on naasty_type?*)
+    Array_Type (None, naasty_type, array_size)
+  | Record_Type (ty_ident, fields) ->
+    failwith "Cannot update index of this type."
+  | Unit_Type -> ty
+  | UserDefined_Type (_, ty_ident) ->
+    UserDefined_Type (None, ty_ident)
+  | Reference_Type (_, naasty_type) ->
+    Reference_Type (None, naasty_type)
+  | Size_Type _ ->
+    Size_Type None
+  | Static_Type (_, naasty_type) ->
+    Static_Type (None, naasty_type)
+  | Fun_Type (_, _, _) ->
+    failwith "Cannot update index of this type."
+
 let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
   function
   | Int_Type (id_opt, int_metadata) ->

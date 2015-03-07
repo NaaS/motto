@@ -81,7 +81,9 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       let body =
         [
           Declaration (Size_Type (Some (-3)));
+          Commented (Skip, "Length of fixed-length parts");
           Assign (-3, Call_Function (-5, [Var (-4)]));
+          Commented (Skip, "Length of variable-length parts");
           Naasty_aux.concat body_contents;
           Return (Var (-3))
         ] |> Naasty_aux.concat
@@ -93,6 +95,10 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
     identifiers =
       ["get_stream_len";
        datatype_name ^ "::get_stream_len";
+       "len";
+       datatype_name;
+       "sizeof";
+       "ReadWriteData::encodeVIntSize";
       ];
     type_scheme = Fun_Type (-1, Size_Type None, []);
     function_scheme =
@@ -101,8 +107,14 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       let ret_ty = Size_Type None in
       let body =
         [
-          (*FIXME fill in the rest of the body*)
-          Skip
+          Declaration (Size_Type (Some (-3)));
+          Assign (-3, Int_Value 0);
+          Commented (Skip, "Length of fixed-length parts");
+          (* FIXME under construction
+          Assign (-3, Call_Function (-5, [Var (-4)]));
+          Naasty_aux.concat body_contents;
+          *)
+          Return (Var (-3))
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
   }

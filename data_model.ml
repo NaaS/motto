@@ -57,7 +57,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let name = "get_channel_len" in
   let identifiers =
     [name;
-     datatype_name ^ "::get_channel_len";
+     datatype_name ^ "::" ^ name;
      "len";
      datatype_name;
      "sizeof";
@@ -94,7 +94,7 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let name = "get_stream_len" in
   let identifiers =
     [name;
-     datatype_name ^ "::get_stream_len";
+     datatype_name ^ "::" ^ name;
      "len";
      datatype_name;
      "sizeof";

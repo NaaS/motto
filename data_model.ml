@@ -106,9 +106,14 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
     let naas_ty' = Naasty_aux.set_empty_identifier naas_ty in
     let naas_ty_s =
       Naasty_aux.string_of_naasty_type ~st_opt:(Some st) 0 naas_ty' in
-    let stmt =
-      Increment (-3, Call_Function (-5, [Var next_placeholder]))
-    in (stmt :: stmts, naas_ty_s :: names, next_placeholder - 1)
+    let is_hadoop_vint =
+      List.exists (fun (k, v) -> k = "hadoop_vint" && v = Ann_Ident "true") ty_ann in
+    let name, stmt =
+      if is_hadoop_vint then
+        (the label_opt, Increment (-3, Call_Function (-5, [Var next_placeholder])))
+      else
+        (naas_ty_s, Increment (-3, Call_Function (-6, [Var next_placeholder])))
+    in (stmt :: stmts, name :: names, next_placeholder - 1)
   | _ -> acc
 let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let name = "get_stream_len" in

@@ -101,12 +101,9 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
             else failwith ("Unrecognised integer annotation: " ^ name)
           | Ann_Ident s ->
             if name = "signed" then
-              let bool_value =
-                match s with
-                | "true" -> true
-                | "false" -> false
-                | _ -> failwith ("Unrecognised Boolean value: " ^ s)
-              in { md with signed = bool_value }
+              { md with signed = (bool_of_string s = true) }
+            else if name = "hadoop_vint" then
+              { md with hadoop_vint = (bool_of_string s = true) }
             else failwith ("Unrecognised integer annotation: " ^ name)
           | _ -> failwith ("Unrecognised integer annotation: " ^ name))
           type_ann default_int_metadata in
@@ -119,7 +116,7 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     in (translated_ty, st'')
   | IPv4Address label_opt ->
     let (label_opt', st') = check_and_generate_name label_opt in
-    let metadata = { signed = false; precision = 32 } in
+    let metadata = { signed = false; precision = 32; hadoop_vint = false } in
     let translated_ty = Int_Type (label_opt', metadata) in
     let st'' =
       match label_opt' with

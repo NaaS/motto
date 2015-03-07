@@ -39,11 +39,11 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
      datatype_name;
      "sizeof";
     ] in
-  let rec analyse_type ((stmts, names, next_placeholder) as acc : type_analysis) ty : type_analysis =
+  let rec analyse_type ty ((stmts, names, next_placeholder) as acc : type_analysis) : type_analysis =
     match ty with
     | RecordType (label_opt, tys, ty_ann) ->
       (*FIXME probably we should look at ty_ann*)
-      snd(*FIXME code style*) (fold_map ([], acc) (fun acc ty -> ([], analyse_type acc ty)) tys)
+      List.fold_right analyse_type tys acc
     | String (label_opt, ty_ann) ->
       begin
         match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
@@ -63,7 +63,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       end
     | _ -> acc in
   let body_contents, more_idents, _ =
-    analyse_type ([Skip], [], (List.length identifiers + 1) * (-1)) ty in
+    analyse_type ty ([Skip], [], (List.length identifiers + 1) * (-1)) in
   { name = name;
     identifiers = identifiers @ more_idents;
     type_scheme = Fun_Type (-1, Size_Type None, []);

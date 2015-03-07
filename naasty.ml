@@ -70,8 +70,7 @@ type naasty_expression =
 
 type naasty_statement =
     (*Should include function prototypes here?*)
-  | Declaration of naasty_type (*FIXME would be nice to be able to initialise
-                                       variables at declaration time.*)
+  | Declaration of naasty_type * naasty_expression option
   | Seq of naasty_statement * naasty_statement
   | Assign of identifier * naasty_expression
   | Increment of identifier * naasty_expression

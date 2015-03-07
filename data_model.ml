@@ -80,7 +80,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       let ret_ty = Size_Type None in
       let body =
         [
-          Declaration (Size_Type (Some (-3)));
+          Declaration (Size_Type (Some (-3)), Some (Int_Value 0));
           Commented (Skip, "Length of fixed-length parts");
           Assign (-3, Call_Function (-5, [Var (-4)]));
           Commented (Skip, "Length of variable-length parts");
@@ -142,8 +142,7 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       let ret_ty = Size_Type None in
       let body =
         [
-          Declaration (Size_Type (Some (-3)));
-          Assign (-3, Int_Value 0);
+          Declaration (Size_Type (Some (-3)), Some (Int_Value 0));
           Commented (Skip, "Length of fixed-length parts");
           Naasty_aux.concat body_contents1;
           Commented (Skip, "Length of variable-length parts");

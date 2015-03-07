@@ -201,10 +201,14 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | _ -> failwith "TODO"
 
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) indent = function
-  | Declaration ty ->
+  | Declaration (ty, e_opt) ->
     (*NOTE assuming that types can only be defined globally,
            but they can be used in local variable declarations.*)
-    string_of_naasty_type ~st_opt indent ty
+    let definition =
+      match e_opt with
+      | None -> ""
+      | Some e -> " = " ^ string_of_naasty_expression ~st_opt e
+    in string_of_naasty_type ~st_opt indent ty ^ definition
   | Seq (stmt1, stmt2) ->
     string_of_naasty_statement ~st_opt indent stmt1 ^ ";\n" ^
     string_of_naasty_statement ~st_opt indent stmt2
@@ -507,9 +511,15 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
 let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_statement) : naasty_statement * state =
   match scheme with
-  | Declaration ty ->
-    let (ty', st') = instantiate_type fresh names st ty
-    in (Declaration ty', st')
+  | Declaration (ty, e_opt) ->
+    let (ty', st') = instantiate_type fresh names st ty in
+    let (e_opt', st'') =
+      match e_opt with
+      | None -> (e_opt, st')
+      | Some e ->
+        let (e', st'') = instantiate_expression fresh names st' e
+        in (Some e', st'')
+    in (Declaration (ty', e_opt'), st'')
   | Seq (stmt1, stmt2) ->
     let (stmt1', st') = instantiate_statement fresh names st stmt1 in
     let (stmt2', st'') = instantiate_statement fresh names st' stmt2
@@ -590,22 +600,3 @@ let rec concat (sts : naasty_statement list) : naasty_statement =
     concat rest
     |> mk_seq s2
     |> mk_seq s1
-
-;;
-(*FIXME crude test*)
-[
-Type_Decl (Record_Type (8, [(Int_Type (Some 1, {signed = true; precision = 32}));
-                 (Bool_Type (Some 2));
-                 (Char_Type (Some 3));
-                 (Array_Type (Some 4,
-                              Int_Type (None,
-                                        {signed = false; precision = 64}),
-                              Max 4))]));
-Fun_Decl (0, [Bool_Type (Some 6); UserDefined_Type (Some 7, 8)], Int_Type (None, {signed = false; precision = 16}),
-          Seq (Declaration (Int_Type (Some 1, {signed = false; precision = 16})),
-               Seq (Assign (1, Int_Value 5),
-                    Return (Var 1))))
-]
-|> string_of_naasty_program prog_indentation
-|> print_endline
-;;

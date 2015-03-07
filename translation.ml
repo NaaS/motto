@@ -373,7 +373,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           | None -> failwith ("Couldn't resolve type of ctxt idx " ^
                               string_of_int idx)
           | Some ty -> ty
-        in mk_seq (Declaration ty) stmt) ctxt' body in
+        in mk_seq (Declaration (ty, None)) stmt) ctxt' body in
 
     let (fn_idx, st5) =
       if is_fresh fn_decl.fn_name st4 then

@@ -90,6 +90,26 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       in (fun_name_idx, arg_tys, ret_ty, body);
   }
 
+let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : type_analysis) : type_analysis =
+  match ty with
+  | RecordType (label_opt, tys, ty_ann) ->
+    (*FIXME probably we should look at ty_ann*)
+    List.fold_right analyse_type_getstreamlen tys acc
+  | Integer (label_opt, ty_ann) ->
+    (*FIXME Haddop's vint needs special handling, since it shows up as an
+            int16_t otherwise*)
+    let naas_ty, st =
+      Translation.naasty_of_flick_type
+        initial_state (*FIXME instead of re-translating the type, could pass an
+                        already-translated type value*)
+        ty in
+    let naas_ty' = Naasty_aux.set_empty_identifier naas_ty in
+    let naas_ty_s =
+      Naasty_aux.string_of_naasty_type ~st_opt:(Some st) 0 naas_ty' in
+    let stmt =
+      Increment (-3, Call_Function (-5, [Var next_placeholder]));
+    in (stmt :: stmts, naas_ty_s :: names, next_placeholder - 1)
+  | _ -> acc
 let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let name = "get_stream_len" in
   let identifiers =
@@ -100,8 +120,21 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
      "sizeof";
      "ReadWriteData::encodeVIntSize";
     ] in
+  let body_contents1, more_idents1, next_placeholder =
+    analyse_type_getstreamlen ty
+      ([Skip],
+       [],
+       (List.length identifiers + 1) * (-1)) in
+  let body_contents2, more_idents2, _ =
+   (*FIXME we have an implicit constraint between the list of identifiers used
+           here and those used in get_channel_len, if there are placeholder
+           constants in analyses_type_getchannellen*)
+    analyse_type_getchannellen ty
+      ([Skip],
+       [],
+       next_placeholder) in
   { name = name;
-    identifiers = identifiers;
+    identifiers = identifiers @ more_idents1 @ more_idents2;
     type_scheme = Fun_Type (-1, Size_Type None, []);
     function_scheme =
       let fun_name_idx = -2 in
@@ -112,10 +145,9 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
           Declaration (Size_Type (Some (-3)));
           Assign (-3, Int_Value 0);
           Commented (Skip, "Length of fixed-length parts");
-          (* FIXME under construction
-          Assign (-3, Call_Function (-5, [Var (-4)]));
-          Naasty_aux.concat body_contents;
-          *)
+          Naasty_aux.concat body_contents1;
+          Commented (Skip, "Length of variable-length parts");
+          Naasty_aux.concat body_contents2;
           Return (Var (-3))
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);

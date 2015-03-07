@@ -10,6 +10,7 @@ type hadoop_wc : record
     { signed = true,
     # FIXME not sure if the target allows us to specify endianness at present.
     #endianness = big,
+    hadoop_vint = true,
     # "size" in bytes
     byte_size = 2 }
   key : string

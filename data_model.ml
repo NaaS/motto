@@ -98,8 +98,6 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
     (*FIXME probably we should look at ty_ann*)
     List.fold_right analyse_type_getstreamlen tys acc
   | Integer (label_opt, ty_ann) ->
-    (*FIXME Haddop's vint needs special handling, since it shows up as an
-            int16_t otherwise*)
     let naas_ty, st =
       Translation.naasty_of_flick_type
         initial_state (*FIXME instead of re-translating the type, could pass an

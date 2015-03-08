@@ -625,3 +625,15 @@ let rec concat (sts : naasty_statement list) : naasty_statement =
     concat rest
     |> mk_seq s2
     |> mk_seq s1
+
+(* Turn a list of identifiers into a projection from nested records.
+   FIXME here we assume throughout that we need dereference*)
+let rec nested_fields (field_idents : identifier list) : naasty_expression =
+  match field_idents with
+  | [field; record] ->
+    RecordProjection (Dereference (Var record), Var field)
+  | field :: rest ->
+    let record = nested_fields rest in
+    RecordProjection (Dereference record, Var field)
+  | _ ->
+    failwith "There needs to be at least one record and one field: field_idents needs to contain at least two items."

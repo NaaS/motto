@@ -199,7 +199,12 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
       let body =
         [
           Declaration (Size_Type (Some offsetI), Some (Int_Value 0));
-          Declaration (param_data_ty (Some copyI), None);
+          Declaration (param_data_ty (Some copyI),
+                       Some (Cast (param_data_ty None, channelI)));
+          Commented (Skip, "Handling fixed-length data");
+(*          Naasty_aux.concat body_contents1;*)
+          Commented (Skip, "Handling variable-length data");
+(*          Naasty_aux.concat body_contents2;*)
           (*FIXME fill in the rest of the body*)
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);

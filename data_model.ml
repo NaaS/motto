@@ -198,6 +198,9 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
                        Some (Cast (param_data_ty None, channelI)));
           Commented (Skip, "Handling fixed-length data");
 (*          Naasty_aux.concat body_contents1;*)
+          Assign (Var offsetI,
+                  Plus (Var channelI,
+                        Call_Function (sizeofI, [Var datatype_nameI])));
           Commented (Skip, "Handling variable-length data");
 (*          Naasty_aux.concat body_contents2;*)
           (*FIXME fill in the rest of the body*)

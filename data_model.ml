@@ -84,7 +84,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
         [
           Declaration (Size_Type (Some lenI), Some (Int_Value 0));
           Commented (Skip, "Length of fixed-length parts");
-          Assign (lenI, Call_Function (sizeofI, [Var datatype_nameI]));
+          Assign (Var lenI, Call_Function (sizeofI, [Var datatype_nameI]));
           Commented (Skip, "Length of variable-length parts");
           Naasty_aux.concat body_contents;
           Return (Var lenI)

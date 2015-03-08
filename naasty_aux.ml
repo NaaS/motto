@@ -228,8 +228,8 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
   | Seq (stmt1, stmt2) ->
     string_of_naasty_statement ~st_opt indent stmt1 ^ "\n" ^
     string_of_naasty_statement ~st_opt indent stmt2
-  | Assign (id, e) ->
-    indn indent ^ id_name st_opt id ^ " = " ^
+  | Assign (lvalue, e) ->
+    indn indent ^ string_of_naasty_expression ~st_opt lvalue ^ " = " ^
     string_of_naasty_expression ~st_opt e ^ ";"
   | Increment (id, e) ->
     indn indent ^ id_name st_opt id ^ " += " ^
@@ -550,11 +550,10 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
     let (stmt1', st') = instantiate_statement fresh names st stmt1 in
     let (stmt2', st'') = instantiate_statement fresh names st' stmt2
     in (Seq (stmt1', stmt2'), st'')
-  | Assign (id, e) ->
-    let id', st' =
-      substitute fresh names false id st id (fun x -> x) in
+  | Assign (lvalue, e) ->
+    let (lvalue', st') = instantiate_expression fresh names st lvalue in
     let (e', st'') = instantiate_expression fresh names st' e
-    in (Assign (id', e'), st'')
+    in (Assign (lvalue', e'), st'')
   | Return e ->
     let (e', st') = instantiate_expression fresh names st e
     in (Return e', st')
@@ -603,7 +602,7 @@ let add_fields_to_record (decl : naasty_declaration)
 (*Assigns to a collection of variables the value of an expression*)
 let lift_assign (recipients : identifier list) (definiens : naasty_expression) :
   naasty_statement list =
-  List.map (fun recipient -> Assign (recipient, definiens)) recipients
+  List.map (fun recipient -> Assign (Var recipient, definiens)) recipients
 
 (*Sequentially composed two statements but eliminate any Skip steps*)
 let mk_seq (s1 : naasty_statement) (s2 : naasty_statement) : naasty_statement =

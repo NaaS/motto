@@ -84,7 +84,7 @@ type naasty_statement =
     (*Should include function prototypes here?*)
   | Declaration of naasty_type * naasty_expression option
   | Seq of naasty_statement * naasty_statement
-  | Assign of identifier * naasty_expression
+  | Assign of naasty_expression * naasty_expression
   | Increment of identifier * naasty_expression
   | For of (identifier * naasty_expression * naasty_statement) *
            naasty_statement

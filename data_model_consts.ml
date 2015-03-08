@@ -168,30 +168,4 @@ let streamI,
   ident_placeholder datatype_bstcK,
   ident_placeholder datatype_wbtcK,
   ident_placeholder datatype_bctsK
-
-(*NOTE crude debugging code
-;;
-List.fold_right (fun x () ->
-  print_endline (string_of_int x ^ " = " ^ List.nth identifiers (abs(x) - 1)))
-[ streamI;
-    channelI;
-    streamendI;
-    get_channel_lenI;
-    lenI;
-    sizeofI;
-    get_stream_lenI;
-    readWriteData_encodeVIntSizeI;
-    bytes_stream_to_channelI;
-    bytes_readI;
-    bytes_writtenI;
-    write_bytes_to_channelI;
-    no_bytesI;
-    bytes_channel_to_streamI;
-    datatype_nameI;
-    datatype_gclI;
-    datatype_gslI;
-    datatype_bstcI;
-    datatype_wbtcI;
-  datatype_bctsI] ()
-*)
 end

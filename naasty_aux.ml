@@ -224,14 +224,16 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
       match e_opt with
       | None -> ""
       | Some e -> " = " ^ string_of_naasty_expression ~st_opt e
-    in string_of_naasty_type ~st_opt indent ty ^ definition
+    in string_of_naasty_type ~st_opt indent ty ^ definition ^ ";"
   | Seq (stmt1, stmt2) ->
-    string_of_naasty_statement ~st_opt indent stmt1 ^ ";\n" ^
+    string_of_naasty_statement ~st_opt indent stmt1 ^ "\n" ^
     string_of_naasty_statement ~st_opt indent stmt2
   | Assign (id, e) ->
-    indn indent ^ id_name st_opt id ^ " = " ^ string_of_naasty_expression ~st_opt e
+    indn indent ^ id_name st_opt id ^ " = " ^
+    string_of_naasty_expression ~st_opt e ^ ";"
   | Increment (id, e) ->
-    indn indent ^ id_name st_opt id ^ " += " ^ string_of_naasty_expression ~st_opt e
+    indn indent ^ id_name st_opt id ^ " += " ^
+    string_of_naasty_expression ~st_opt e ^ ";"
 (*
   | For of (identifier * naasty_expression * naasty_statement) *
            naasty_statement
@@ -239,29 +241,31 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
   | If (e, stmt1, stmt2) ->
     indn indent ^ "if (" ^ string_of_naasty_expression ~st_opt e ^ ") {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
-    ";\n" ^
+    "\n" ^
     indn indent ^ "} else {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) stmt2 ^
-    ";\n" ^
+    "\n" ^
     indn indent ^ "}"
   | If1 (e, stmt1) ->
     indn indent ^ "if (" ^ string_of_naasty_expression ~st_opt e ^ ") {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
-    ";\n" ^
+    "\n" ^
     indn indent ^ "}"
-  | Break -> indn indent ^ "break"
-  | Continue -> indn indent ^ "continue"
+  | Break -> indn indent ^ "break;"
+  | Continue -> indn indent ^ "continue;"
 (*
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
 *)
   | Return e ->
-    indn indent ^ "return (" ^ string_of_naasty_expression ~st_opt e ^ ")"
+    indn indent ^ "return (" ^ string_of_naasty_expression ~st_opt e ^ ")" ^ ";"
   | Skip -> indn indent ^ "/*skip*/"
   | Commented (Skip, comment) ->
+    (*Simply print the comment*)
     indn indent ^ "// " ^ comment
   | Commented (stmt, comment) ->
-    string_of_naasty_statement ~st_opt indent stmt ^ "// " ^ comment
+    (*First print the statement, then the comment*)
+    string_of_naasty_statement ~st_opt indent stmt ^ "; // " ^ comment
   | _ -> failwith "TODO"
 
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent (f_id, arg_types, res_type, body) =
@@ -270,7 +274,7 @@ let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent (f
    |> String.concat ", " in
   string_of_naasty_type ~st_opt indent res_type ^ " " ^ id_name st_opt f_id ^ " " ^
     "(" ^ arg_types_s ^ ") {\n" ^
-    string_of_naasty_statement ~st_opt (indent + default_indentation) body ^ ";\n" ^
+    string_of_naasty_statement ~st_opt (indent + default_indentation) body ^ "\n" ^
     "}"
 
 let string_of_naasty_declaration ?st_opt:((st_opt : state option) = None) indent = function
@@ -281,9 +285,7 @@ let string_of_naasty_declaration ?st_opt:((st_opt : state option) = None) indent
 let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent prog =
   prog
   |> List.map
-       (fun decl ->
-          string_of_naasty_declaration ~st_opt indent decl
-          |> fun s -> s ^ ";")
+       (string_of_naasty_declaration ~st_opt indent)
   |> String.concat "\n"
 
 (*Extends a scope by adding a mapping between a name and an index.

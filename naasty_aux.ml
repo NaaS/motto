@@ -198,6 +198,22 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | GEq (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") >= (" ^
     string_of_naasty_expression ~st_opt e2 ^ ")"
+  | Gt (e1, e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") > (" ^
+    string_of_naasty_expression ~st_opt e2 ^ ")"
+  | Cast (ty, id) ->
+    "(" ^ string_of_naasty_type no_indent ~st_opt ty ^ ")" ^ id_name st_opt id
+  | RecordProjection (Dereference record_ref, field) ->
+    (*NOTE this syntactic sugaring is handled directly*)
+    "(" ^ string_of_naasty_expression ~st_opt record_ref ^ ")" ^
+    "->" ^
+    "(" ^ string_of_naasty_expression ~st_opt field ^ ")"
+  | Dereference e ->
+    "*" ^ "(" ^ string_of_naasty_expression ~st_opt e ^ ")"
+  | RecordProjection (record, field) ->
+    "(" ^ string_of_naasty_expression ~st_opt record ^ ")" ^
+    "." ^
+    "(" ^ string_of_naasty_expression ~st_opt field ^ ")"
   | _ -> failwith "TODO"
 
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) indent = function
@@ -506,6 +522,14 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
       fold_map ([], st') (instantiate_expression fresh names) es
     in (Call_Function (id', es'), st'')
   | GEq (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> GEq (e1', e2'))
+  | Gt (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Gt (e1', e2'))
+  | Cast (ty, id) ->
+    let ty', st' = instantiate_type fresh names st ty in
+    let id', st'' =
+      substitute fresh names false id st' id (fun x -> x)
+    in (Cast (ty', id'), st'')
+  | Dereference e -> unary_op_inst e (fun e' -> Dereference e')
+  | RecordProjection (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> RecordProjection (e1', e2'))
 
 (*Instantiates a naasty_statement scheme with a set of names*)
 let rec instantiate_statement (fresh : bool) (names : string list) (st : state)

@@ -75,6 +75,10 @@ type naasty_expression =
   | Abs of naasty_expression
   | Call_Function of identifier * naasty_expression list
   | GEq of naasty_expression * naasty_expression
+  | Gt of naasty_expression * naasty_expression
+  | Cast of naasty_type * identifier
+  | Dereference of naasty_expression
+  | RecordProjection of naasty_expression * naasty_expression
 
 type naasty_statement =
     (*Should include function prototypes here?*)

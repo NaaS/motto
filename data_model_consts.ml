@@ -5,13 +5,22 @@
 
 module type Datatype =
 sig
+  (*The Crisp type the definition of which we're expanding to use the data
+    model.*)
   val ty : Crisp_syntax.type_value
+
+  (*The name of the Crisp type 'ty' above.
+    FIXME i think we could extract this directly from 'ty'.*)
   val datatype_name : string
 end
 
 module type Values =
 sig
+  (*The Crisp type the definition of which we're expanding to use the data
+    model.*)
   val ty : Crisp_syntax.type_value
+
+  (*String literals that can be used in a template: these need to be specified by us*)
   val get_channel_lenK : string
   val get_stream_lenK : string
   val bytes_stream_to_channelK : string
@@ -33,8 +42,11 @@ sig
   val datatype_wbtcK : string
   val datatype_bctsK : string
 
+  (*This collects all the string literals described above*)
   val identifiers : string list
 
+  (*Placeholders for the string literals -- these need to be declared, but their
+  precise value will be generated automatically.*)
   val streamI : int
   val channelI : int
   val streamendI : int

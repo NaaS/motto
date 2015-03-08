@@ -7,6 +7,7 @@ open General
 open State
 open Crisp_syntax
 open Naasty
+open Data_model_consts
 
 type data_model_component =
   { name : string;
@@ -17,6 +18,14 @@ type data_model_component =
 type type_analysis =
   Naasty.naasty_statement list * string list * identifier
 
+module type Instance =
+sig
+  val instantiate_data_model : data_model_component list
+end
+
+module Instance (Values : Values) : Instance =
+struct
+open Values
 (*
   Based on
    https://lsds.doc.ic.ac.uk/gitlab/naas/naas-box-system/blob/master/src/applications/hadoop_data_model/HadoopDMData.h 
@@ -47,21 +56,14 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
           | Ann_Ident s ->
             let stmt =
               If1 (GEq (Var next_placeholder, Int_Value 0),
-                   Increment (-3, Var next_placeholder))
+                   Increment (lenI, Var next_placeholder))
+                (*next_placeholder stands for the contents of "s"*)
             in (stmt :: stmts, s :: names, next_placeholder - 1)
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
   | _ -> acc
 let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
-  let name = "get_channel_len" in
-  let identifiers =
-    [name;
-     datatype_name ^ "::" ^ name;
-     "len";
-     datatype_name;
-     "sizeof";
-    ] in
   let body_contents, more_idents, _ =
     analyse_type_getchannellen ty
       ((*The initial program does nothing*)
@@ -71,21 +73,21 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
        (*The next place holder used will depend on how many identifiers we have
          so far*)
         (List.length identifiers + 1) * (-1)) in
-  { name = name;
+  { name = get_channel_lenK;
     identifiers = identifiers @ more_idents;
-    type_scheme = Fun_Type (-1, Size_Type None, []);
+    type_scheme = Fun_Type (get_channel_lenI, Size_Type None, []);
     function_scheme =
-      let fun_name_idx = -2 in
+      let fun_name_idx = datatype_gclI in
       let arg_tys = [] in
       let ret_ty = Size_Type None in
       let body =
         [
-          Declaration (Size_Type (Some (-3)), Some (Int_Value 0));
+          Declaration (Size_Type (Some lenI), Some (Int_Value 0));
           Commented (Skip, "Length of fixed-length parts");
-          Assign (-3, Call_Function (-5, [Var (-4)]));
+          Assign (lenI, Call_Function (sizeofI, [Var datatype_nameI]));
           Commented (Skip, "Length of variable-length parts");
           Naasty_aux.concat body_contents;
-          Return (Var (-3))
+          Return (Var lenI)
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
   }
@@ -110,21 +112,15 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
       List.exists (fun (k, v) -> k = "hadoop_vint" && v = Ann_Ident "true") ty_ann in
     let name, stmt =
       if is_hadoop_vint then
-        (the label_opt, Increment (-3, Call_Function (-5, [Var next_placeholder])))
+        (the label_opt, Increment (lenI, Call_Function (sizeofI, [Var next_placeholder])))
       else
-        (naas_ty_s, Increment (-3, Call_Function (-6, [Var next_placeholder])))
+        (naas_ty_s,
+         Increment (lenI,
+                    Call_Function
+                      (readWriteData_encodeVIntSizeI, [Var next_placeholder])))
     in (stmt :: stmts, name :: names, next_placeholder - 1)
   | _ -> acc
 let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
-  let name = "get_stream_len" in
-  let identifiers =
-    [name;
-     datatype_name ^ "::" ^ name;
-     "len";
-     datatype_name;
-     "sizeof";
-     "ReadWriteData::encodeVIntSize";
-    ] in
   let body_contents1, more_idents1, next_placeholder =
     analyse_type_getstreamlen ty
       ([Skip],
@@ -138,21 +134,21 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       ([Skip],
        [],
        next_placeholder) in
-  { name = name;
+  { name = get_stream_lenK;
     identifiers = identifiers @ more_idents1 @ more_idents2;
-    type_scheme = Fun_Type (-1, Size_Type None, []);
+    type_scheme = Fun_Type (get_stream_lenI, Size_Type None, []);
     function_scheme =
-      let fun_name_idx = -2 in
+      let fun_name_idx = datatype_gslI in
       let arg_tys = [] in
       let ret_ty = Size_Type None in
       let body =
         [
-          Declaration (Size_Type (Some (-3)), Some (Int_Value 0));
+          Declaration (Size_Type (Some lenI), Some (Int_Value 0));
           Commented (Skip, "Length of fixed-length parts");
           Naasty_aux.concat body_contents1;
           Commented (Skip, "Length of variable-length parts");
           Naasty_aux.concat body_contents2;
-          Return (Var (-3))
+          Return (Var lenI)
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
   }
@@ -161,30 +157,21 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
   let ret_ty =
     Static_Type (None,
                  Reference_Type (None,
-                                 UserDefined_Type (None, -2))) in
+                                 UserDefined_Type (None, datatype_nameI))) in
   let arg_tys =
-    [Reference_Type (Some (-3), Char_Type None);
-     Reference_Type (Some (-4), Char_Type None);
-     Reference_Type (Some (-5), Char_Type None);
-     Reference_Type (Some (-6), Size_Type None);
-     Reference_Type (Some (-7), Size_Type None)] in
-  { name = "bytes_stream_to_channel";
-    identifiers =
-      ["bytes_stream_to_channel";
-       datatype_name;
-       "stream";
-       "channel";
-       "streamend";
-       "bytes_read";
-       "bytes_written";
-       datatype_name ^ "::bytes_stream_to_channel";
-      ];
+    [Reference_Type (Some streamI, Char_Type None);
+     Reference_Type (Some channelI, Char_Type None);
+     Reference_Type (Some streamendI, Char_Type None);
+     Reference_Type (Some bytes_readI, Size_Type None);
+     Reference_Type (Some bytes_writtenI, Size_Type None)] in
+  { name = bytes_stream_to_channelK;
+    identifiers = identifiers;
     type_scheme =
-      Fun_Type (-1,
+      Fun_Type (bytes_stream_to_channelI,
                 ret_ty,
                 arg_tys);
     function_scheme =
-      let fun_name_idx = -8 in
+      let fun_name_idx = datatype_bstcI in
       let body =
         [
           (*FIXME fill in the rest of the body*)
@@ -196,23 +183,17 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
 let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let ret_ty = Static_Type (None, Unit_Type) in
   let arg_tys =
-    [Reference_Type (None, UserDefined_Type (None, -2));
-     Reference_Type (Some (-3), Char_Type None);
-     Reference_Type (Some (-4), Size_Type None)] in
-  { name = "write_bytes_to_channel";
-    identifiers =
-      ["write_bytes_to_channel";
-       datatype_name;
-       "channel";
-       "no_bytes";
-       datatype_name ^ "::write_bytes_to_channel";
-      ];
+    [Reference_Type (None, UserDefined_Type (None, datatype_nameI));
+     Reference_Type (Some channelI, Char_Type None);
+     Reference_Type (Some no_bytesI, Size_Type None)] in
+  { name = write_bytes_to_channelK;
+    identifiers = identifiers;
     type_scheme =
-      Fun_Type (-1,
+      Fun_Type (write_bytes_to_channelI,
                 ret_ty,
                 arg_tys);
     function_scheme =
-      let fun_name_idx = -5 in
+      let fun_name_idx = datatype_wbtcI in
       let body =
         [
           (*FIXME fill in the rest of the body*)
@@ -224,25 +205,18 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
 let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let ret_ty = Static_Type (None, Unit_Type) in
   let arg_tys =
-    [Reference_Type (Some (-2), Char_Type None);
-     Reference_Type (Some (-3), Char_Type None);
-     Reference_Type (Some (-4), Size_Type None);
-     Reference_Type (Some (-5), Size_Type None)] in
-  { name = "bytes_channel_to_stream";
-    identifiers =
-      ["bytes_channel_to_stream";
-       "stream";
-       "channel";
-       "bytes_read";
-       "bytes_written";
-       datatype_name ^ "::bytes_channel_to_stream";
-      ];
+    [Reference_Type (Some streamI, Char_Type None);
+     Reference_Type (Some channelI, Char_Type None);
+     Reference_Type (Some bytes_readI, Size_Type None);
+     Reference_Type (Some bytes_writtenI, Size_Type None)] in
+  { name = bytes_channel_to_streamK;
+    identifiers = identifiers;
     type_scheme =
-      Fun_Type (-1,
+      Fun_Type (bytes_channel_to_streamI,
                 ret_ty,
                 arg_tys);
     function_scheme =
-      let fun_name_idx = -6 in
+      let fun_name_idx = datatype_bctsI in
       let body =
         [
           (*FIXME fill in the rest of the body*)
@@ -254,9 +228,10 @@ let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_val
 (*Instantiates the data model for a particular serialisable datatype.
   This should generate part of the "struct" definition in the resulting C++
   translation of the Flick type. *)
-let instantiate_data_model (datatype_name : string) (ty : Crisp_syntax.type_value) =
-  [get_channel_len datatype_name ty;
-   get_stream_len datatype_name ty;
-   bytes_stream_to_channel datatype_name ty;
-   write_bytes_to_channel datatype_name ty;
-   bytes_channel_to_stream datatype_name ty]
+let instantiate_data_model =
+  [get_channel_len Values.datatype_nameK Values.ty;
+   get_stream_len Values.datatype_nameK Values.ty;
+   bytes_stream_to_channel Values.datatype_nameK Values.ty;
+   write_bytes_to_channel Values.datatype_nameK Values.ty;
+   bytes_channel_to_stream Values.datatype_nameK Values.ty]
+end

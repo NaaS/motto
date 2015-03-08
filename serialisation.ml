@@ -95,7 +95,13 @@ let translate_type_compilation_unit (st : state)
        let name = Crisp_syntax_aux.name_of_type decl in
        let (translated, st'') =
          Translation.naasty_of_flick_program ~st:st' [decl] in
-       let data_model_instance = instantiate_data_model name (Crisp_syntax_aux.the_ty_of_decl decl) in
+       let module Data_model_instance =
+         Instance(Data_model_consts.Values(
+         struct
+           let datatype_name = name
+           let ty = (Crisp_syntax_aux.the_ty_of_decl decl)
+         end)) in
+       let data_model_instance(*FIXME inline?*) = Data_model_instance.instantiate_data_model in
        let (type_data_model_instance, st''') =
          fold_map ([], st'') (fun st scheme ->
            Naasty_aux.instantiate_type true scheme.identifiers st scheme.type_scheme)

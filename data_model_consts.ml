@@ -41,6 +41,10 @@ sig
   val datatype_bstcK : string
   val datatype_wbtcK : string
   val datatype_bctsK : string
+  val offsetK : string
+  val copyK : string
+  val dataK : string
+  val readWriteData_writeBytesK : string
 
   (*This collects all the string literals described above*)
   val identifiers : string list
@@ -67,6 +71,10 @@ sig
   val datatype_bstcI : int
   val datatype_wbtcI : int
   val datatype_bctsI : int
+  val offsetI : int
+  val copyI : int
+  val dataI : int
+  val readWriteData_writeBytesI : int
 end
 
 module Values (Datatype : Datatype) : Values =
@@ -89,6 +97,10 @@ let readWriteData_encodeVIntSizeK = "ReadWriteData::encodeVIntSize"
 let bytes_readK = "bytes_read"
 let bytes_writtenK = "bytes_written"
 let no_bytesK = "no_bytes"
+let offsetK = "offset"
+let copyK = "copy"
+let dataK = "data"
+let readWriteData_writeBytesK = "ReadWriteData::writeBytes"
 
 (*The following aren't fixed -- they depend on the value of datatype_name*)
 let datatype_nameK = Datatype.datatype_name
@@ -120,6 +132,10 @@ let identifiers =
     datatype_bstcK;
     datatype_wbtcK;
     datatype_bctsK;
+    offsetK;
+    copyK;
+    dataK;
+    readWriteData_writeBytesK;
   ]
 
 let ident_placeholder s =
@@ -158,7 +174,11 @@ let streamI,
     datatype_gslI,
     datatype_bstcI,
     datatype_wbtcI,
-    datatype_bctsI
+    datatype_bctsI,
+    offsetI,
+    copyI,
+    dataI,
+    readWriteData_writeBytesI
   =
   ident_placeholder streamK,
   ident_placeholder channelK,
@@ -179,5 +199,9 @@ let streamI,
   ident_placeholder datatype_gslK,
   ident_placeholder datatype_bstcK,
   ident_placeholder datatype_wbtcK,
-  ident_placeholder datatype_bctsK
+  ident_placeholder datatype_bctsK,
+  ident_placeholder offsetK,
+  ident_placeholder copyK,
+  ident_placeholder dataK,
+  ident_placeholder readWriteData_writeBytesK
 end

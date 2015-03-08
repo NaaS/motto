@@ -182,8 +182,10 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
 
 let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let ret_ty = Static_Type (None, Unit_Type) in
+  let param_data_ty =
+    Reference_Type (Some dataI, UserDefined_Type (None, datatype_nameI)) in
   let arg_tys =
-    [Reference_Type (Some dataI, UserDefined_Type (None, datatype_nameI));
+    [param_data_ty;
      Reference_Type (Some channelI, Char_Type None);
      Reference_Type (Some no_bytesI, Size_Type None)] in
   { name = write_bytes_to_channelK;
@@ -196,8 +198,10 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
       let fun_name_idx = datatype_wbtcI in
       let body =
         [
+          Declaration (Size_Type (Some offsetI), Some (Int_Value 0));
+          Declaration (Naasty_aux.update_empty_identifier copyI
+                         (Naasty_aux.set_empty_identifier param_data_ty), None);
           (*FIXME fill in the rest of the body*)
-          Skip
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
   }

@@ -175,6 +175,24 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
       in (fun_name_idx, arg_tys, ret_ty, body);
   }
 
+let rec analyse_type_writebytestochannel_static
+          (source : identifier list)
+          (target : identifier list)
+          ty
+ ((stmts, names, next_placeholder) as acc : type_analysis) : type_analysis =
+  match ty with
+  | RecordType (label_opt, tys, ty_ann) ->
+    (*FIXME probably we should look at ty_ann*)
+    (*FIXME accumulate source and target, in case we have nested records*)
+    List.fold_right (analyse_type_writebytestochannel_static source target) tys acc
+  | Integer (label_opt, ty_ann) ->
+    let source' = next_placeholder :: source in
+    let target' = next_placeholder :: target in
+    let stmt =
+      Assign (Naasty_aux.nested_fields target', Naasty_aux.nested_fields source')
+    in (stmt :: stmts, the label_opt :: names, next_placeholder - 1)
+  | _ -> acc
+
 let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let ret_ty = Static_Type (None, Unit_Type) in
   let param_data_ty identifier =
@@ -183,8 +201,13 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
     [param_data_ty (Some dataI);
      Reference_Type (Some channelI, Char_Type None);
      Reference_Type (Some no_bytesI, Size_Type None)] in
+  let body_contents1, more_idents1, next_placeholder =
+    analyse_type_writebytestochannel_static [dataI] [copyI] ty
+      ([Skip],
+       [],
+       (List.length identifiers + 1) * (-1)) in
   { name = write_bytes_to_channelK;
-    identifiers = identifiers;
+    identifiers = identifiers @ more_idents1;
     type_scheme =
       Fun_Type (write_bytes_to_channelI,
                 ret_ty,
@@ -197,7 +220,7 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
           Declaration (param_data_ty (Some copyI),
                        Some (Cast (param_data_ty None, channelI)));
           Commented (Skip, "Handling fixed-length data");
-(*          Naasty_aux.concat body_contents1;*)
+          Naasty_aux.concat body_contents1;
           Assign (Var offsetI,
                   Plus (Var channelI,
                         Call_Function (sizeofI, [Var datatype_nameI])));

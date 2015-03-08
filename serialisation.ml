@@ -99,7 +99,7 @@ let translate_type_compilation_unit (st : state)
          Instance(Data_model_consts.Values(
          struct
            let datatype_name = name
-           let ty = (Crisp_syntax_aux.the_ty_of_decl decl)
+           let ty = Crisp_syntax_aux.the_ty_of_decl decl
          end)) in
        let data_model_instance(*FIXME inline?*) = Data_model_instance.instantiate_data_model in
        let (type_data_model_instance, st''') =

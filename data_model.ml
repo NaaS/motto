@@ -127,9 +127,6 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
        [],
        (List.length identifiers + 1) * (-1)) in
   let body_contents2, more_idents2, _ =
-   (*FIXME we have an implicit constraint between the list of identifiers used
-           here and those used in get_channel_len, if there are placeholder
-           constants in analyses_type_getchannellen*)
     analyse_type_getchannellen ty
       ([Skip],
        [],

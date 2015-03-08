@@ -101,11 +101,10 @@ let translate_type_compilation_unit (st : state)
            let datatype_name = name
            let ty = Crisp_syntax_aux.the_ty_of_decl decl
          end)) in
-       let data_model_instance(*FIXME inline?*) = Data_model_instance.instantiate_data_model in
        let (type_data_model_instance, st''') =
          fold_map ([], st'') (fun st scheme ->
            Naasty_aux.instantiate_type true scheme.identifiers st scheme.type_scheme)
-           data_model_instance in
+           Data_model_instance.instantiate_data_model in
        let header_unit =
          {Naasty_project.name = name;
           Naasty_project.unit_type = Naasty_project.Header;
@@ -126,7 +125,7 @@ let translate_type_compilation_unit (st : state)
          fold_map ([], st''') (fun st scheme ->
            Naasty_aux.instantiate_function true scheme.identifiers st
              scheme.function_scheme)
-           data_model_instance in
+           Data_model_instance.instantiate_data_model in
        let cpp_unit =
          {Naasty_project.name = name;
           Naasty_project.unit_type = Naasty_project.Cpp;

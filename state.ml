@@ -55,7 +55,7 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b * 'c) list)
     else Some (List.assoc id l') in
   let type_lookup = gen_lookup type_symbols in
   let normal_lookup = gen_lookup symbols in
-  if type_lookup <> None && normal_lookup <> None then
+  if term_type_separation && type_lookup <> None && normal_lookup <> None then
     failwith ("Somehow the symbol " ^ id_to_str id ^
               " is being used for both a type and a non-type")
   else match scope with

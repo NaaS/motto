@@ -16,6 +16,6 @@ type hadoop_wc : record
   key : string
     { byte_size = key_len }
   value : integer
-    { signed = false,
+    { signed = true,
     #endianness = big,
     byte_size = 8 }

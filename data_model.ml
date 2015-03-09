@@ -43,7 +43,9 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
   match ty with
   | RecordType (label_opt, tys, ty_ann) ->
     (*FIXME probably we should look at ty_ann*)
-    List.fold_right analyse_type_getchannellen tys acc
+    List.fold_right analyse_type_getchannellen
+      (List.rev tys)
+      acc
   | String (label_opt, ty_ann) ->
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
@@ -75,7 +77,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
          so far*)
         (List.length identifiers + 1) * (-1)) in
   { name = get_channel_lenK;
-    identifiers = identifiers @ more_idents;
+    identifiers = identifiers @ List.rev more_idents;
     type_scheme = Fun_Type (get_channel_lenI, Size_Type None, []);
     function_scheme =
       let fun_name_idx = datatype_gclI in
@@ -97,7 +99,9 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
   match ty with
   | RecordType (label_opt, tys, ty_ann) ->
     (*FIXME probably we should look at ty_ann*)
-    List.fold_right analyse_type_getstreamlen tys acc
+    List.fold_right analyse_type_getstreamlen
+      (List.rev tys)
+      acc
   | Integer (label_opt, ty_ann) ->
     let naas_ty, st =
       Translation.naasty_of_flick_type
@@ -106,17 +110,19 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
         ty in
     let naas_ty' = Naasty_aux.set_empty_identifier naas_ty in
     let naas_ty_s =
-      Naasty_aux.string_of_naasty_type ~st_opt:(Some st) 0 naas_ty' in
+      Naasty_aux.string_of_naasty_type ~st_opt:(Some st) Naasty_aux.no_indent naas_ty' in
     let is_hadoop_vint =
-      List.exists (fun (k, v) -> k = "hadoop_vint" && v = Ann_Ident "true") ty_ann in
+      List.exists (fun (k, v) -> k = "hadoop_vint"(*FIXME const*) &&
+                                 v = Ann_Ident "true"(*FIXME const*)) ty_ann in
     let name, stmt =
       if is_hadoop_vint then
-        (the label_opt, Increment (lenI, Call_Function (sizeofI, [Var next_placeholder])))
-      else
-        (naas_ty_s,
+        (the label_opt,
          Increment (lenI,
                     Call_Function
-                      (readWriteData_encodeVIntSizeI, [Var next_placeholder]))) in
+                      (readWriteData_encodeVIntSizeI, [Var next_placeholder])))
+      else
+        (naas_ty_s,
+         Increment (lenI, Call_Function (sizeofI, [Var next_placeholder]))) in
     let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
     in (commented_stmt :: stmts, name :: names, next_placeholder - 1)
   | _ -> acc
@@ -132,7 +138,7 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
        [],
        next_placeholder) in
   { name = get_stream_lenK;
-    identifiers = identifiers @ more_idents1 @ more_idents2;
+    identifiers = identifiers @ List.rev more_idents1 @ List.rev more_idents2;
     type_scheme = Fun_Type (get_stream_lenI, Size_Type None, []);
     function_scheme =
       let fun_name_idx = datatype_gslI in
@@ -197,7 +203,9 @@ let rec analyse_type_writebytestochannel_static
   | RecordType (label_opt, tys, ty_ann) ->
     (*FIXME probably we should look at ty_ann*)
     (*FIXME accumulate source and target, in case we have nested records*)
-    List.fold_right (analyse_type_writebytestochannel_static source target) tys acc
+    List.fold_right (analyse_type_writebytestochannel_static source target)
+      (List.rev tys)
+      acc
   | Integer (label_opt, ty_ann) ->
     let source' = next_placeholder :: source in
     let target' = next_placeholder :: target in
@@ -214,7 +222,9 @@ let rec analyse_type_writebytestochannel_dynamic
   | RecordType (label_opt, tys, ty_ann) ->
     (*FIXME probably we should look at ty_ann*)
     (*FIXME accumulate source and target, in case we have nested records*)
-    List.fold_right (analyse_type_writebytestochannel_dynamic source target) tys acc
+    List.fold_right (analyse_type_writebytestochannel_dynamic source target)
+      (List.rev tys)
+      acc
   | String (label_opt, ty_ann) ->
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
@@ -260,7 +270,7 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
        [],
        next_placeholder) in
   { name = write_bytes_to_channelK;
-    identifiers = identifiers @ more_idents1 @ more_idents2;
+    identifiers = identifiers @ List.rev more_idents1 @ List.rev more_idents2;
     type_scheme =
       Fun_Type (write_bytes_to_channelI,
                 ret_ty,

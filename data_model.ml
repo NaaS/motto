@@ -55,10 +55,11 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
           | Ann_Int _ -> failwith "TODO"
           | Ann_Ident s ->
             let stmt =
+              (*next_placeholder stands for the contents of "s"*)
               If1 (GEq (Var next_placeholder, Int_Value 0),
-                   Increment (lenI, Var next_placeholder))
-                (*next_placeholder stands for the contents of "s"*)
-            in (stmt :: stmts, s :: names, next_placeholder - 1)
+                   Increment (lenI, Var next_placeholder)) in
+            let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
+            in (commented_stmt :: stmts, s :: names, next_placeholder - 1)
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
@@ -115,8 +116,9 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
         (naas_ty_s,
          Increment (lenI,
                     Call_Function
-                      (readWriteData_encodeVIntSizeI, [Var next_placeholder])))
-    in (stmt :: stmts, name :: names, next_placeholder - 1)
+                      (readWriteData_encodeVIntSizeI, [Var next_placeholder]))) in
+    let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
+    in (commented_stmt :: stmts, name :: names, next_placeholder - 1)
   | _ -> acc
 let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let body_contents1, more_idents1, next_placeholder =

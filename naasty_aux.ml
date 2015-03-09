@@ -214,6 +214,8 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
     "(" ^ string_of_naasty_expression ~st_opt record ^ ")" ^
     "." ^
     "(" ^ string_of_naasty_expression ~st_opt field ^ ")"
+  | Address_of e ->
+    "&(" ^ string_of_naasty_expression ~st_opt e ^ ")"
   | _ -> failwith "TODO"
 
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) indent = function
@@ -532,6 +534,7 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
     in (Cast (ty', id'), st'')
   | Dereference e -> unary_op_inst e (fun e' -> Dereference e')
   | RecordProjection (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> RecordProjection (e1', e2'))
+  | Address_of e -> unary_op_inst e (fun e' -> Address_of e')
 
 (*Instantiates a naasty_statement scheme with a set of names*)
 let rec instantiate_statement (fresh : bool) (names : string list) (st : state)

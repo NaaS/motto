@@ -79,6 +79,7 @@ type naasty_expression =
   | Cast of naasty_type * identifier
   | Dereference of naasty_expression
   | RecordProjection of naasty_expression * naasty_expression
+  | Address_of of naasty_expression
 
 type naasty_statement =
     (*Should include function prototypes here?*)

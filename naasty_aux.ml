@@ -267,7 +267,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
     indn indent ^ "// " ^ comment
   | Commented (stmt, comment) ->
     (*First print the statement, then the comment*)
-    string_of_naasty_statement ~st_opt indent stmt ^ "; // " ^ comment
+    string_of_naasty_statement ~st_opt indent stmt ^ " // " ^ comment
   | _ -> failwith "TODO"
 
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent (f_id, arg_types, res_type, body) =

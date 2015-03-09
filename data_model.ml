@@ -149,10 +149,9 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
   }
 
 let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
-  let ret_ty =
-    Static_Type (None,
-                 Reference_Type (None,
-                                 UserDefined_Type (None, datatype_nameI))) in
+  let param_data_ty identifier =
+    Reference_Type (identifier, UserDefined_Type (None, datatype_nameI)) in
+  let ret_ty = Static_Type (None, param_data_ty None) in
   let arg_tys =
     [Reference_Type (Some streamI, Char_Type None);
      Reference_Type (Some channelI, Char_Type None);
@@ -169,8 +168,13 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
       let fun_name_idx = datatype_bstcI in
       let body =
         [
+          Declaration (Size_Type (Some read_offsetI), Some (Int_Value 0));
+          Declaration (Size_Type (Some write_offsetI), Some (Int_Value 0));
+          Declaration (param_data_ty (Some dataI),
+                       Some (Cast (param_data_ty None, channelI)));
+          Commented (Skip, "Handling fixed-length data");
+
           (*FIXME fill in the rest of the body*)
-          Skip
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
   }

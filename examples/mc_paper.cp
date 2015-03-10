@@ -22,58 +22,58 @@
 
 type req : record
    _ : string
-   { byte_size = 1 }
+     { byte_size = 1 }
 
    opcode : string
-   { byte_size = 1 }
+     { byte_size = 1 }
 
    keylen : integer
-   { signed = false,
-   byte_size = 2 }
+     { signed = false,
+     byte_size = 2 }
 
    _ : string
-   { byte_size = 20 }
+     { byte_size = 20 }
 
    key : string
-   { byte_size = keylen }
+     { byte_size = keylen }
 
 
 
 type reply : record
    _ : string
-   { byte_size = 1 }
+     { byte_size = 1 }
 
    opcode : string
-   { byte_size = 1 }
+     { byte_size = 1 }
 
    keylen : integer
-   { signed = false,
-   byte_size = 2 }
+     { signed = false,
+     byte_size = 2 }
 
 
    # This field isn't in the req type.
 
    extraslen : integer
-   { signed = false,
-   byte_size = 1 }
+     { signed = false,
+     byte_size = 1 }
 
    # The rest differs from the req type too.
 
    _ : string
-   { byte_size = 3 }
+     { byte_size = 3 }
 
    bodylen : integer
-   { signed = false,
-   byte_size = 8 }
+     { signed = false,
+     byte_size = 8 }
 
    _ : string
-   { byte_size = 12 }
+     { byte_size = 12 }
 
    extras : string
-   { byte_size = extraslen }
+     { byte_size = extraslen }
 
    key : string
-   { byte_size = keylen }
+     { byte_size = keylen }
 
    values : string
-   { byte_size = bodylen - extraslen - keylen }
+     { byte_size = bodylen - extraslen - keylen }

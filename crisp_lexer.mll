@@ -160,4 +160,5 @@ rule main = parse
 
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_''\'']* as id {IDENTIFIER id}
 
+  | "_" {UNDERSCORE}
 (*FIXME string primitives as keywords -- e.g., concat, etc*)

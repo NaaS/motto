@@ -103,6 +103,8 @@
 %token TYPE_DICTIONARY
 %token TYPE_REF
 
+%token UNDERSCORE
+
 (*Names*)
 (*
 %token <string> UPPER_ALPHA
@@ -213,6 +215,15 @@ type_line:
     {td (Some value_name) ann}
   | value_name = IDENTIFIER; COLON; td = type_def
     {td (Some value_name) []}
+
+  (*Anonymous values -- such as anonymous fields in a record.*)
+  (*FIXME would be nicer if we used a separate constructor for this, rather
+          then revert to a string, but it'll do for the time being.*)
+  | UNDERSCORE; COLON; td = type_def;
+    INDENT; ann = type_annotation; UNDENT
+    {td (Some "_") ann}
+  | UNDERSCORE; COLON; td = type_def
+    {td (Some "_") []}
 
 type_lines:
   | tl = type_line; NL; rest = type_lines { tl :: rest }

@@ -156,6 +156,8 @@ let string_of_token = function
 
   | TYPE_DICTIONARY -> "TYPE_DICTIONARY"
   | TYPE_REF -> "TYPE_REF"
+
+  | UNDERSCORE -> "UNDERSCORE"
 ;;
 
 let test filepath =

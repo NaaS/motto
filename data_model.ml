@@ -252,7 +252,7 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
           Declaration (Size_Type (Some read_offsetI), Some (Int_Value 0));
           Declaration (Size_Type (Some write_offsetI), Some (Int_Value 0));
           Declaration (param_data_ty (Some dataI),
-                       Some (Cast (param_data_ty None, channelI)));
+                       Some (Cast (param_data_ty None, Var channelI)));
 
           Commented (Skip, "Handling fixed-length data");
           Naasty_aux.concat (List.rev rev_body_contents1);
@@ -357,7 +357,7 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
         [
           Declaration (Size_Type (Some offsetI), Some (Int_Value 0));
           Declaration (param_data_ty (Some copyI),
-                       Some (Cast (param_data_ty None, channelI)));
+                       Some (Cast (param_data_ty None, Var channelI)));
 
           Commented (Skip, "Handling fixed-length data");
           Naasty_aux.concat (List.rev rev_body_contents1);
@@ -474,7 +474,7 @@ let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_val
         [
           Declaration (Size_Type (Some offsetI), Some (Int_Value 0));
           Declaration (param_data_ty (Some dataI),
-                       Some (Cast (param_data_ty None, channelI)));
+                       Some (Cast (param_data_ty None, Var channelI)));
           Assign (Dereference (Var bytes_readI),
                   RecordProjection
                     (Dereference (Var dataI),

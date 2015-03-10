@@ -201,8 +201,9 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | Gt (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") > (" ^
     string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Cast (ty, id) ->
-    "(" ^ string_of_naasty_type no_indent ~st_opt ty ^ ")" ^ id_name st_opt id
+  | Cast (ty, e) ->
+    "(" ^ string_of_naasty_type no_indent ~st_opt ty ^ ")" ^
+    "(" ^ string_of_naasty_expression ~st_opt e ^ ")"
   | RecordProjection (Dereference record_ref, field) ->
     (*NOTE this syntactic sugaring is handled directly*)
     "(" ^ string_of_naasty_expression ~st_opt record_ref ^ ")" ^
@@ -529,11 +530,11 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
     in (Call_Function (id', es'), st'')
   | GEq (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> GEq (e1', e2'))
   | Gt (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Gt (e1', e2'))
-  | Cast (ty, id) ->
+  | Cast (ty, e) ->
     let ty', st' = instantiate_type fresh names st ty in
-    let id', st'' =
-      substitute fresh names false id st' id (fun x -> x)
-    in (Cast (ty', id'), st'')
+    let e', st'' =
+      instantiate_expression fresh names st' e
+    in (Cast (ty', e'), st'')
   | Dereference e -> unary_op_inst e (fun e' -> Dereference e')
   | RecordProjection (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> RecordProjection (e1', e2'))
   | Address_of e -> unary_op_inst e (fun e' -> Address_of e')

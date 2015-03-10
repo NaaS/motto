@@ -76,7 +76,7 @@ type naasty_expression =
   | Call_Function of identifier * naasty_expression list
   | GEq of naasty_expression * naasty_expression
   | Gt of naasty_expression * naasty_expression
-  | Cast of naasty_type * identifier
+  | Cast of naasty_type * naasty_expression
   | Dereference of naasty_expression
   | RecordProjection of naasty_expression * naasty_expression
   | Address_of of naasty_expression

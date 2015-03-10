@@ -358,27 +358,112 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
           Declaration (Size_Type (Some offsetI), Some (Int_Value 0));
           Declaration (param_data_ty (Some copyI),
                        Some (Cast (param_data_ty None, channelI)));
+
           Commented (Skip, "Handling fixed-length data");
           Naasty_aux.concat (List.rev rev_body_contents1);
           Assign (Var offsetI,
                   Plus (Var channelI,
                         Call_Function (sizeofI, [Var datatype_nameI])));
+
           Commented (Skip, "Handling variable-length data");
           Naasty_aux.concat (List.rev rev_body_contents2);
+
           Assign (Dereference (Var no_bytesI), Var offsetI);
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
   }
 
+let rec analyse_type_bcts_static
+          (target : identifier list)
+          ty ((stmts, names, next_placeholder) as acc : type_analysis) : type_analysis =
+  match ty with
+  | RecordType (label_opt, tys, ty_ann) ->
+    (*FIXME probably we should look at ty_ann*)
+    (*FIXME accumulate target, in case we have nested records*)
+    List.fold_right (analyse_type_bcts_static target)
+      (List.rev tys)
+      acc
+  | Integer (label_opt, ty_ann) ->
+    let naas_ty, st =
+      Translation.naasty_of_flick_type
+        initial_state (*FIXME instead of re-translating the type, could pass an
+                        already-translated type value*)
+        ty in
+    let naas_ty' = Naasty_aux.set_empty_identifier naas_ty in
+    let name, name_idx = the label_opt, next_placeholder in
+    let naas_ty_s, naas_ty_s_idx =
+      (Naasty_aux.string_of_naasty_type ~st_opt:(Some st) Naasty_aux.no_indent naas_ty',
+       next_placeholder - 1) in
+    let item_offset = Plus (Var streamI, Var offsetI) in
+    let stmt =
+      Increment (offsetI,
+        (Call_Function
+           (readWriteData_writeVIntI,
+            [(*FIXME need to cast to naast_ty'*)
+              Naasty_aux.nested_fields (name_idx :: target);
+             item_offset]))) in
+    let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
+    in (commented_stmt :: stmts, naas_ty_s :: name :: names, next_placeholder - 2)
+  | _ -> acc
+let rec analyse_type_bcts_dynamic
+          (target : identifier list)
+          ty ((stmts, names, next_placeholder) as acc : type_analysis) : type_analysis =
+  match ty with
+  | RecordType (label_opt, tys, ty_ann) ->
+    (*FIXME probably we should look at ty_ann*)
+    (*FIXME accumulate target, in case we have nested records*)
+    List.fold_right (analyse_type_bcts_dynamic target)
+      (List.rev tys)
+      acc
+  | String (label_opt, ty_ann) ->
+    begin
+      match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
+      | [] -> failwith "Strings need to be given an indication of size."
+      | [(_, v)] ->
+        begin
+          match v with
+          | Ann_Str _ -> failwith "TODO"
+          | Ann_Int _ -> failwith "TODO"
+          | Ann_Ident length_field ->
+            let name, name_idx = the label_opt, next_placeholder in
+            let length_field_idx = next_placeholder - 1 in
+            let stream_offset = Plus (Var streamI, Var offsetI) in
+            let f_call =
+              Call_Function
+                (readWriteData_writeBytesI,
+                 [Naasty_aux.nested_fields (name_idx :: target);
+                  Naasty_aux.nested_fields (length_field_idx :: target);
+                  stream_offset]) in
+            let stmt =
+              If1 (Gt (Naasty_aux.nested_fields (length_field_idx :: target), Int_Value 0),
+                   Increment (offsetI, f_call))
+            in (stmt :: stmts, length_field :: name :: names, next_placeholder - 2)
+        end
+      | _ -> failwith "Too many sizes specified for a string."
+    end
+  | _ -> acc
 let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_value) =
+  let param_data_ty identifier =
+    Reference_Type (identifier, UserDefined_Type (None, datatype_nameI)) in
   let ret_ty = Static_Type (None, Unit_Type) in
   let arg_tys =
     [Reference_Type (Some streamI, Char_Type None);
      Reference_Type (Some channelI, Char_Type None);
      Reference_Type (Some bytes_readI, Size_Type None);
      Reference_Type (Some bytes_writtenI, Size_Type None)] in
+  let rev_body_contents1, rev_more_idents1, next_placeholder =
+    analyse_type_bcts_static [dataI] ty
+      ([Skip],
+       [],
+       (List.length identifiers + 1) * (-1)) in
+  let rev_body_contents2, rev_more_idents2, _ =
+    analyse_type_bcts_dynamic [dataI] ty
+      ([Skip],
+       [],
+       next_placeholder) in
   { name = bytes_channel_to_streamK;
-    identifiers = identifiers;
+    identifiers =
+      identifiers @ List.rev rev_more_idents1 @ List.rev rev_more_idents2;
     type_scheme =
       Fun_Type (bytes_channel_to_streamI,
                 ret_ty,
@@ -387,8 +472,21 @@ let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_val
       let fun_name_idx = datatype_bctsI in
       let body =
         [
-          (*FIXME fill in the rest of the body*)
-          Skip
+          Declaration (Size_Type (Some offsetI), Some (Int_Value 0));
+          Declaration (param_data_ty (Some dataI),
+                       Some (Cast (param_data_ty None, channelI)));
+          Assign (Dereference (Var bytes_readI),
+                  RecordProjection
+                    (Dereference (Var dataI),
+                     Call_Function (get_channel_lenI, [])));
+
+          Commented (Skip, "Length of fixed-length parts");
+          Naasty_aux.concat (List.rev rev_body_contents1);
+
+          Commented (Skip, "Length of variable-length parts");
+          Naasty_aux.concat (List.rev rev_body_contents2);
+
+          Assign (Dereference (Var bytes_writtenI), Var offsetI);
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
   }

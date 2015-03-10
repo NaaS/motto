@@ -76,4 +76,5 @@ type reply : record
      { byte_size = keylen }
 
    values : string
-     { byte_size = bodylen - extraslen - keylen }
+     # FIXME arithmetic on field sizes isn't supported yet.
+     { byte_size = "bodylen - extraslen - keylen" }

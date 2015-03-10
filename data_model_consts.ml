@@ -49,6 +49,7 @@ sig
   val write_offsetK : string
   val readWriteData_read_write_VIntK : string
   val readWriteData_read_write_BytesK : string
+  val readWriteData_writeVIntK : string
 
   (*This collects all the string literals described above*)
   val identifiers : string list
@@ -83,6 +84,7 @@ sig
   val write_offsetI : int
   val readWriteData_read_write_VIntI : int
   val readWriteData_read_write_BytesI : int
+  val readWriteData_writeVIntI : int
 end
 
 module Values (Datatype : Datatype) : Values =
@@ -113,6 +115,7 @@ let read_offsetK = "read_offset"
 let write_offsetK = "write_offset"
 let readWriteData_read_write_VIntK = "ReadWriteData::read_write_VInt"
 let readWriteData_read_write_BytesK = "ReadWriteData::read_write_Bytes"
+let readWriteData_writeVIntK = "ReadWriteData::writeVInt"
 
 (*The following aren't fixed -- they depend on the value of datatype_name*)
 let datatype_nameK = Datatype.datatype_name
@@ -152,6 +155,7 @@ let identifiers =
     write_offsetK;
     readWriteData_read_write_VIntK;
     readWriteData_read_write_BytesK;
+    readWriteData_writeVIntK;
   ]
 
 let ident_placeholder s =
@@ -198,7 +202,8 @@ let streamI,
     read_offsetI,
     write_offsetI,
     readWriteData_read_write_VIntI,
-    readWriteData_read_write_BytesI
+    readWriteData_read_write_BytesI,
+    readWriteData_writeVIntI
   =
   ident_placeholder streamK,
   ident_placeholder channelK,
@@ -227,5 +232,6 @@ let streamI,
   ident_placeholder read_offsetK,
   ident_placeholder write_offsetK,
   ident_placeholder readWriteData_read_write_VIntK,
-  ident_placeholder readWriteData_read_write_BytesK
+  ident_placeholder readWriteData_read_write_BytesK,
+  ident_placeholder readWriteData_writeVIntK
 end

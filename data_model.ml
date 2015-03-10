@@ -156,6 +156,27 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       in (fun_name_idx, arg_tys, ret_ty, body);
   }
 
+let rec analyse_type_bstc_static
+          (target : identifier list)
+          ty ((stmts, names, next_placeholder) as acc : type_analysis) : type_analysis =
+  match ty with
+  | RecordType (label_opt, tys, ty_ann) ->
+    (*FIXME probably we should look at ty_ann*)
+    (*FIXME accumulate target, in case we have nested records*)
+    List.fold_right (analyse_type_bstc_static target)
+      (List.rev tys)
+      acc
+  | Integer (label_opt, ty_ann) ->
+    let name, name_idx = the label_opt, next_placeholder in
+    let stmt =
+      St_of_E
+        (Call_Function
+           (readWriteData_read_write_VIntI,
+            [Address_of (Naasty_aux.nested_fields (name_idx :: target));
+             Var streamI; Var streamendI; Address_of (Var read_offsetI)])) in
+    let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
+    in (commented_stmt :: stmts, name :: names, next_placeholder - 1)
+  | _ -> acc
 let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let param_data_ty identifier =
     Reference_Type (identifier, UserDefined_Type (None, datatype_nameI)) in
@@ -166,8 +187,13 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
      Reference_Type (Some streamendI, Char_Type None);
      Reference_Type (Some bytes_readI, Size_Type None);
      Reference_Type (Some bytes_writtenI, Size_Type None)] in
+  let body_contents1, more_idents1, next_placeholder =
+    analyse_type_bstc_static [dataI] ty
+      ([Skip],
+       [],
+       (List.length identifiers + 1) * (-1)) in
   { name = bytes_stream_to_channelK;
-    identifiers = identifiers;
+    identifiers = identifiers @ List.rev more_idents1;
     type_scheme =
       Fun_Type (bytes_stream_to_channelI,
                 ret_ty,
@@ -182,11 +208,12 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
                        Some (Cast (param_data_ty None, channelI)));
 
           Commented (Skip, "Handling fixed-length data");
-          (*FIXME fill in the rest of the body*)
+          Naasty_aux.concat body_contents1;
           Assign (Var write_offsetI,
                   Call_Function (sizeofI, [Var datatype_nameI]));
-          (*FIXME fill in the rest of the body*)
 
+          Commented (Skip, "Handling variable-length data");
+          (*FIXME fill in the rest of the body*)
           Assign (Dereference (Var bytes_readI), Var read_offsetI);
           Assign (Dereference (Var bytes_writtenI), Var write_offsetI);
           Return (Var dataI);

@@ -21,7 +21,7 @@
 #   value: bytes(bodylen-extraslen-keylen)
 
 type req : record
-   _ : string
+   IGNORE_ : string
      { byte_size = 1 }
 
    opcode : string
@@ -31,7 +31,7 @@ type req : record
      { signed = false,
      byte_size = 2 }
 
-   _ : string
+   IGNORE_ : string
      { byte_size = 20 }
 
    key : string
@@ -40,7 +40,7 @@ type req : record
 
 
 type reply : record
-   _ : string
+   IGNORE_ : string
      { byte_size = 1 }
 
    opcode : string
@@ -59,14 +59,14 @@ type reply : record
 
    # The rest differs from the req type too.
 
-   _ : string
+   IGNORE_ : string
      { byte_size = 3 }
 
    bodylen : integer
      { signed = false,
      byte_size = 8 }
 
-   _ : string
+   IGNORE_ : string
      { byte_size = 12 }
 
    extras : string

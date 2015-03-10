@@ -67,7 +67,7 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
     end
   | _ -> acc
 let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
-  let body_contents, more_idents, _ =
+  let rev_body_contents, rev_more_idents, _ =
     analyse_type_getchannellen ty
       ((*The initial program does nothing*)
         [Skip],
@@ -77,7 +77,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
          so far*)
         (List.length identifiers + 1) * (-1)) in
   { name = get_channel_lenK;
-    identifiers = identifiers @ List.rev more_idents;
+    identifiers = identifiers @ List.rev rev_more_idents;
     type_scheme = Fun_Type (get_channel_lenI, Size_Type None, []);
     function_scheme =
       let fun_name_idx = datatype_gclI in
@@ -89,7 +89,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
           Commented (Skip, "Length of fixed-length parts");
           Assign (Var lenI, Call_Function (sizeofI, [Var datatype_nameI]));
           Commented (Skip, "Length of variable-length parts");
-          Naasty_aux.concat body_contents;
+          Naasty_aux.concat (List.rev rev_body_contents);
           Return (Var lenI)
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
@@ -127,18 +127,18 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
     in (commented_stmt :: stmts, name :: names, next_placeholder - 1)
   | _ -> acc
 let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
-  let body_contents1, more_idents1, next_placeholder =
+  let rev_body_contents1, rev_more_idents1, next_placeholder =
     analyse_type_getstreamlen ty
       ([Skip],
        [],
        (List.length identifiers + 1) * (-1)) in
-  let body_contents2, more_idents2, _ =
+  let rev_body_contents2, rev_more_idents2, _ =
     analyse_type_getchannellen ty
       ([Skip],
        [],
        next_placeholder) in
   { name = get_stream_lenK;
-    identifiers = identifiers @ List.rev more_idents1 @ List.rev more_idents2;
+    identifiers = identifiers @ List.rev rev_more_idents1 @ List.rev rev_more_idents2;
     type_scheme = Fun_Type (get_stream_lenI, Size_Type None, []);
     function_scheme =
       let fun_name_idx = datatype_gslI in
@@ -148,9 +148,9 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
         [
           Declaration (Size_Type (Some lenI), Some (Int_Value 0));
           Commented (Skip, "Length of fixed-length parts");
-          Naasty_aux.concat body_contents1;
+          Naasty_aux.concat (List.rev rev_body_contents1);
           Commented (Skip, "Length of variable-length parts");
-          Naasty_aux.concat body_contents2;
+          Naasty_aux.concat (List.rev rev_body_contents2);
           Return (Var lenI)
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);
@@ -229,18 +229,18 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
      Reference_Type (Some streamendI, Char_Type None);
      Reference_Type (Some bytes_readI, Size_Type None);
      Reference_Type (Some bytes_writtenI, Size_Type None)] in
-  let body_contents1, more_idents1, next_placeholder =
+  let rev_body_contents1, rev_more_idents1, next_placeholder =
     analyse_type_bstc_static [dataI] ty
       ([Skip],
        [],
        (List.length identifiers + 1) * (-1)) in
-  let body_contents2, more_idents2, _ =
+  let rev_body_contents2, rev_more_idents2, _ =
     analyse_type_bstc_dynamic [dataI] ty
       ([Skip],
        [],
        next_placeholder) in
   { name = bytes_stream_to_channelK;
-    identifiers = identifiers @ List.rev more_idents1 @ List.rev more_idents2;
+    identifiers = identifiers @ List.rev rev_more_idents1 @ List.rev rev_more_idents2;
     type_scheme =
       Fun_Type (bytes_stream_to_channelI,
                 ret_ty,
@@ -255,12 +255,12 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
                        Some (Cast (param_data_ty None, channelI)));
 
           Commented (Skip, "Handling fixed-length data");
-          Naasty_aux.concat body_contents1;
+          Naasty_aux.concat (List.rev rev_body_contents1);
           Assign (Var write_offsetI,
                   Call_Function (sizeofI, [Var datatype_nameI]));
 
           Commented (Skip, "Handling variable-length data");
-          Naasty_aux.concat body_contents2;
+          Naasty_aux.concat (List.rev rev_body_contents2);
 
           Commented (Skip, "Update offsets");
           Assign (Dereference (Var bytes_readI), Var read_offsetI);
@@ -335,18 +335,18 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
     [param_data_ty (Some dataI);
      Reference_Type (Some channelI, Char_Type None);
      Reference_Type (Some no_bytesI, Size_Type None)] in
-  let body_contents1, more_idents1, next_placeholder =
+  let rev_body_contents1, rev_more_idents1, next_placeholder =
     analyse_type_writebytestochannel_static [dataI] [copyI] ty
       ([Skip],
        [],
        (List.length identifiers + 1) * (-1)) in
-  let body_contents2, more_idents2, _ =
+  let rev_body_contents2, rev_more_idents2, _ =
     analyse_type_writebytestochannel_dynamic [dataI] [copyI] ty
       ([Skip],
        [],
        next_placeholder) in
   { name = write_bytes_to_channelK;
-    identifiers = identifiers @ List.rev more_idents1 @ List.rev more_idents2;
+    identifiers = identifiers @ List.rev rev_more_idents1 @ List.rev rev_more_idents2;
     type_scheme =
       Fun_Type (write_bytes_to_channelI,
                 ret_ty,
@@ -359,12 +359,12 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
           Declaration (param_data_ty (Some copyI),
                        Some (Cast (param_data_ty None, channelI)));
           Commented (Skip, "Handling fixed-length data");
-          Naasty_aux.concat body_contents1;
+          Naasty_aux.concat (List.rev rev_body_contents1);
           Assign (Var offsetI,
                   Plus (Var channelI,
                         Call_Function (sizeofI, [Var datatype_nameI])));
           Commented (Skip, "Handling variable-length data");
-          Naasty_aux.concat body_contents2;
+          Naasty_aux.concat (List.rev rev_body_contents2);
           Assign (Dereference (Var no_bytesI), Var offsetI);
         ] |> Naasty_aux.concat
       in (fun_name_idx, arg_tys, ret_ty, body);

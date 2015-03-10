@@ -98,6 +98,7 @@ type naasty_statement =
   | Return of naasty_expression
   | Skip
   | Commented of naasty_statement * string
+  | St_of_E of naasty_expression
 
 type naasty_function =
   identifier * naasty_type list * naasty_type * naasty_statement

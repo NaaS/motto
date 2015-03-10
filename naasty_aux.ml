@@ -268,6 +268,8 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
   | Commented (stmt, comment) ->
     (*First print the statement, then the comment*)
     string_of_naasty_statement ~st_opt indent stmt ^ " // " ^ comment
+  | St_of_E e ->
+    indn indent ^ string_of_naasty_expression ~st_opt e ^ ";"
   | _ -> failwith "TODO"
 
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent (f_id, arg_types, res_type, body) =
@@ -579,6 +581,9 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
   | Commented (stmt, comment) ->
     let (stmt', st') = instantiate_statement fresh names st stmt
     in (Commented (stmt', comment), st')
+  | St_of_E e ->
+    let (e', st') = instantiate_expression fresh names st e
+    in (St_of_E e', st')
   | _ -> failwith "TODO"
 
 (*Instantiates a naasty_function scheme with a set of names*)

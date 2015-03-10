@@ -21,6 +21,7 @@
 #   value: bytes(bodylen-extraslen-keylen)
 
 type req : record
+   # FIXME anonymous field syntax not yet supported.
    IGNORE_ : string
      { byte_size = 1 }
 

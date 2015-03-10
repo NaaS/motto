@@ -3,7 +3,6 @@
   Nik Sultana, Cambridge University Computer Lab, January 2015
 *)
 
-open Core.Std
 open Lexing
 open Crisp_syntax
 open Crisp_parser
@@ -38,6 +37,7 @@ let loop filename () =
 *)
 
 let lex_looper filename () =
+  let open Core.Std in
   let inx = In_channel.create filename in
   let lexbuf = Lexing.from_channel inx in
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
@@ -160,14 +160,15 @@ let string_of_token = function
 
 let test filepath =
   print_endline ("Testing " ^ filepath);
-  printf "%s\n"
-    ((List.map ~f:string_of_token (lex_looper filepath ()))
-     |> List.fold ~init:"" ~f:(fun s acc -> s ^ ", " ^ acc));
+  Core.Std.printf "%s\n"
+    ((List.map string_of_token (lex_looper filepath ()))
+     |> String.concat ", ");
   loop filepath ()
 ;;
 
 (*Only considers files ending in ".cp"*)
 let test_whole_dir testdir =
+  let open Core.Std in
   let ending = ".cp" in
   let ending_length = String.length ending in
   let dh = Unix.opendir testdir in

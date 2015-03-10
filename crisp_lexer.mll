@@ -98,7 +98,7 @@ rule main = parse
   | ws {main lexbuf}
   | eof {test_indentation Crisp_syntax.min_indentation [EOF] lexbuf}
   | "ipv4_address" {TYPE_IPv4ADDRESS}
-  | (integer as oct1) '.' (integer as oct2) '.'(integer as oct3) '.' (integer as oct4)
+  | (integer as oct1) '.' (integer as oct2) '.' (integer as oct3) '.' (integer as oct4)
       {IPv4 (int_of_string(oct1), int_of_string(oct2), int_of_string(oct3),
              int_of_string(oct4))}
   | integer as num {INTEGER (int_of_string(num))}

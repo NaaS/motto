@@ -18,4 +18,5 @@ type hadoop_wc : record
   value : integer
     { signed = true,
     #endianness = big,
+    hadoop_vint = true,
     byte_size = 8 }

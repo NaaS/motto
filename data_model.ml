@@ -108,11 +108,8 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
     let naas_ty' = Naasty_aux.set_empty_identifier naas_ty in
     let naas_ty_s =
       Naasty_aux.string_of_naasty_type ~st_opt:(Some st) Naasty_aux.no_indent naas_ty' in
-    let is_hadoop_vint =
-      List.exists (fun (k, v) -> k = hadoop_vint_ann_key &&
-                                 v = true_ann_value) ty_ann in
     let name, stmt =
-      if is_hadoop_vint then
+      if is_hadoop_vint ty_ann then
         (the label_opt,
          Increment (lenI,
                     Call_Function

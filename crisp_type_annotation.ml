@@ -19,6 +19,9 @@ type type_annotation = (string * type_annotation_kind) list
 
 let hadoop_vint_ann_key = "hadoop_vint"
 let true_ann_value = Ann_Ident "true"
+let is_hadoop_vint =
+  List.exists (fun (k, v) -> k = hadoop_vint_ann_key &&
+                             v = true_ann_value)
 
 let k_v_string indent (l, e) =
   let e_s = match e with

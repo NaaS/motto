@@ -21,8 +21,7 @@
 #   value: bytes(bodylen-extraslen-keylen)
 
 type req : record
-   # FIXME anonymous field syntax not yet supported.
-   IGNORE_ : string
+   _ : string
      { byte_size = 1 }
 
    opcode : string
@@ -32,7 +31,7 @@ type req : record
      { signed = false,
      byte_size = 2 }
 
-   IGNORE_ : string
+   _ : string
      { byte_size = 20 }
 
    key : string
@@ -41,7 +40,7 @@ type req : record
 
 
 type reply : record
-   IGNORE_ : string
+   _ : string
      { byte_size = 1 }
 
    opcode : string
@@ -60,14 +59,14 @@ type reply : record
 
    # The rest differs from the req type too.
 
-   IGNORE_ : string
+   _ : string
      { byte_size = 3 }
 
    bodylen : integer
      { signed = false,
      byte_size = 8 }
 
-   IGNORE_ : string
+   _ : string
      { byte_size = 12 }
 
    extras : string

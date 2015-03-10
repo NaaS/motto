@@ -391,19 +391,16 @@ let rec analyse_type_bcts_static
         ty in
     let naas_ty' = Naasty_aux.set_empty_identifier naas_ty in
     let name, name_idx = the label_opt, next_placeholder in
-    let naas_ty_s, naas_ty_s_idx =
-      (Naasty_aux.string_of_naasty_type ~st_opt:(Some st) Naasty_aux.no_indent naas_ty',
-       next_placeholder - 1) in
     let item_offset = Plus (Var streamI, Var offsetI) in
     let stmt =
       Increment (offsetI,
         (Call_Function
            (readWriteData_writeVIntI,
-            [(*FIXME need to cast to naast_ty'*)
-              Naasty_aux.nested_fields (name_idx :: target);
+            [Cast (naas_ty',
+                   Naasty_aux.nested_fields (name_idx :: target));
              item_offset]))) in
     let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
-    in (commented_stmt :: stmts, naas_ty_s :: name :: names, next_placeholder - 2)
+    in (commented_stmt :: stmts, name :: names, next_placeholder - 1)
   | _ -> acc
 let rec analyse_type_bcts_dynamic
           (target : identifier list)

@@ -100,6 +100,7 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
     (*FIXME probably we should look at ty_ann*)
     List.fold_right analyse_type_getstreamlen tys acc
   | Integer (label_opt, ty_ann) ->
+    assert (is_hadoop_vint ty_ann);
     let naas_ty, st =
       Translation.naasty_of_flick_type
         initial_state (*FIXME instead of re-translating the type, could pass an
@@ -115,6 +116,8 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
                     Call_Function
                       (readWriteData_encodeVIntSizeI, [Var next_placeholder])))
       else
+        (*FIXME this branch of the code is speculation: i don't know for sure
+                what code to generate for such a case yet.*)
         (naas_ty_s,
          Increment (lenI, Call_Function (sizeofI, [Var next_placeholder]))) in
     let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
@@ -159,6 +162,7 @@ let rec analyse_type_bstc_static
     (*FIXME accumulate target, in case we have nested records*)
     List.fold_right (analyse_type_bstc_static target) tys acc
   | Integer (label_opt, ty_ann) ->
+    assert (is_hadoop_vint ty_ann);
     let name, name_idx = the label_opt, next_placeholder in
     let stmt =
       St_of_E
@@ -272,6 +276,7 @@ let rec analyse_type_writebytestochannel_static
     List.fold_right (analyse_type_writebytestochannel_static source target)
       tys acc
   | Integer (label_opt, ty_ann) ->
+    assert (is_hadoop_vint ty_ann);
     let source' = next_placeholder :: source in
     let target' = next_placeholder :: target in
     let stmt =
@@ -370,6 +375,7 @@ let rec analyse_type_bcts_static
     (*FIXME accumulate target, in case we have nested records*)
     List.fold_right (analyse_type_bcts_static target) tys acc
   | Integer (label_opt, ty_ann) ->
+    assert (is_hadoop_vint ty_ann);
     let naas_ty, st =
       Translation.naasty_of_flick_type
         initial_state (*FIXME instead of re-translating the type, could pass an

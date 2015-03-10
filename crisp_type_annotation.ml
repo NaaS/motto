@@ -30,6 +30,12 @@ type type_annotation_kind =
   | Ann_Str of string
   | Ann_Int of int
   | Ann_Ident of string
+(* NOTE would be useful to support expressions -- this seems to be needed in the
+        memcached example.
+  | Ann_Exp of ... rather than use Crisp_syntax.expression, a separate (more
+                     limited expression grammar should be used; this will also
+                     avoid the circular module dependencies we'd get if we were
+                     to use Crisp_syntax.expression.)*)
 
 type type_annotation = (string * type_annotation_kind) list
 

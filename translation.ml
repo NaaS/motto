@@ -5,6 +5,7 @@
 
 open General
 open Crisp_syntax
+open Crisp_type_annotation
 open Naasty
 open Naasty_aux
 open State

@@ -5,6 +5,7 @@
 *)
 
 open General
+open Crisp_type_annotation
 
 (*NOTE currently we don't allow programmers to have a non-zero program-level
   indentation. Cannot think of a reason why this policy is a bad thing.*)
@@ -22,16 +23,6 @@ type label = string
 type univ_type = string (*FIXME hack*)
 
 type dependency_index = string
-
-(*FIXME must allow the annotation to talk about a value that won't be used in
-        the program -- but that will be represented in the input (and whose
-        value is preserved in the output.)
-        Add dummy names in type specs -- such as in records.*)
-type type_annotation_kind =
-  | Ann_Str of string
-  | Ann_Int of int
-  | Ann_Ident of string
-type type_annotation = (string * type_annotation_kind) list
 
 (*Labels are used to implement labelled variants over disjoint unions.*)
 type type_value =
@@ -64,25 +55,7 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
     | Boolean _
     | Tuple _
     | List _ -> true
-    | _ -> false in
-  let k_v_string indent (l, e) =
-    let e_s = match e with
-    | Ann_Str s -> "\"" ^ s ^ "\""
-    | Ann_Int i -> string_of_int i
-    | Ann_Ident s -> s in
-    indn indent ^ l ^ " = " ^ e_s in
-  let ann_string indent indentation ann =
-    match ann with
-    | [] -> ""
-    | k_v :: xs ->
-      let indent' = indent + indentation in
-      let k_v_string' indent x =
-        ",\n"(*FIXME use endline instead of \n?*) ^
-        k_v_string indent x
-      in
-      "\n"(*FIXME check that this agrees with endline*) ^ indn indent' ^
-      "{" ^ k_v_string 0 k_v ^
-      mk_block(*FIXME instruct mk_block to use endline?*) indent' k_v_string' xs ^ "}"
+    | _ -> false
   in match ty_value with
   | UserDefinedType (label, type_name) ->
       opt_string (indn indent) label " : " ^ "type " ^ type_name ^ endline

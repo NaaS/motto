@@ -185,11 +185,11 @@ base_type:
 
 type_annotation_value:
   | name = IDENTIFIER; EQUALS; str = STRING
-    {(name, Crisp_syntax.Ann_Str str)}
+    {(name, Crisp_type_annotation.Ann_Str str)}
   | name = IDENTIFIER; EQUALS; i = INTEGER
-    {(name, Crisp_syntax.Ann_Int i)}
+    {(name, Crisp_type_annotation.Ann_Int i)}
   | name = IDENTIFIER; EQUALS; value = IDENTIFIER
-    {(name, Crisp_syntax.Ann_Ident value)}
+    {(name, Crisp_type_annotation.Ann_Ident value)}
 
 remainder_of_annotation:
   | COMMA; tav = type_annotation_value; r = remainder_of_annotation
@@ -221,50 +221,50 @@ type_lines:
 single_line_type_def:
   | bt = base_type
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
      bt name ann}
   | TYPE_LIST; LEFT_C_BRACKET; dv = dep_var; RIGHT_C_BRACKET; td = type_def
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
        Crisp_syntax.List (name, td None [](*FIXME what annotation for listed value?*),
                           Some dv, ann)}
   | TYPE_LIST; td = type_def
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
        Crisp_syntax.List (name, td None [](*FIXME what annotation for listed value?*),
                           None, ann)}
   | TYPE (*FIXME use sigil? make implicit?*); type_name = IDENTIFIER
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
        if ann <> [] then failwith "user-defined type shouldn't be annotated"
        else Crisp_syntax.UserDefinedType (name, type_name)}
   | LEFT_S_BRACKET; td = type_def; RIGHT_S_BRACKET
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
        Crisp_syntax.List (name, td None [](*FIXME what annotation for listed value?*),
                           None, ann)}
   | LEFT_S_BRACKET; td = type_def; RIGHT_S_BRACKET; LEFT_C_BRACKET; dv = dep_var; RIGHT_C_BRACKET
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
        Crisp_syntax.List (name, td None [](*FIXME what annotation for listed value?*),
                           Some dv, ann)}
   | TYPE_TUPLE; LEFT_R_BRACKET; tl = singleline_type_list; RIGHT_R_BRACKET
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
        if ann <> [] then failwith "user-defined type shouldn't be annotated"
        else Crisp_syntax.Tuple (name, tl)}
   | LT; tl = singleline_type_list_ast; GT
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
        if ann <> [] then failwith "user-defined type shouldn't be annotated"
        else Crisp_syntax.Tuple (name, tl)}
   | TYPE_DICTIONARY; td = type_def
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
        Crisp_syntax.Dictionary (name, td None ann)}
   | TYPE_REF (*FIXME use sigil*); ty = single_line_type_def
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
        if ann <> [] then failwith "reference types shouldn't be annotated"
        else Crisp_syntax.Reference (name, ty None ann)}
 
@@ -273,17 +273,17 @@ type_def:
     {sltd}
   | TYPE_RECORD; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
      Crisp_syntax.RecordType (name, List.rev tl, ann)}
   | TYPE_VARIANT; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option)
-         (ann : Crisp_syntax.type_annotation) ->
+         (ann : Crisp_type_annotation.type_annotation) ->
      if ann <> [] then failwith "variant type shouldn't be annotated"
      else Crisp_syntax.Disjoint_Union (name, List.rev tl)}
   | TYPE_RECORD; INDENT; ann = type_annotation; NL;
     tl = type_lines
     {fun (name : Crisp_syntax.label option)
-         (ann' : Crisp_syntax.type_annotation) ->
+         (ann' : Crisp_type_annotation.type_annotation) ->
      if ann' <> [] then failwith "record has already been annotated"
      else Crisp_syntax.RecordType (name, List.rev tl, ann)}
 

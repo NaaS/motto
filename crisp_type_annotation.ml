@@ -6,25 +6,25 @@
 open General
 
 
-(*FIXME must allow the annotation to talk about a value that won't be used in
-        the program -- but that will be represented in the input (and whose
-        value is preserved in the output.)
-        By this I mean things like anonymous field names that have type
-        annotations -- being anonymous, we cannot read, use, or change their
-        value in the program, since we have no way of referring to their value.
-        Their value must be preserved however, if, say, we output the (possibly
-        otherwise modified) record to the network.
+(*NOTE we allow the annotation to talk about a value that won't be used in
+       the program -- but that will be represented in the input (and whose
+       value is preserved in the output.)
+       By this I mean things like anonymous field names that have type
+       annotations -- being anonymous, we cannot read, use, or change their
+       value in the program, since we have no way of referring to their value.
+       Their value must be preserved however, if, say, we output the (possibly
+       otherwise modified) record to the network.
 
-        In order to indicate that a field is anonymous -- i.e., its value is not
-        important to the program -- then i should add dummy names in type specs
-        -- such as in records, to support syntax such as:
-            type bla : record
-              a : integer
-                { ... }
-              _ : integer  # Anonymous field.
-                { ... }
-              b : integer
-                { ... }
+       In order to indicate that a field is anonymous -- i.e., its value is not
+       important to the program -- then we use dummy names in type specs
+       -- such as in records, in which case the syntax is:
+           type bla : record
+             a : integer
+               { ... }
+             _ : integer  # Anonymous field.
+               { ... }
+             b : integer
+               { ... }
 *)
 type type_annotation_kind =
   | Ann_Str of string

@@ -22,17 +22,21 @@ type chan_type =
   | Socket (*FIXME encode socket metadata -- address and port?*)
   | Type (*FIXME encode type data*)
 
+(*NOTE a channel's id consists of its offset in input_chans or
+       output_chans*)
+type chan_offset = int
 (*NOTE channels in libNaaS are unidirectional*)
 type chan =
   {
-    (*NOTE a channel's id consists of its offset in input_chans or
-           output_chans*)
     chan_type : chan_type;
+    (*FIXME incomplete?*)
   }
+
+type task_id = int
 
 type task =
   {
-    task_id : int; (*NOTE must be unique*)
+    task_id : task_id; (*NOTE must be unique*)
     task_type : task_type;
     task_class : task_class;
     input_chans : chan list;
@@ -40,4 +44,17 @@ type task =
     process : Crisp_syntax.process;
   }
 
-type task_graph = task list(*FIXME incomplete*)
+(*A connection describes which channel of which task (in a task graph) is
+  connected to which channel of which (other) task.*)
+type connection =
+  { src : task_id * chan_offset;
+    dst : task_id * chan_offset }
+
+(*NOTE to be well-formed, all tasks ids mentioned in connections must be
+       resolvable to tasks, and all chan offsets must be resolvable within their
+       related tasks.*)
+type task_graph =
+  {
+    tasks : task list;
+    connections : connection list;
+  }

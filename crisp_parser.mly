@@ -647,7 +647,9 @@ matcher syntax -- needed for switch syntax
 *)
 process_decl: PROC; name = IDENTIFIER; COLON; pt = process_type; INDENT;
   pb = process_body; UNDENT
-  {Crisp_syntax.Process (name, pt, pb)}
+  {Crisp_syntax.Process {Crisp_syntax.process_name = name;
+                         Crisp_syntax.process_type = pt;
+                         Crisp_syntax.process_body = pb}}
 
 function_decl: FUN; name = IDENTIFIER; COLON; ft = function_type; INDENT;
   e = expression; UNDENT

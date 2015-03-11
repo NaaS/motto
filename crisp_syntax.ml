@@ -485,17 +485,23 @@ let process_body_to_string indent (ProcessBody (st_decls, e, exc_decls)) =
   e_s ^
   (if exc_decls = [] then "" else "\n" ^ exc_decls_s)
 
+type process =
+  { process_name : process_name;
+    process_type : process_type;
+    process_body : process_body;
+  }
+
 (*Top-level declarations. We cannot define types or functions within functions*)
 type toplevel_decl =
   | Type of ty_decl
   | Function of fn_decl
-  | Process of process_name * process_type * process_body
+  | Process of process
   | Include of string
 let toplevel_decl_to_string = function
   | Type ty_decl -> "type " ^ ty_decl_to_string ty_decl
-  | Process (process_name, process_type, process_body) ->
-    "proc " ^ process_name ^ " : " ^ process_type_to_string process_type ^
-     "\n" ^ process_body_to_string indentation process_body
+  | Process process ->
+    "proc " ^ process.process_name ^ " : " ^ process_type_to_string process.process_type ^
+     "\n" ^ process_body_to_string indentation process.process_body
   | Function fn_decl ->
     "fun " ^ fn_decl.fn_name ^ " : " ^ function_type_to_string fn_decl.fn_params ^
      "\n" ^ expression_to_string indentation fn_decl.fn_body

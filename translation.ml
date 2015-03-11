@@ -383,7 +383,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                 (*Add "Return result_idx" to end of function body*)
                   Seq (body', Return (Var result_idx))),
         st5)
-  | Process (process_name, process_type, process_body) ->
+  | Process process ->
     (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
   | Include filename ->
     (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)

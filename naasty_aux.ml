@@ -40,7 +40,7 @@ let idx_of_naasty_type = function
   | Record_Type (ty_ident, _) -> Some ty_ident
   | Unit_Type -> failwith "Unit type cannot have idx"
   | UserDefined_Type (id_opt, _) -> id_opt
-  | Reference_Type (id_opt, _) -> id_opt
+  | Pointer_Type (id_opt, _) -> id_opt
   | Size_Type id_opt -> id_opt
   | Static_Type (id_opt, _) -> id_opt
   | Fun_Type (id, _, _) -> Some id
@@ -71,9 +71,9 @@ let update_empty_identifier (idx : identifier) (ty : naasty_type) =
     if id_opt = None then
       UserDefined_Type (Some idx, ty_ident)
     else failwith "Cannot set an already-set index"
-  | Reference_Type (id_opt, naasty_type) ->
+  | Pointer_Type (id_opt, naasty_type) ->
     if id_opt = None then
-      Reference_Type (Some idx, naasty_type)
+      Pointer_Type (Some idx, naasty_type)
     else failwith "Cannot set an already-set index"
   | Size_Type id_opt ->
     if id_opt = None then
@@ -111,8 +111,8 @@ let set_empty_identifier (ty : naasty_type) : naasty_type =
   | Unit_Type -> ty
   | UserDefined_Type (_, ty_ident) ->
     UserDefined_Type (None, ty_ident)
-  | Reference_Type (_, naasty_type) ->
-    Reference_Type (None, naasty_type)
+  | Pointer_Type (_, naasty_type) ->
+    Pointer_Type (None, naasty_type)
   | Size_Type _ ->
     Size_Type None
   | Static_Type (_, naasty_type) ->
@@ -172,7 +172,7 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
     indn indent ^
     ty_name st_opt ty_ident ^
     bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
-  | Reference_Type (id_opt, naasty_type) ->
+  | Pointer_Type (id_opt, naasty_type) ->
     string_of_naasty_type ~st_opt indent naasty_type ^ " *" ^
     bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
   | Size_Type id_opt ->
@@ -478,17 +478,17 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
     let scheme' = UserDefined_Type (id_opt, ty_ident') in
     substitute_opt fresh names false scheme' st' id_opt (fun id' ->
       UserDefined_Type (Some id', ty_ident'))
-  | Reference_Type (id_opt, naasty_type) ->
+  | Pointer_Type (id_opt, naasty_type) ->
     let naasty_type', st' =
       instantiate_type fresh names st naasty_type in
     if naasty_type' = naasty_type then
       begin
         assert (st = st');
         substitute_opt fresh names false scheme st id_opt (fun id' ->
-        Reference_Type (Some id', naasty_type))
+        Pointer_Type (Some id', naasty_type))
       end
     else
-      Reference_Type (id_opt, naasty_type')
+      Pointer_Type (id_opt, naasty_type')
       |> instantiate_type fresh names st'
   | Size_Type id_opt ->
     substitute_opt fresh names false scheme st id_opt (fun id' ->

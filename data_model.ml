@@ -215,14 +215,14 @@ let rec analyse_type_bstc_dynamic
   | _ -> acc
 let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let param_data_ty identifier =
-    Reference_Type (identifier, UserDefined_Type (None, datatype_nameI)) in
+    Pointer_Type (identifier, UserDefined_Type (None, datatype_nameI)) in
   let ret_ty = Static_Type (None, param_data_ty None) in
   let arg_tys =
-    [Reference_Type (Some streamI, Char_Type None);
-     Reference_Type (Some channelI, Char_Type None);
-     Reference_Type (Some streamendI, Char_Type None);
-     Reference_Type (Some bytes_readI, Size_Type None);
-     Reference_Type (Some bytes_writtenI, Size_Type None)] in
+    [Pointer_Type (Some streamI, Char_Type None);
+     Pointer_Type (Some channelI, Char_Type None);
+     Pointer_Type (Some streamendI, Char_Type None);
+     Pointer_Type (Some bytes_readI, Size_Type None);
+     Pointer_Type (Some bytes_writtenI, Size_Type None)] in
   let body_contents1, rev_more_idents1, next_placeholder =
     analyse_type_bstc_static [dataI] ty
       ([Skip],
@@ -323,11 +323,11 @@ let rec analyse_type_writebytestochannel_dynamic
 let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let ret_ty = Static_Type (None, Unit_Type) in
   let param_data_ty identifier =
-    Reference_Type (identifier, UserDefined_Type (None, datatype_nameI)) in
+    Pointer_Type (identifier, UserDefined_Type (None, datatype_nameI)) in
   let arg_tys =
     [param_data_ty (Some dataI);
-     Reference_Type (Some channelI, Char_Type None);
-     Reference_Type (Some no_bytesI, Size_Type None)] in
+     Pointer_Type (Some channelI, Char_Type None);
+     Pointer_Type (Some no_bytesI, Size_Type None)] in
   let body_contents1, rev_more_idents1, next_placeholder =
     analyse_type_writebytestochannel_static [dataI] [copyI] ty
       ([Skip],
@@ -431,13 +431,13 @@ let rec analyse_type_bcts_dynamic
   | _ -> acc
 let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_value) =
   let param_data_ty identifier =
-    Reference_Type (identifier, UserDefined_Type (None, datatype_nameI)) in
+    Pointer_Type (identifier, UserDefined_Type (None, datatype_nameI)) in
   let ret_ty = Static_Type (None, Unit_Type) in
   let arg_tys =
-    [Reference_Type (Some streamI, Char_Type None);
-     Reference_Type (Some channelI, Char_Type None);
-     Reference_Type (Some bytes_readI, Size_Type None);
-     Reference_Type (Some bytes_writtenI, Size_Type None)] in
+    [Pointer_Type (Some streamI, Char_Type None);
+     Pointer_Type (Some channelI, Char_Type None);
+     Pointer_Type (Some bytes_readI, Size_Type None);
+     Pointer_Type (Some bytes_writtenI, Size_Type None)] in
   let body_contents1, rev_more_idents1, next_placeholder =
     analyse_type_bcts_static [dataI] ty
       ([Skip],

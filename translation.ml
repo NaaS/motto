@@ -137,11 +137,11 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
         (*FIXME it's really important to specify stopping conditions, for the
           deserialiser to work -- plus this could also allow us to implement
           bounds checking. This also applies to "Dependent" below.*)
-        Reference_Type (label_opt', Char_Type None)
+        Pointer_Type (label_opt', Char_Type None)
       | Max _ -> Array_Type (label_opt', Char_Type None, vlen)
       | Dependent _ ->
         (*FIXME as in "Undefined" above, we need stopping conditions.*)
-        Reference_Type (label_opt', Char_Type None) in
+        Pointer_Type (label_opt', Char_Type None) in
     let st'' =
       match label_opt' with
       | None -> st'
@@ -151,7 +151,7 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
   | Reference (label_opt, ty) ->
     let (label_opt', st') = check_and_generate_name label_opt in
     let (ty', st'') = naasty_of_flick_type st' ty in
-    let translated_ty = Reference_Type (label_opt', ty') in
+    let translated_ty = Pointer_Type (label_opt', ty') in
     let st''' =
       match label_opt' with
       | None -> st''

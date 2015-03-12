@@ -52,8 +52,7 @@ type naasty_type =
   | UserDefined_Type of identifier option * type_identifier
     (*No identifier is provided if the UDT appears in the value type within
     a function type*)
-  | Reference_Type of identifier option * naasty_type
-    (*Pointer type*)
+  | Pointer_Type of identifier option * naasty_type
   | Size_Type of identifier option
     (*size_t*)
   | Static_Type of identifier option * naasty_type

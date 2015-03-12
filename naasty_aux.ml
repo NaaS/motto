@@ -44,6 +44,7 @@ let idx_of_naasty_type = function
   | Size_Type id_opt -> id_opt
   | Static_Type (id_opt, _) -> id_opt
   | Fun_Type (id, _, _) -> Some id
+  | Chan_Type (id_opt, _, _, _) -> id_opt
 
 let update_empty_identifier (idx : identifier) (ty : naasty_type) =
   match ty with
@@ -84,6 +85,10 @@ let update_empty_identifier (idx : identifier) (ty : naasty_type) =
     else failwith "Cannot set an already-set index"
   | Fun_Type (_, _, _) ->
     failwith "Cannot update index of this type."
+  | Chan_Type (id_opt, is_array, chan_direction, naasty_type) ->
+    if id_opt = None then
+      Chan_Type (Some idx, is_array, chan_direction, naasty_type)
+    else failwith "Cannot set an already-set index"
 
 (*Erase the identifier associated with a type. This is useful if we simply want
   to print out the type (without its associated identifier), such as if we're
@@ -114,6 +119,8 @@ let set_empty_identifier (ty : naasty_type) : naasty_type =
     Static_Type (None, naasty_type)
   | Fun_Type (_, _, _) ->
     failwith "Cannot update index of this type."
+  | Chan_Type (_, is_array, chan_direction, naasty_type) ->
+    Chan_Type (None, is_array, chan_direction, naasty_type)
 
 let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
   function
@@ -183,6 +190,20 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
     String.concat ", "
       (List.map (string_of_naasty_type ~st_opt no_indent) arg_tys) ^
     ")"
+  | Chan_Type (id_opt, is_array, chan_direction, naasty_type) ->
+    (*NOTE chan_direction and naasty_type are metadata, as far as
+           pretty-printing are concerned, that aren't displayed here.*)
+    indn indent ^
+    begin
+      match is_array with
+      | true ->
+        "std::vector<TaskBuffer *> &" ^
+        bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
+      | false ->
+        "TaskBuffer &"(*FIXME check syntax -- i'm not sure we have singleton
+                         channels in the C++ implementation examples*) ^
+        bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
+    end
 
 let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = function
   | Int_Value i -> string_of_int i
@@ -492,6 +513,18 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
     let arg_tys', st''' =
       fold_map ([], st'') (instantiate_type fresh names) arg_tys in
     (Fun_Type (id', res_ty', arg_tys'), st''')
+  | Chan_Type (id_opt, is_array, chan_direction, naasty_type) ->
+    let naasty_type', st' =
+      instantiate_type fresh names st naasty_type in
+    if naasty_type' = naasty_type then
+      begin
+        assert (st = st');
+        substitute_opt fresh names false scheme st id_opt (fun id' ->
+          Chan_Type (Some id', is_array, chan_direction, naasty_type))
+      end
+    else
+      Chan_Type (id_opt, is_array, chan_direction, naasty_type')
+      |> instantiate_type fresh names st'
 
 (*Instantiates a naasty_statement scheme with a set of names*)
 let rec instantiate_expression (fresh : bool) (names : string list) (st : state)

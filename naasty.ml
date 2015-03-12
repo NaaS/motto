@@ -31,6 +31,10 @@ type vlen =
       referring to a field name.*)
 type type_identifier = int
 
+type chan_direction =
+  | Input
+  | Output
+
 (*FIXME where to store/use metadata for de/serialisers*)
 type naasty_type =
   | Int_Type of identifier option * int_metadata
@@ -56,6 +60,8 @@ type naasty_type =
   | Fun_Type of identifier(*Can't have anonymous functions*) *
                 naasty_type * (*result type*)
                 naasty_type list (*argument types*)
+  | Chan_Type of identifier option * bool(*if this is an array of channels*) *
+                 chan_direction * naasty_type
 
 type naasty_expression =
   | Var of identifier

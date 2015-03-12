@@ -13,6 +13,9 @@ open State
 
 let require_annotations = false
 
+let unidir_chan_receive_suffix = "_receive_"
+let unidir_chan_send_suffix = "_send_"
+
 exception Translation_type of string * type_value
 exception Translation_expr of string * expression
 
@@ -332,6 +335,40 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
   | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string 0 e, e))
 
+(*Split a (possibly bidirectional) Crisp channel into a collection of
+  unidirectional NaaSty channels.*)
+let unidirect_channel (st : state) (Channel (channel_type, channel_name)) : naasty_type list * state =
+  let subchan ty direction suffix is_array st =
+    let ty', st' = naasty_of_flick_type st ty in
+    let _, name_idx, st'' =
+      mk_fresh Term ~ty_opt:(Some ty')
+        (channel_name ^ suffix) 0(*FIXME const*) st'
+    in ([Chan_Type (Some name_idx, is_array, Input, ty')], st'') in
+  match channel_type with
+  | ChannelSingle (receive_ty, send_ty) ->
+    let is_array = false in
+    let rec_ty, st' = match receive_ty with
+      | Empty -> ([], st)
+      | ty ->
+        subchan ty Input unidir_chan_receive_suffix is_array st in
+    let sen_ty, st'' = match send_ty with
+      | Empty -> ([], st')
+      | ty ->
+        subchan ty Output unidir_chan_send_suffix is_array st'
+    in (rec_ty @ sen_ty, st'')
+  | ChannelArray (receive_ty, send_ty, dependency) ->
+    assert (dependency = None); (*NOTE Dependencies aren't supported*)
+    let is_array = true in
+    let rec_ty, st' = match receive_ty with
+      | Empty -> ([], st)
+      | ty ->
+        subchan ty Input unidir_chan_receive_suffix is_array st in
+    let sen_ty, st'' = match send_ty with
+      | Empty -> ([], st')
+      | ty ->
+        subchan ty Output unidir_chan_send_suffix is_array st'
+    in (rec_ty @ sen_ty, st'')
+
 let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   (naasty_declaration * state) =
   match tl with
@@ -345,11 +382,12 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
             function body*)
     let ((chans, arg_tys), res_tys) =
       Crisp_syntax_aux.extract_function_types fn_decl.fn_params in
-    let _ =
-      (*FIXME restriction*)
-      if chans <> [] then failwith "Currently translation of channels isn't supported" in
     let (n_arg_tys, st') =
-      fold_map ([], st) naasty_of_flick_type arg_tys in
+      let standard_types, st' =
+        fold_map ([], st) naasty_of_flick_type arg_tys in
+      let channel_types, st'' =
+        fold_map ([], st') unidirect_channel chans in
+      (List.flatten channel_types @ standard_types, st'') in
     let (n_res_ty, st'') =
       match res_tys with
       | [res_ty] -> naasty_of_flick_type st' res_ty

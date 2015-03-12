@@ -345,7 +345,9 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
             function body*)
     let ((chans, arg_tys), res_tys) =
       Crisp_syntax_aux.extract_function_types fn_decl.fn_params in
-    (*FIXME currently not translating chans*)
+    let _ =
+      (*FIXME restriction*)
+      if chans <> [] then failwith "Currently translation of channels isn't supported" in
     let (n_arg_tys, st') =
       fold_map ([], st) naasty_of_flick_type arg_tys in
     let (n_res_ty, st'') =

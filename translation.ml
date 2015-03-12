@@ -349,8 +349,11 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     let (n_arg_tys, st') =
       fold_map ([], st) naasty_of_flick_type arg_tys in
     let (n_res_ty, st'') =
-      the_single res_tys (*FIXME assuming that a single type is returned*)
-      |> naasty_of_flick_type st' in
+      match res_tys with
+      | [res_ty] -> naasty_of_flick_type st' res_ty
+      | _ ->
+        (*FIXME restriction*)
+        failwith "Currently only functions with single return type are supported." in
     let (_, result_idx, st''') = mk_fresh Term ~ty_opt:(Some n_res_ty) "x_" 0 st'' in
     (*Add type declaration for result_idx, which should be the same as res_ty
       since result_idx will carry the value that's computed in this function.*)

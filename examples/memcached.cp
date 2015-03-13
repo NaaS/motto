@@ -18,7 +18,7 @@ fun update_cache : (cache : ref dictionary <string * string>, response : type mc
   cache[response.key] := response
   response
 
-fun test_cache_or_pass_on : (type mcd_request/type mcd_reply client, [type mcd_request/type mcd_reply] backend; request : type mcd_request) -> ()
+fun test_cache_or_pass_on : (type mcd_request/type mcd_reply client, [type mcd_request/type mcd_reply] backends; request : type mcd_request) -> ()
   if cache[request.key] = None:
     # Work out which backend memcached to forward this request to, and send.
     request => backends[hash(request.key) mod len(backends)]

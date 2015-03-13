@@ -1,11 +1,4 @@
-
-# FIXME update to match proper spec, and include serialisation annotations
-type mcd_request : record
-  key : string
-
-type mcd_reply : record
-  key : string
-  value : string
+include "mc_type.cp"
 
 proc MCD : (type mcd_request/type mcd_reply client, [type mcd_request/type mcd_reply] backends)
   # NOTE (possibly shared) dictionaries are application-level primitives we supply.

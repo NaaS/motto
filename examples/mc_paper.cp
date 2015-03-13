@@ -1,6 +1,6 @@
 # Luo's merge of the memcached data types we had specified in the paper.
 
-type mc_command
+type mc_command : record
    magiccode : string
      { byte_size = 1 }
 

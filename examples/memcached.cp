@@ -2,13 +2,15 @@ include "mc_type.cp"
 
 proc MCD : (type mcd_request/type mcd_reply client, [type mcd_request/type mcd_reply] backends)
   # NOTE (possibly shared) dictionaries are application-level primitives we supply.
-  # FIXME specift what parameters to give? e.g., whether to randomise, and initial allocation.
+  # FIXME specify what parameters to give? e.g., whether to randomise, and initial allocation.
   global cache : dictionary <string * string> := empty_dictionary
 
   # Any time we get something from a backend, cache it and forward it to the
   # client.
   backends => update_cache(cache) => client
 
+  # Any time we get something from a client, see if we have a response in our
+  # cache, and forward the request to a backend if it isn't.
   client => test_cache_or_pass_on(client, backends)
 
 fun update_cache : (cache : ref dictionary <string * string>, response : type mcd_reply) -> (type mcd_reply)

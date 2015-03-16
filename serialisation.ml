@@ -43,13 +43,15 @@ type translated_type =
    - out of memory
 *)
 
-let expand_includes (p : Crisp_syntax.program) =
+let expand_includes (include_directories : string list) (p : Crisp_syntax.program) =
   let rec expand_includes' (p : Crisp_syntax.program) =
     List.fold_right (fun decl acc ->
       match decl with
-      | Include source_file -> (*FIXME probably should search inside some set of
-                                       include directories, given using -I
-                                       parameter to the compiler.*)
+      | Include source_file ->
+        (*FIXME take include_directories into account; currently this info is
+                unused.*)
+        (*FIXME when all the include directories have been exhausted and the
+                file hasn't been found yet, then try the current directory.*)
         let inclusion =
           Crisp_parse.parse source_file
           |> List.rev

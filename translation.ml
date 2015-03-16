@@ -429,7 +429,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   | Process process ->
     (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
   | Include filename ->
-    (*FIXME!*)(Type_Decl (Bool_Type (Some (-1))), st)
+    failwith "'include' statements should have been expanded earlier"
 
 let naasty_of_flick_program ?st:((st : state) = initial_state) (p : program) : (naasty_program * state) =
   fold_map ([], st) naasty_of_flick_toplevel_decl p

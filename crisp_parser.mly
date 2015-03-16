@@ -185,13 +185,17 @@ base_type:
      l5 : integer
 *)
 
+type_annotation_rhs:
+  | str = STRING
+    {Crisp_type_annotation.Ann_Str str}
+  | i = INTEGER
+    {Crisp_type_annotation.Ann_Int i}
+  | value = IDENTIFIER
+    {Crisp_type_annotation.Ann_Ident value}
+
 type_annotation_value:
-  | name = IDENTIFIER; EQUALS; str = STRING
-    {(name, Crisp_type_annotation.Ann_Str str)}
-  | name = IDENTIFIER; EQUALS; i = INTEGER
-    {(name, Crisp_type_annotation.Ann_Int i)}
-  | name = IDENTIFIER; EQUALS; value = IDENTIFIER
-    {(name, Crisp_type_annotation.Ann_Ident value)}
+  | name = IDENTIFIER; EQUALS; rhs = type_annotation_rhs
+    {(name, rhs)}
 
 remainder_of_annotation:
   | COMMA; tav = type_annotation_value; r = remainder_of_annotation

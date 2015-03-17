@@ -61,6 +61,7 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
                    Increment (lenI, Var next_placeholder)) in
             let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
             in (stmts @(*FIXME naive*) [commented_stmt], s :: names, next_placeholder - 1)
+          | Ann_BinaryExp (_, _, _) -> failwith "TODO"
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
@@ -209,6 +210,7 @@ let rec analyse_type_bstc_dynamic
               If1 (GEq (Naasty_aux.nested_fields (length_field_idx :: target), Int_Value 0),
                    Increment (write_offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt1; stmt2], length_field :: name :: names, next_placeholder - 2)
+          | Ann_BinaryExp (_, _, _) -> failwith "TODO"
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
@@ -315,6 +317,7 @@ let rec analyse_type_writebytestochannel_dynamic
               If1 (Gt (Naasty_aux.nested_fields (length_field_idx :: source), Int_Value 0),
                    Increment (offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt], name :: length_field :: names, next_placeholder - 2)
+          | Ann_BinaryExp (_, _, _) -> failwith "TODO"
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
@@ -425,6 +428,7 @@ let rec analyse_type_bcts_dynamic
               If1 (Gt (Naasty_aux.nested_fields (length_field_idx :: target), Int_Value 0),
                    Increment (offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt], length_field :: name :: names, next_placeholder - 2)
+          | Ann_BinaryExp (_, _, _) -> failwith "TODO"
         end
       | _ -> failwith "Too many sizes specified for a string."
     end

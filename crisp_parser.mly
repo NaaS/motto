@@ -192,6 +192,14 @@ type_annotation_rhs:
     {Crisp_type_annotation.Ann_Int i}
   | value = IDENTIFIER
     {Crisp_type_annotation.Ann_Ident value}
+  | LEFT_R_BRACKET; rhs = type_annotation_rhs; RIGHT_R_BRACKET
+    {rhs}
+  | rhs1 = type_annotation_rhs; PLUS; rhs2 = type_annotation_rhs
+    {Crisp_type_annotation.Ann_BinaryExp
+       (Crisp_type_annotation.Plus, rhs1, rhs2)}
+  | rhs1 = type_annotation_rhs; DASH; rhs2 = type_annotation_rhs
+    {Crisp_type_annotation.Ann_BinaryExp
+       (Crisp_type_annotation.Minus, rhs1, rhs2)}
 
 type_annotation_value:
   | name = IDENTIFIER; EQUALS; rhs = type_annotation_rhs

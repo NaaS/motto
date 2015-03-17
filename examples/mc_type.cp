@@ -32,5 +32,4 @@ type mc_command : record
      { byte_size = keylen }
 
    values : string
-     # FIXME arithmetic on field sizes isn't supported yet.
-     { byte_size = "bodylen - extraslen - keylen" }
+     { byte_size = ((bodylen - extraslen) - keylen) }

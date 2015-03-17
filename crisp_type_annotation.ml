@@ -26,16 +26,14 @@ open General
              b : integer
                { ... }
 *)
+type type_annotation_op =
+  | Plus
+  | Minus
 type type_annotation_kind =
   | Ann_Str of string
   | Ann_Int of int
   | Ann_Ident of string
-(* NOTE would be useful to support expressions -- this seems to be needed in the
-        memcached example.
-  | Ann_Exp of ... rather than use Crisp_syntax.expression, a separate (more
-                     limited expression grammar should be used; this will also
-                     avoid the circular module dependencies we'd get if we were
-                     to use Crisp_syntax.expression.)*)
+  | Ann_BinaryExp of type_annotation_op * type_annotation_kind * type_annotation_kind
 
 type type_annotation = (string * type_annotation_kind) list
 
@@ -46,11 +44,16 @@ let is_hadoop_vint =
                              v = true_ann_value)
 
 let k_v_string indent (l, e) =
-  let e_s = match e with
+  let rec e_s e = match e with
   | Ann_Str s -> "\"" ^ s ^ "\""
   | Ann_Int i -> string_of_int i
-  | Ann_Ident s -> s in
-  indn indent ^ l ^ " = " ^ e_s
+  | Ann_Ident s -> s
+  | Ann_BinaryExp (op, e1, e2) ->
+    let op_s = match op with
+      | Plus -> "+"
+      | Minus -> "-"
+    in "(" ^ e_s e1 ^ ")" ^ op_s ^ "(" ^ e_s e2 ^ ")"
+  in indn indent ^ l ^ " = " ^ e_s e
 
 let ann_string indent indentation ann =
   match ann with

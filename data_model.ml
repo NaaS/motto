@@ -92,7 +92,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
           Naasty_aux.concat body_contents;
           Return (Var lenI)
         ] |> Naasty_aux.concat
-      in (fun_name_idx, arg_tys, ret_ty, body);
+      in {id = fun_name_idx; arg_tys = arg_tys; ret_ty = ret_ty; body = body};
   }
 
 let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : type_analysis) : type_analysis =
@@ -151,7 +151,7 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
           Naasty_aux.concat body_contents2;
           Return (Var lenI)
         ] |> Naasty_aux.concat
-      in (fun_name_idx, arg_tys, ret_ty, body);
+      in {id = fun_name_idx; arg_tys = arg_tys; ret_ty = ret_ty; body = body};
   }
 
 let rec analyse_type_bstc_static
@@ -263,7 +263,7 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
           Assign (Dereference (Var bytes_writtenI), Var write_offsetI);
           Return (Var dataI);
         ] |> Naasty_aux.concat
-      in (fun_name_idx, arg_tys, ret_ty, body);
+      in {id = fun_name_idx; arg_tys = arg_tys; ret_ty = ret_ty; body = body};
   }
 
 let rec analyse_type_writebytestochannel_static
@@ -366,7 +366,7 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
 
           Assign (Dereference (Var no_bytesI), Var offsetI);
         ] |> Naasty_aux.concat
-      in (fun_name_idx, arg_tys, ret_ty, body);
+      in {id = fun_name_idx; arg_tys = arg_tys; ret_ty = ret_ty; body = body};
   }
 
 let rec analyse_type_bcts_static
@@ -479,7 +479,7 @@ let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_val
 
           Assign (Dereference (Var bytes_writtenI), Var offsetI);
         ] |> Naasty_aux.concat
-      in (fun_name_idx, arg_tys, ret_ty, body);
+      in {id = fun_name_idx; arg_tys = arg_tys; ret_ty = ret_ty; body = body};
   }
 
 (*Instantiates the data model for a particular serialisable datatype.

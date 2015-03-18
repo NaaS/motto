@@ -105,8 +105,12 @@ type naasty_statement =
   | Commented of naasty_statement * string
   | St_of_E of naasty_expression
 
-type naasty_function =
-  identifier * naasty_type list * naasty_type * naasty_statement
+type naasty_function = {
+  id : identifier;
+  arg_tys : naasty_type list;
+  ret_ty : naasty_type;
+  body : naasty_statement;
+}
 
 type naasty_declaration =
     Type_Decl of naasty_type

@@ -422,9 +422,15 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       else
         failwith ("Function name " ^ fn_decl.fn_name ^ " isn't fresh.")
 
-    in (Fun_Decl (fn_idx, n_arg_tys, n_res_ty,
-                (*Add "Return result_idx" to end of function body*)
-                  Seq (body', Return (Var result_idx))),
+    in (Fun_Decl
+          {
+            id = fn_idx;
+            arg_tys = n_arg_tys;
+            ret_ty = n_res_ty;
+            body =
+              (*Add "Return result_idx" to end of function body*)
+              Seq (body', Return (Var result_idx))
+          },
         st5)
   | Process process ->
     (*A process could be regarded as a unit-returning function that is evaluated

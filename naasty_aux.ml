@@ -294,13 +294,15 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
     indn indent ^ string_of_naasty_expression ~st_opt e ^ ";"
   | _ -> failwith "TODO"
 
-let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent (f_id, arg_types, res_type, body) =
+let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent naasty_function =
   let arg_types_s =
-   List.map (string_of_naasty_type ~st_opt indent) arg_types
+   List.map (string_of_naasty_type ~st_opt indent) naasty_function.arg_tys
    |> String.concat ", " in
-  string_of_naasty_type ~st_opt indent res_type ^ " " ^ id_name st_opt f_id ^ " " ^
+string_of_naasty_type ~st_opt indent naasty_function.ret_ty ^ " " ^
+  id_name st_opt naasty_function.id ^ " " ^
     "(" ^ arg_types_s ^ ") {\n" ^
-    string_of_naasty_statement ~st_opt (indent + default_indentation) body ^ "\n" ^
+    string_of_naasty_statement ~st_opt (indent + default_indentation)
+      naasty_function.body ^ "\n" ^
     "}"
 
 let string_of_naasty_declaration ?st_opt:((st_opt : state option) = None) indent = function
@@ -623,14 +625,13 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
 (*Instantiates a naasty_function scheme with a set of names*)
 let rec instantiate_function (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_function) : naasty_function * state =
-  let (id, arg_tys, ret_ty, stmt) = scheme in
   let id', st' =
-    substitute fresh names false id st id (fun x -> x) in
+    substitute fresh names false scheme.id st scheme.id (fun x -> x) in
   let (arg_tys', st'') =
-    fold_map ([], st') (instantiate_type fresh names) arg_tys in
-  let (ret_ty', st''') = instantiate_type fresh names st'' ret_ty in
-  let (stmt', st4) = instantiate_statement fresh names st''' stmt
-  in ((id', arg_tys', ret_ty', stmt'), st4)
+    fold_map ([], st') (instantiate_type fresh names) scheme.arg_tys in
+  let (ret_ty', st''') = instantiate_type fresh names st'' scheme.ret_ty in
+  let (stmt', st4) = instantiate_statement fresh names st''' scheme.body
+  in ({id = id'; arg_tys = arg_tys'; ret_ty = ret_ty'; body = stmt'}, st4)
 
 (*Takes a record type specification and adds fields to the end, in order.
   This is used to extend a type specification to fit the data model.*)

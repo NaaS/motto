@@ -369,6 +369,26 @@ let unidirect_channel (st : state) (Channel (channel_type, channel_name)) : naas
         subchan ty Output unidir_chan_send_suffix is_array st'
     in (rec_ty @ sen_ty, st'')
 
+(*Turns a Flick function body into a NaaSty one. The content of processes could
+  also be regarded to be function bodies.*)
+let naasty_of_flick_function_body (ctxt : Naasty.identifier list)
+      (waiting : Naasty.identifier list) (init_statmt : naasty_statement)
+      (flick_body : Crisp_syntax.expression) (st''' : state) =
+  let (body, ctxt', waiting', st4) = naasty_of_flick_expr st''' flick_body init_statmt ctxt waiting in
+  (*There shouldn't be any more waiting variables at this point, they should
+    all have been assigned something.*)
+  assert (waiting' = []);
+  let body' =
+    List.fold_right (fun idx stmt ->
+      let ty =
+        match lookup_symbol_type idx Term(*all ctxt symbols are term-level*)
+                st4 with
+        | None -> failwith ("Couldn't resolve type of ctxt idx " ^
+                            string_of_int idx)
+        | Some ty -> ty
+      in mk_seq (Declaration (ty, None)) stmt) ctxt' body in
+  (body', st4)
+
 let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   (naasty_declaration * state) =
   match tl with
@@ -399,39 +419,29 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       since result_idx will carry the value that's computed in this function.*)
     let init_ctxt = [result_idx] in
     let init_assign_acc = [result_idx] in
-    let (init_statmt, ctxt, waiting) = (Skip, init_ctxt, init_assign_acc) in
-    let (body, ctxt', waiting', st4) = naasty_of_flick_expr st''' fn_decl.fn_body init_statmt ctxt waiting in
-
-    (*There shouldn't be any more waiting variables at this point, they should
-      all have been assigned something.*)
-    assert (waiting' = []);
-
-    let body' =
-      List.fold_right (fun idx stmt ->
-        let ty =
-          match lookup_symbol_type idx Term(*all ctxt symbols are term-level*)
-                  st4 with
-          | None -> failwith ("Couldn't resolve type of ctxt idx " ^
-                              string_of_int idx)
-          | Some ty -> ty
-        in mk_seq (Declaration (ty, None)) stmt) ctxt' body in
-
+    let init_statmt = Skip in
+    let body', st4 =
+      naasty_of_flick_function_body init_ctxt init_assign_acc init_statmt
+        fn_decl.fn_body st''' in
     let (fn_idx, st5) =
       if is_fresh fn_decl.fn_name st4 then
-        extend_scope_unsafe Term st4 ~ty_opt:None(*FIXME put function's type here?*) fn_decl.fn_name
+        extend_scope_unsafe Term st4 ~ty_opt:None(*FIXME put function's type here?*)
+                          fn_decl.fn_name
       else
-        failwith ("Function name " ^ fn_decl.fn_name ^ " isn't fresh.")
-
+        failwith ("Function name " ^ fn_decl.fn_name ^ " isn't
+               fresh.")
     in (Fun_Decl
           {
             id = fn_idx;
             arg_tys = n_arg_tys;
             ret_ty = n_res_ty;
             body =
-              (*Add "Return result_idx" to end of function body*)
+              (*Add "Return result_idx" to end of
+unction body*)
               Seq (body', Return (Var result_idx))
           },
         st5)
+
   | Process process ->
     (*A process could be regarded as a unit-returning function that is evaluated
       repeatedly in a loop, until a stopping condition is satisfied. Perhaps the

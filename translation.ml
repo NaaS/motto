@@ -434,7 +434,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
         st5)
   | Process process ->
     (*A process could be regarded as a unit-returning function that is evaluated
-      repeatedly in a loop, until a stopping condition is reached. Perhaps the
+      repeatedly in a loop, until a stopping condition is satisfied. Perhaps the
       most common stopping condition will be "end of file" or "no more data"
       which could show up in the language as something like "the channel was
       terminated unexceptionally by the other party".*)

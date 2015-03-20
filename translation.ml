@@ -421,9 +421,13 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       if n_res_ty = Unit_Type then
         let init_ctxt = [] in
         let init_assign_acc = [] in
-        naasty_of_flick_function_body init_ctxt init_assign_acc init_statmt
-          fn_decl.fn_body st''
-        (*FIXME add a return statement*)
+        let body', st4 =
+          naasty_of_flick_function_body init_ctxt init_assign_acc init_statmt
+            fn_decl.fn_body st'' in
+        let body'' =
+          (*Add "Return" to end of function body*)
+          Seq (body', Return None)
+        in (body'', st4)
       else
         let (_, result_idx, st''') = mk_fresh Term ~ty_opt:(Some n_res_ty) "x_" 0 st'' in
         (*Add type declaration for result_idx, which should be the same as res_ty
@@ -434,9 +438,10 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           naasty_of_flick_function_body init_ctxt init_assign_acc init_statmt
             fn_decl.fn_body st''' in
         let body'' =
-          if n_res_ty = Unit_Type then body' else
-            (*Add "Return result_idx" to end of function body*)
-            Seq (body', Return (Some (Var result_idx))) in
+          assert (n_res_ty <> Unit_Type); (*Unit functions should have been
+                                            handled in a different branch.*)
+          (*Add "Return result_idx" to end of function body*)
+          Seq (body', Return (Some (Var result_idx))) in
         (body'', st4) in
 
     let (fn_idx, st5) =

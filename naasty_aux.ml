@@ -282,8 +282,8 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
   | ReadFromChan of identifier * identifier
 *)
   | Return e_opt ->
-    let f e = "(" ^ string_of_naasty_expression ~st_opt e ^ ")" in
-    indn indent ^ "return " ^  bind_opt f "" e_opt ^ ";"
+    let f e = " " ^ "(" ^ string_of_naasty_expression ~st_opt e ^ ")" in
+    indn indent ^ "return" ^  bind_opt f "" e_opt ^ ";"
   | Skip -> indn indent ^ "/*skip*/"
   | Commented (Skip, comment) ->
     (*Simply print the comment*)

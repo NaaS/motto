@@ -373,8 +373,8 @@ let unidirect_channel (st : state) (Channel (channel_type, channel_name)) : naas
   also be regarded to be function bodies.*)
 let naasty_of_flick_function_body (ctxt : Naasty.identifier list)
       (waiting : Naasty.identifier list) (init_statmt : naasty_statement)
-      (flick_body : Crisp_syntax.expression) (st''' : state) =
-  let (body, ctxt', waiting', st4) = naasty_of_flick_expr st''' flick_body init_statmt ctxt waiting in
+      (flick_body : Crisp_syntax.expression) (st : state) =
+  let (body, ctxt', waiting', st') = naasty_of_flick_expr st flick_body init_statmt ctxt waiting in
   (*There shouldn't be any more waiting variables at this point, they should
     all have been assigned something.*)
   assert (waiting' = []);
@@ -382,12 +382,12 @@ let naasty_of_flick_function_body (ctxt : Naasty.identifier list)
     List.fold_right (fun idx stmt ->
       let ty =
         match lookup_symbol_type idx Term(*all ctxt symbols are term-level*)
-                st4 with
+                st' with
         | None -> failwith ("Couldn't resolve type of ctxt idx " ^
                             string_of_int idx)
         | Some ty -> ty
-      in mk_seq (Declaration (ty, None)) stmt) ctxt' body in
-  (body', st4)
+      in mk_seq (Declaration (ty, None)) stmt) ctxt' body
+  in (body', st')
 
 let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   (naasty_declaration * state) =
@@ -421,9 +421,8 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       if n_res_ty = Unit_Type then
         let init_ctxt = [] in
         let init_assign_acc = [] in
-        let st''' = st''(*FIXME*) in
         naasty_of_flick_function_body init_ctxt init_assign_acc init_statmt
-          fn_decl.fn_body st'''
+          fn_decl.fn_body st''
         (*FIXME add a return statement*)
       else
         let (_, result_idx, st''') = mk_fresh Term ~ty_opt:(Some n_res_ty) "x_" 0 st'' in

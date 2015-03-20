@@ -281,8 +281,9 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
 *)
-  | Return e ->
-    indn indent ^ "return (" ^ string_of_naasty_expression ~st_opt e ^ ")" ^ ";"
+  | Return e_opt ->
+    let f e = "(" ^ string_of_naasty_expression ~st_opt e ^ ")" in
+    indn indent ^ "return " ^  bind_opt f "" e_opt ^ ";"
   | Skip -> indn indent ^ "/*skip*/"
   | Commented (Skip, comment) ->
     (*Simply print the comment*)
@@ -595,9 +596,14 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
     let (lvalue', st') = instantiate_expression fresh names st lvalue in
     let (e', st'') = instantiate_expression fresh names st' e
     in (Assign (lvalue', e'), st'')
-  | Return e ->
-    let (e', st') = instantiate_expression fresh names st e
-    in (Return e', st')
+  | Return e_opt ->
+    let (e_opt', st') =
+      match e_opt with
+      | None -> (e_opt, st)
+      | Some e ->
+        let (e', st') = instantiate_expression fresh names st e
+        in (Some e', st')
+    in (Return e_opt', st')
   | Skip -> (Skip, st)
   | If (e, stmt1, stmt2) ->
     let (e', st') = instantiate_expression fresh names st e in

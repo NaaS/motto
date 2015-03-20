@@ -436,7 +436,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
         let body'' =
           if n_res_ty = Unit_Type then body' else
             (*Add "Return result_idx" to end of function body*)
-            Seq (body', Return (Var result_idx)) in
+            Seq (body', Return (Some (Var result_idx))) in
         (body'', st4) in
 
     let (fn_idx, st5) =

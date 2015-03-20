@@ -90,7 +90,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
           Assign (Var lenI, Call_Function (sizeofI, [Var datatype_nameI]));
           Commented (Skip, "Length of variable-length parts");
           Naasty_aux.concat body_contents;
-          Return (Var lenI)
+          Return (Some (Var lenI))
         ] |> Naasty_aux.concat
       in {id = fun_name_idx; arg_tys = arg_tys; ret_ty = ret_ty; body = body};
   }
@@ -149,7 +149,7 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
           Naasty_aux.concat body_contents1;
           Commented (Skip, "Length of variable-length parts");
           Naasty_aux.concat body_contents2;
-          Return (Var lenI)
+          Return (Some (Var lenI))
         ] |> Naasty_aux.concat
       in {id = fun_name_idx; arg_tys = arg_tys; ret_ty = ret_ty; body = body};
   }
@@ -261,7 +261,7 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
           Commented (Skip, "Update offsets");
           Assign (Dereference (Var bytes_readI), Var read_offsetI);
           Assign (Dereference (Var bytes_writtenI), Var write_offsetI);
-          Return (Var dataI);
+          Return (Some (Var dataI));
         ] |> Naasty_aux.concat
       in {id = fun_name_idx; arg_tys = arg_tys; ret_ty = ret_ty; body = body};
   }

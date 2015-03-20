@@ -100,7 +100,7 @@ type naasty_statement =
   | Continue
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
-  | Return of naasty_expression
+  | Return of naasty_expression option
   | Skip
   | Commented of naasty_statement * string
   | St_of_E of naasty_expression

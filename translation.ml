@@ -410,35 +410,48 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       (List.flatten channel_types @ standard_types, st'') in
     let (n_res_ty, st'') =
       match res_tys with
+      | [] -> (Unit_Type, st')
       | [res_ty] -> naasty_of_flick_type st' res_ty
       | _ ->
         (*FIXME restriction*)
         failwith "Currently only functions with single return type are supported." in
-    let (_, result_idx, st''') = mk_fresh Term ~ty_opt:(Some n_res_ty) "x_" 0 st'' in
-    (*Add type declaration for result_idx, which should be the same as res_ty
-      since result_idx will carry the value that's computed in this function.*)
-    let init_ctxt = [result_idx] in
-    let init_assign_acc = [result_idx] in
+
     let init_statmt = Skip in
-    let body', st4 =
-      naasty_of_flick_function_body init_ctxt init_assign_acc init_statmt
-        fn_decl.fn_body st''' in
+    let body'', st4 =
+      if n_res_ty = Unit_Type then
+        let init_ctxt = [] in
+        let init_assign_acc = [] in
+        let st''' = st''(*FIXME*) in
+        naasty_of_flick_function_body init_ctxt init_assign_acc init_statmt
+          fn_decl.fn_body st'''
+        (*FIXME add a return statement*)
+      else
+        let (_, result_idx, st''') = mk_fresh Term ~ty_opt:(Some n_res_ty) "x_" 0 st'' in
+        (*Add type declaration for result_idx, which should be the same as res_ty
+          since result_idx will carry the value that's computed in this function.*)
+        let init_ctxt = [result_idx] in
+        let init_assign_acc = [result_idx] in
+        let body', st4 =
+          naasty_of_flick_function_body init_ctxt init_assign_acc init_statmt
+            fn_decl.fn_body st''' in
+        let body'' =
+          if n_res_ty = Unit_Type then body' else
+            (*Add "Return result_idx" to end of function body*)
+            Seq (body', Return (Var result_idx)) in
+        (body'', st4) in
+
     let (fn_idx, st5) =
       if is_fresh fn_decl.fn_name st4 then
         extend_scope_unsafe Term st4 ~ty_opt:None(*FIXME put function's type here?*)
                           fn_decl.fn_name
       else
-        failwith ("Function name " ^ fn_decl.fn_name ^ " isn't
-               fresh.")
+        failwith ("Function name " ^ fn_decl.fn_name ^ " isn't fresh.")
     in (Fun_Decl
           {
             id = fn_idx;
             arg_tys = n_arg_tys;
             ret_ty = n_res_ty;
-            body =
-              (*Add "Return result_idx" to end of
-unction body*)
-              Seq (body', Return (Var result_idx))
+            body = body''
           },
         st5)
 

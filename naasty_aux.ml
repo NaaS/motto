@@ -658,10 +658,7 @@ let mk_seq (s1 : naasty_statement) (s2 : naasty_statement) : naasty_statement =
 (*Concats a list of statements into the smallest equivalent sequence of statements*)
 let rec concat (sts : naasty_statement list) : naasty_statement =
   match sts with
-  | [] ->
-    (*We could return Skip here, but for the time being i prefer failing since
-      i don't think we should be getting empty statement lists..*)
-    failwith "Statement concat must be applied to at least one statement."
+  | [] -> Skip
   | [s] -> s
   | [s1; s2] -> mk_seq s1 s2
   | s1 :: s2 :: rest ->

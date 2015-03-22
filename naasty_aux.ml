@@ -315,7 +315,6 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
     string_of_naasty_statement ~st_opt indent stmt ^ " // " ^ comment
   | St_of_E e ->
     indn indent ^ string_of_naasty_expression ~st_opt e ^ ";"
-  | _ -> failwith "TODO"
 
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent naasty_function =
   let arg_types_s =

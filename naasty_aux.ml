@@ -277,10 +277,13 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
   | Increment (id, e) ->
     indn indent ^ id_name st_opt id ^ " += " ^
     string_of_naasty_expression ~st_opt e ^ ";"
-(*
-  | For of (identifier * naasty_expression * naasty_statement) *
-           naasty_statement
-*)
+  | For ((id, condition, increment), body) ->
+    (*FIXME check if the target syntax is correct*)
+    indn indent ^ "for (" ^ id_name st_opt id ^ "; " ^
+    string_of_naasty_expression ~st_opt condition ^ "; " ^
+    string_of_naasty_statement ~st_opt no_indent increment ^ ") {\n" ^
+    string_of_naasty_statement ~st_opt (indent + indentation) body ^
+    "}"
   | If (e, stmt1, stmt2) ->
     indn indent ^ "if (" ^ string_of_naasty_expression ~st_opt e ^ ") {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^

@@ -644,7 +644,27 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
   | St_of_E e ->
     let (e', st') = instantiate_expression fresh names st e
     in (St_of_E e', st')
-  | _ -> failwith "TODO"
+  | Break -> (Break, st)
+  | Continue -> (Continue, st)
+  | WriteToChan (chan_id, var_id) ->
+    let chan_id', st' =
+      substitute fresh names false chan_id st chan_id (fun x -> x) in
+    let var_id', st'' =
+      substitute fresh names false var_id st' var_id (fun x -> x)
+    in (WriteToChan (chan_id', var_id'), st'')
+  | ReadFromChan (chan_id, var_id) ->
+    let chan_id', st' =
+      substitute fresh names false chan_id st chan_id (fun x -> x) in
+    let var_id', st'' =
+      substitute fresh names false var_id st' var_id (fun x -> x)
+    in (ReadFromChan (chan_id', var_id'), st'')
+  | For ((id, condition, increment), body) ->
+    let id', st' =
+      substitute fresh names false id st id (fun x -> x) in
+    let (condition', st'') = instantiate_expression fresh names st' condition in
+    let (increment', st''') = instantiate_statement fresh names st'' increment in
+    let (body', st4) = instantiate_statement fresh names st''' body
+    in (For ((id', condition', increment'), body'), st4)
 
 (*Instantiates a naasty_function scheme with a set of names*)
 let rec instantiate_function (fresh : bool) (names : string list) (st : state)

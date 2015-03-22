@@ -71,8 +71,7 @@ type naasty_expression =
   | Not of naasty_expression
   | Plus of naasty_expression * naasty_expression
   | Equals of naasty_expression * naasty_expression
-  | GreaterThan of naasty_expression * naasty_expression
-  | LessThan of naasty_expression * naasty_expression
+  | Lt of naasty_expression * naasty_expression
   | Minus of naasty_expression * naasty_expression
   | Times of naasty_expression * naasty_expression
   | Mod of naasty_expression * naasty_expression

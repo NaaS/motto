@@ -281,9 +281,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | Equals (_, _) ->
         Naasty.Equals (Var e1_result_idx, Var e2_result_idx)
       | GreaterThan (_, _) ->
-        Naasty.GreaterThan (Var e1_result_idx, Var e2_result_idx)
+        Naasty.Gt (Var e1_result_idx, Var e2_result_idx)
       | LessThan (_, _) ->
-        Naasty.LessThan (Var e1_result_idx, Var e2_result_idx)
+        Naasty.Lt (Var e1_result_idx, Var e2_result_idx)
       | Minus (_, _) ->
         Naasty.Minus (Var e1_result_idx, Var e2_result_idx)
       | Times (_, _) ->

@@ -249,7 +249,7 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | Equals (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") = (" ^
     string_of_naasty_expression ~st_opt e2
-  | LessThan (e1, e2) ->
+  | Lt (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") < (" ^
     string_of_naasty_expression ~st_opt e2
   | Minus (e1, e2) ->
@@ -571,8 +571,7 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
   | Or (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Or (e1', e2'))
   | Plus (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Plus (e1', e2'))
   | Equals (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Equals (e1', e2'))
-  | GreaterThan (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> GreaterThan (e1', e2'))
-  | LessThan (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> LessThan (e1', e2'))
+  | Lt (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Lt (e1', e2'))
   | Minus (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Minus (e1', e2'))
   | Times (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Times (e1', e2'))
   | Mod (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Mod (e1', e2'))

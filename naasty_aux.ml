@@ -238,7 +238,26 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
     "(" ^ string_of_naasty_expression ~st_opt field ^ ")"
   | Address_of e ->
     "&(" ^ string_of_naasty_expression ~st_opt e ^ ")"
-  | _ -> failwith "TODO"
+  | And (e1, e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") && (" ^
+    string_of_naasty_expression ~st_opt e2
+  | Or (e1, e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") || (" ^
+    string_of_naasty_expression ~st_opt e2
+  | Not e ->
+    "!(" ^ string_of_naasty_expression ~st_opt e ^ ")"
+  | Equals (e1, e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") = (" ^
+    string_of_naasty_expression ~st_opt e2
+  | LessThan (e1, e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") < (" ^
+    string_of_naasty_expression ~st_opt e2
+  | Minus (e1, e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") - (" ^
+    string_of_naasty_expression ~st_opt e2
+  | Times (e1, e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") * (" ^
+    string_of_naasty_expression ~st_opt e2
 
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) indent = function
   | Declaration (ty, e_opt) ->

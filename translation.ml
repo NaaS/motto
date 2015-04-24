@@ -302,8 +302,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     assert (assign_acc' = []);
     assert (assign_acc'' = []);
     (mk_seq sts_acc'' nstmt, ctxt_acc'', [], st4)
-  | Not e
-  | Abs e ->
+  | Not e'
+  | Abs e' ->
     let ty =
       match e with
       | Not _ ->
@@ -317,7 +317,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | _ -> failwith "Impossible" in
     let (_, e_result_idx, st') = mk_fresh Term ~ty_opt:(Some ty) "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
-      naasty_of_flick_expr st' e sts_acc (e_result_idx :: ctxt_acc)
+      naasty_of_flick_expr st' e' sts_acc (e_result_idx :: ctxt_acc)
         [e_result_idx] in
     let translated =
       match e with

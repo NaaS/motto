@@ -11,9 +11,7 @@ type http_request: record
       { size = 5,
       begin_at = "^\wContent-length\w:\w"}
   payload : string
-             # FIXME probably best if i didn't use string for this -- treat as
-             #       an identifier.
-    { size = "http_request.header.content_len" }
+    { size = content_len }
 
 # FIXME currently this isn't very nice
 type http_reply: record

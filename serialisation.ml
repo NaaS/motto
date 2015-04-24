@@ -158,7 +158,7 @@ let translate_function_compilation_unit (st : state)
          Naasty_project.inclusions =
            [(*FIXME*)];
          Naasty_project.content = translated
-        },
+        }, (*FIXME generate header file together with this .cpp*)
         st''))
     functions_unit.Crisp_project.content
 

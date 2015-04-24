@@ -6,7 +6,8 @@ type channel_metadata : record
     TCP : record
       src_port : integer
       dst_port : integer
-    UDP : record
-      src_port : integer
-      dst_port : integer
+# NOTE currently we're ignoring UDP
+#    UDP : record
+#      src_port : integer
+#      dst_port : integer
 

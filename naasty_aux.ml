@@ -259,6 +259,9 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | Times (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") * (" ^
     string_of_naasty_expression ~st_opt e2
+  | LEq (e1, e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") <= (" ^
+    string_of_naasty_expression ~st_opt e2 ^ ")"
 
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
           ?print_semicolon:(print_semicolon : bool = true) indent statement =

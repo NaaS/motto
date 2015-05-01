@@ -440,8 +440,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let local_name_map'' =
       extend_local_names local_name_map' label idx st''' in
 
-    (*FIXME use this instead: let condition = LEq (Var from_idx, Var to_idx)*)
-    let condition = Not (Gt (Var from_idx, Var to_idx)) in
+    let condition = LEq (Var from_idx, Var to_idx) in
     let increment = Increment (idx, Int_Value 1) in
 
     (*The tail statement is added to the body, it's the last statement executed

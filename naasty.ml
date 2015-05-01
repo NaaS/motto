@@ -84,6 +84,7 @@ type naasty_expression =
   | Dereference of naasty_expression
   | RecordProjection of naasty_expression * naasty_expression
   | Address_of of naasty_expression
+  | LEq of naasty_expression * naasty_expression
 
 type naasty_statement =
     (*Should include function prototypes here?*)

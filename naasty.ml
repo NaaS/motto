@@ -91,7 +91,7 @@ type naasty_statement =
   | Seq of naasty_statement * naasty_statement
   | Assign of naasty_expression * naasty_expression
   | Increment of identifier * naasty_expression
-  | For of (identifier * naasty_expression * naasty_statement) *
+  | For of (naasty_type * naasty_expression * naasty_statement) *
            naasty_statement
   | If of naasty_expression * naasty_statement * naasty_statement
   | If1 of naasty_expression * naasty_statement

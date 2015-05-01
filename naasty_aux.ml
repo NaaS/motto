@@ -26,6 +26,7 @@ let resolve_idx (scope : scope) (prefix : string) (st_opt : state option) (i : i
                           scope_to_str scope ^ " scope")
       | Some name -> name
     end
+let no_prefix = ""
 let ty_prefix = "ty_"
 let ty_name = resolve_idx Type ty_prefix
 let id_prefix = "id_"
@@ -259,7 +260,11 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") * (" ^
     string_of_naasty_expression ~st_opt e2
 
-let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) indent = function
+let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
+          ?print_semicolon:(print_semicolon : bool = true) indent statement =
+  let terminal =
+    if print_semicolon then ";" else "" in
+  match statement with
   | Declaration (ty, e_opt) ->
     (*NOTE assuming that types can only be defined globally,
            but they can be used in local variable declarations.*)
@@ -267,23 +272,24 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
       match e_opt with
       | None -> ""
       | Some e -> " = " ^ string_of_naasty_expression ~st_opt e
-    in string_of_naasty_type ~st_opt indent ty ^ definition ^ ";"
+    in string_of_naasty_type ~st_opt indent ty ^ definition ^ terminal
   | Seq (stmt1, stmt2) ->
     string_of_naasty_statement ~st_opt indent stmt1 ^ "\n" ^
     string_of_naasty_statement ~st_opt indent stmt2
   | Assign (lvalue, e) ->
     indn indent ^ string_of_naasty_expression ~st_opt lvalue ^ " = " ^
-    string_of_naasty_expression ~st_opt e ^ ";"
+    string_of_naasty_expression ~st_opt e ^ terminal
   | Increment (id, e) ->
     indn indent ^ id_name st_opt id ^ " += " ^
-    string_of_naasty_expression ~st_opt e ^ ";"
+    string_of_naasty_expression ~st_opt e ^ terminal
   | For ((id, condition, increment), body) ->
     (*FIXME check if the target syntax is correct*)
-    indn indent ^ "for (" ^ id_name st_opt id ^ "; " ^
+    indn indent ^ "for (" ^
+    string_of_naasty_type ~st_opt no_indent id ^ "; " ^
     string_of_naasty_expression ~st_opt condition ^ "; " ^
-    string_of_naasty_statement ~st_opt no_indent increment ^ ") {\n" ^
+    string_of_naasty_statement ~st_opt no_indent ~print_semicolon:false increment ^ ") {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) body ^
-    "}"
+    "\n" ^ indn indent ^ "}"
   | If (e, stmt1, stmt2) ->
     indn indent ^ "if (" ^ string_of_naasty_expression ~st_opt e ^ ") {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
@@ -297,15 +303,15 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
     string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
     "\n" ^
     indn indent ^ "}"
-  | Break -> indn indent ^ "break;"
-  | Continue -> indn indent ^ "continue;"
+  | Break -> indn indent ^ "break" ^ terminal
+  | Continue -> indn indent ^ "continue" ^ terminal
 (*
   | WriteToChan of identifier * identifier
   | ReadFromChan of identifier * identifier
 *)
   | Return e_opt ->
     let f e = " " ^ "(" ^ string_of_naasty_expression ~st_opt e ^ ")" in
-    indn indent ^ "return" ^  bind_opt f "" e_opt ^ ";"
+    indn indent ^ "return" ^  bind_opt f "" e_opt ^ terminal
   | Skip -> indn indent ^ "/*skip*/"
   | Commented (Skip, comment) ->
     (*Simply print the comment*)
@@ -314,7 +320,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None) inde
     (*First print the statement, then the comment*)
     string_of_naasty_statement ~st_opt indent stmt ^ " // " ^ comment
   | St_of_E e ->
-    indn indent ^ string_of_naasty_expression ~st_opt e ^ ";"
+    indn indent ^ string_of_naasty_expression ~st_opt e ^ terminal
 
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent naasty_function =
   let arg_types_s =
@@ -661,8 +667,7 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
       substitute fresh names false var_id st' var_id (fun x -> x)
     in (ReadFromChan (chan_id', var_id'), st'')
   | For ((id, condition, increment), body) ->
-    let id', st' =
-      substitute fresh names false id st id (fun x -> x) in
+    let id', st' = instantiate_type fresh names st id in
     let (condition', st'') = instantiate_expression fresh names st' condition in
     let (increment', st''') = instantiate_statement fresh names st'' increment in
     let (body', st4) = instantiate_statement fresh names st''' body

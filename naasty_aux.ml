@@ -241,24 +241,24 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
     "&(" ^ string_of_naasty_expression ~st_opt e ^ ")"
   | And (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") && (" ^
-    string_of_naasty_expression ~st_opt e2
+    string_of_naasty_expression ~st_opt e2 ^ ")"
   | Or (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") || (" ^
-    string_of_naasty_expression ~st_opt e2
+    string_of_naasty_expression ~st_opt e2 ^ ")"
   | Not e ->
     "!(" ^ string_of_naasty_expression ~st_opt e ^ ")"
   | Equals (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") = (" ^
-    string_of_naasty_expression ~st_opt e2
+    string_of_naasty_expression ~st_opt e2 ^ ")"
   | Lt (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") < (" ^
-    string_of_naasty_expression ~st_opt e2
+    string_of_naasty_expression ~st_opt e2 ^ ")"
   | Minus (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") - (" ^
-    string_of_naasty_expression ~st_opt e2
+    string_of_naasty_expression ~st_opt e2 ^ ")"
   | Times (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") * (" ^
-    string_of_naasty_expression ~st_opt e2
+    string_of_naasty_expression ~st_opt e2 ^ ")"
   | LEq (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") <= (" ^
     string_of_naasty_expression ~st_opt e2 ^ ")"

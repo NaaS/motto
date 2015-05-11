@@ -586,6 +586,41 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           Seq (body', Return (Some (Var result_idx))) in
         (body'', st4) in
 
+    let arg_idxs = List.map (fun x ->
+      idx_of_naasty_type x
+      |> the) n_arg_tys in
+    (*Mention the parameters in the initial table*)
+    let init_table = List.map (fun idx ->
+      {
+        id = idx;
+        parameter = true;
+        update_count = 0;
+        ref_count = 0;
+        initialisation = None;
+        assignment = None;
+      }) arg_idxs in
+
+    (*FIXME check cfg if we should apply this pass*)
+    let table =
+      inliner_analysis st4 body'' [] init_table
+      |> count_var_references_in_naasty_stmt st4 body''
+      |> variables_to_be_inlined
+      |> List.sort inliner_table_entry_order in
+    let _ =
+      List.iter (fun entry ->
+        inliner_table_entry_to_string ~st_opt:(Some st4) entry
+        |> print_endline) table in
+
+    let subst =
+      inliner_to_subst table
+      |> (fun subst ->
+            subst_to_string ~st_opt:(Some st4) subst
+            |> (fun s -> print_endline ("Pre-substitution: " ^ s)); List.rev subst)
+      |> inline_substvars_in_subst []
+      |> (fun subst ->
+            subst_to_string ~st_opt:(Some st4) subst
+            |> (fun s -> print_endline ("Substitution: " ^ s)); subst) in
+
     let (fn_idx, st5) =
       if is_fresh fn_decl.fn_name st4 then
         extend_scope_unsafe Term st4 ~ty_opt:None(*FIXME put function's type here?*)
@@ -597,7 +632,13 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
             id = fn_idx;
             arg_tys = n_arg_tys;
             ret_ty = n_res_ty;
-            body = body''
+            body =
+              body''
+              (*If all variables mentioned in an assignment/declaration are to be deleted,
+                then delete the assignment/declaration*)
+              |> erase_inlined subst
+              (*Do the inlining*)
+              |> subst_stmt subst
           },
         st5)
 

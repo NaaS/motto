@@ -62,7 +62,7 @@ match !cfg.source_file, !cfg.output_directory with
   |> Serialisation.expand_includes !cfg.include_directories
   |> Serialisation.split_declaration_kinds
   |> Serialisation.translate_serialise_stringify State.initial_state
-  |> General.write_files
+  |> General.write_files output_directory
 | _ ->
   begin
     failwith "Output directory and input file need to be specified";

@@ -3,28 +3,13 @@
    Nik Sultana, Cambridge University Computer Lab, February 2015
 *)
 
-type configuration =
-  { source_file : string option;
-    output_directory : string option;
-    max_task_cost : int option;
-    cost_function_file : string option;
-    (*Include directories are ordered by priority in which they are searched;
-      this is in the reverse order they are provided on the command line.
-      i.e., -I searched_dir_2 -I searched_dir_1*)
-    include_directories : string list;
-  }
+open Config
+
 type arg_params =
   | OutputDir
   | IncludeDir
 ;;
 
-let cfg : configuration ref = ref {
-  source_file = None;
-  output_directory = None;
-  max_task_cost = None;
-  cost_function_file = None;
-  include_directories = [];
-} in
 let next_arg : arg_params option ref = ref None in
 let arg_idx = ref 1 in
 
@@ -33,6 +18,8 @@ while !arg_idx < Array.length Sys.argv do
     match Sys.argv.(idx) with
     | "--max_task_cost" -> failwith "Unsupported feature" (*TODO*)
     | "--cost_function_file" -> failwith "Unsupported feature" (*TODO*)
+    | "--disable_inlining" ->
+      cfg := { !cfg with disable_inlining = true }
     | "-o" ->
       if !next_arg <> None then
         failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
@@ -44,7 +31,10 @@ while !arg_idx < Array.length Sys.argv do
     | s ->
       match !next_arg with
       | None ->
-        cfg := { !cfg with source_file = Some s }
+        if (!cfg).source_file <> None then
+          failwith "Parameters seem incorrect"
+        else
+          cfg := { !cfg with source_file = Some s }
       | Some OutputDir ->
         cfg := { !cfg with output_directory = Some s };
         next_arg := None
@@ -61,6 +51,9 @@ match !cfg.source_file, !cfg.output_directory with
   Crisp_parse.parse source_file
   |> Serialisation.expand_includes !cfg.include_directories
   |> Serialisation.split_declaration_kinds
+  (*FIXME "Serialisation" doesn't seem like most sensible module in which to
+           keep this code.*)
+  (*FIXME Functorise to take backend-specific code as parameter*)
   |> Serialisation.translate_serialise_stringify State.initial_state
   |> General.write_files output_directory
 | _ ->

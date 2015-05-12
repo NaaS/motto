@@ -248,7 +248,7 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | Not e ->
     "!(" ^ string_of_naasty_expression ~st_opt e ^ ")"
   | Equals (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") = (" ^
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") == (" ^
     string_of_naasty_expression ~st_opt e2 ^ ")"
   | Lt (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") < (" ^

@@ -466,3 +466,23 @@ let rec erase_inlined (subst : substitution) (stmt : naasty_statement) : naasty_
     let stmt'' = erase_inlined subst stmt' in
     If1 (cond, stmt'')
   | _ -> stmt
+
+let mk_subst st init_table body =
+  let table =
+    inliner_analysis st body [] init_table
+    |> count_var_references_in_naasty_stmt st body
+    |> variables_to_be_inlined
+    |> List.sort inliner_table_entry_order in
+  let _ =
+    List.iter (fun entry ->
+      inliner_table_entry_to_string ~st_opt:(Some st) entry
+      |> print_endline) table
+in
+  inliner_to_subst table
+  |> (fun subst ->
+        subst_to_string ~st_opt:(Some st) subst
+        |> (fun s -> print_endline ("Pre-substitution: " ^ s)); List.rev subst)
+  |> inline_substvars_in_subst []
+  |> (fun subst ->
+        subst_to_string ~st_opt:(Some st) subst
+        |> (fun s -> print_endline ("Substitution: " ^ s)); subst)

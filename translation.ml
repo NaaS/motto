@@ -606,7 +606,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                 (*Initialise table for the inliner.
                   Mention the parameters in the initial table*)
                 let init_table = Inliner.init_table arg_idxs in
-                let subst = Inliner.mk_subst st4 init_table body'' in
+                let subst = Inliner.mk_subst st5 init_table body'' in
 
                 (*If all variables mentioned in an assignment/declaration are to be deleted,
                   then delete the assignment/declaration*)

@@ -3,9 +3,11 @@
    Nik Sultana, Cambridge University Computer Lab, May 2015
 *)
 
+type output_location = Stdout | Directory of string;;
+
 type configuration =
   { source_file : string option;
-    output_directory : string option;
+    output_location : output_location;
     max_task_cost : int option;
     cost_function_file : string option;
     (*Include directories are ordered by priority in which they are searched;
@@ -17,7 +19,7 @@ type configuration =
 
 let cfg : configuration ref = ref {
   source_file = None;
-  output_directory = None;
+  output_location = Stdout;
   max_task_cost = None;
   cost_function_file = None;
   include_directories = [];

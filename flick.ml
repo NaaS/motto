@@ -36,7 +36,7 @@ while !arg_idx < Array.length Sys.argv do
         else
           cfg := { !cfg with source_file = Some s }
       | Some OutputDir ->
-        cfg := { !cfg with output_directory = Some s };
+        cfg := { !cfg with output_location = Directory s };
         next_arg := None
       | Some IncludeDir ->
         cfg := { !cfg with include_directories = s :: !cfg.include_directories};
@@ -46,8 +46,8 @@ while !arg_idx < Array.length Sys.argv do
   arg_idx := !arg_idx + 1
 done;
 
-match !cfg.source_file, !cfg.output_directory with
-| Some source_file, Some output_directory ->
+match !cfg.source_file with
+| Some source_file ->
   Crisp_parse.parse source_file
   |> Serialisation.expand_includes !cfg.include_directories
   |> Serialisation.split_declaration_kinds
@@ -55,7 +55,7 @@ match !cfg.source_file, !cfg.output_directory with
            keep this code.*)
   (*FIXME Functorise to take backend-specific code as parameter*)
   |> Serialisation.translate_serialise_stringify State.initial_state
-  |> General.write_files output_directory
+  |> Output.write_files !cfg.output_location
 | _ ->
   begin
     failwith "Output directory and input file need to be specified";

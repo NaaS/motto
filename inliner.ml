@@ -1,6 +1,9 @@
 (*
    Analysis and implementation of an inliner transformation on NaaSty code.
    Nik Sultana, Cambridge University Computer Lab, May 2015
+
+   NOTE some definitions in this module, such as free_vars, are general enough
+   to be moved to Naasty_aux.
 *)
 
 open General
@@ -313,7 +316,7 @@ let rec free_vars (expr : naasty_expression) (acc : Identifier_Set.t) : Identifi
   | Bool_Value _ -> acc
 
   | Cast
-      (_ (*we don't couny any identifiers used in types*),
+      (_ (*we don't count any identifiers used in types*),
        e) ->
     free_vars e acc
 

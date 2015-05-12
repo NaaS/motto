@@ -598,23 +598,21 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
             arg_tys = n_arg_tys;
             ret_ty = n_res_ty;
             body =
-              let f x =
-                if !Config.cfg.Config.disable_inlining then x
-                else
-                  let arg_idxs = List.map (fun x ->
-                    idx_of_naasty_type x
-                    |> the) n_arg_tys in
-                  (*Initialise table for the inliner.
-                    Mention the parameters in the initial table*)
-                  let init_table = Inliner.init_table arg_idxs in
-                  let subst = Inliner.mk_subst st4 init_table body'' in
+              if !Config.cfg.Config.disable_inlining then body''
+              else
+                let arg_idxs = List.map (fun x ->
+                  idx_of_naasty_type x
+                  |> the) n_arg_tys in
+                (*Initialise table for the inliner.
+                  Mention the parameters in the initial table*)
+                let init_table = Inliner.init_table arg_idxs in
+                let subst = Inliner.mk_subst st4 init_table body'' in
 
-                  (*If all variables mentioned in an assignment/declaration are to be deleted,
-                    then delete the assignment/declaration*)
-                  Inliner.erase_inlined subst x
-                  (*Do the inlining*)
-                  |> Inliner.subst_stmt subst
-              in f body''
+                (*If all variables mentioned in an assignment/declaration are to be deleted,
+                  then delete the assignment/declaration*)
+                Inliner.erase_inlined subst body''
+                (*Do the inlining*)
+                |> Inliner.subst_stmt subst
           },
         st5)
 

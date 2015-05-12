@@ -20,11 +20,14 @@ let write_files (ol : output_location) (file_contents : (string * string) list) 
         | _ when Sys.file_exists dir ->
           begin
             print_string ("directory " ^ dir ^ " already exists, overwrite files in it [Y/n]?");
-            match (*input_line stdin*) read_line () with
+            match read_line () with
               "Y" | "y" | "" -> Directory dir
             | _ -> Stdout
           end
-        | _ -> print_endline "Creating output directory" ; Unix.mkdir dir 0o777 ; Directory dir
+        | _ ->
+          print_endline "Creating output directory";
+          Unix.mkdir dir 0o777;
+          Directory dir
       end
   in
   List.fold_right (fun (filename, contents) _ ->

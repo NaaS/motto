@@ -471,6 +471,24 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       For ((idx_ty, condition, increment), mk_seq body tail_statement) in
     (Naasty_aux.concat [sts_acc''; for_stmt; nstmt], ctxt_acc''', [], st4)
 
+  | Crisp_syntax.ITE (be, e1, e2_opt) -> 
+     (*FIXME: if are expressions, so they should assume the value of either the then or the else branch, so 
+      we should allocate a variable for that and assign the expression of one of the two to that variable *)
+    let (_, cond_result_idx, st_before_cond) = mk_fresh Term ~ty_opt:(Some (Bool_Type None) (*Fixme: not sure about the None *)) "ifcond_" 0 st in
+    let (sts_acc_cond, ctxt_acc_cond, assign_acc_cond, st_cond) =
+      naasty_of_flick_expr st_before_cond be local_name_map sts_acc (cond_result_idx :: ctxt_acc) [cond_result_idx] in
+    assert (assign_acc_cond = []); (* should this be empty? not sure *)
+    let (_, if_result_idx, st_before_then) = mk_fresh Term ~ty_opt:(Some (Int_Type (None, default_int_metadata))) (*Fixme: not sure about type *) "ifresult_" 0 st_cond in
+    let (then_block, ctxt_acc_then, assign_acc_then, st_then) = 
+      naasty_of_flick_expr st_before_then e1 local_name_map Skip (if_result_idx :: ctxt_acc_cond) [if_result_idx] in
+    let (else_block, ctxt_acc_else, assign_acc_else, st_else) = 
+      naasty_of_flick_expr st_then (the e2_opt) local_name_map Skip ctxt_acc_then [if_result_idx] in
+    let translated = 
+      Naasty.If ( Var cond_result_idx, then_block, else_block) in
+    let nstmt =
+      lift_assign assign_acc (Var if_result_idx) in
+    (Naasty_aux.concat (List.concat [[sts_acc_cond; translated]; nstmt]), ctxt_acc_else, assign_acc_else, st_else);
+      
   | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string 0 e, e))
 
 (*Split a (possibly bidirectional) Crisp channel into a collection of

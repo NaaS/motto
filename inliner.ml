@@ -104,6 +104,10 @@ let rec count_var_references_in_naasty_stmt (st : state)
     count_var_references_in_naasty_expr st expr table
     |> count_var_references_in_naasty_stmt st stmt
     |> count_var_references_in_naasty_stmt st body
+  | If (be, e1, e2) ->
+    count_var_references_in_naasty_expr st be table
+    |> count_var_references_in_naasty_stmt st e1
+    |> count_var_references_in_naasty_stmt st e2
   | Return expr_opt ->
     begin
       match expr_opt with

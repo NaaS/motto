@@ -24,6 +24,17 @@ type inliner_table_entry =
     assignment : naasty_expression option;
   }
 
+(*Initialise the inliner table, and mention the parameters in the initial table*)
+let init_table = List.map (fun idx ->
+  {
+    id = idx;
+    parameter = true;
+    update_count = 0;
+    ref_count = 0;
+    initialisation = None;
+    assignment = None;
+  })
+
 let rec count_var_references_in_naasty_expr (st : state)
   (expr : naasty_expression) (table : inliner_table_entry list) : inliner_table_entry list =
   match expr with

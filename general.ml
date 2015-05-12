@@ -59,26 +59,3 @@ let the x_opt =
 let concat_pair (l : ('a list * 'b list) list) : 'a list * 'b list =
   List.fold_right (fun (item : 'a list * 'b list) (acc : 'a list * 'b list) ->
     (fst item @ fst acc, snd item @ snd acc)) l ([], [])
-
-(*FIXME this currently simply prints files out; doesn't write them to the file
-  system*)
-
-type output_location = Stdout | Directory of string;;
-
-let write_files dir (file_contents : (string * string) list) : unit =
-  let output = 
-    match dir with
-      _ when Sys.file_exists dir && not (Sys.is_directory dir) -> print_endline (dir ^ " already exists, and is not a directory, printing to stdout") ; Stdout
-    | _ when Sys.file_exists dir -> print_string ("directory " ^ dir ^ " already exists, overwrite files in it [Y/n]?");
-                                    ( match (*input_line stdin*) read_line () with "Y"|"y"|"" -> Directory dir | _ -> Stdout )
-    | _ -> print_endline "Creating output directory" ; Unix.mkdir dir 0o777 ; Directory dir;
-  in
-  List.fold_right (
-      fun (filename, contents) _ -> match output with Stdout -> print_endline ("<<Starting " ^ filename);
-								print_endline contents;
-								print_endline (">>Finished " ^ filename)
-						    | Directory dir -> let channel = open_out (dir ^ "/" ^ filename) in
-								       output_string channel contents;
-								       close_out channel;
-    )
-                  file_contents ()

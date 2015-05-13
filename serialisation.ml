@@ -176,6 +176,6 @@ let translate_serialise_stringify
     translate_type_compilation_unit st types_unit in
   let (translated_function_units, st'') =
     translate_function_compilation_unit st' functions_unit in
-  State_aux.state_to_str true st'' |> print_endline; (*FIXME debug line*)
+  if !Config.cfg.Config.debug then State_aux.state_to_str true st'' |> print_endline;
   List.map (stringify_compilation_unit st'')
     (translated_type_units @ translated_function_units)

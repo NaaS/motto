@@ -510,15 +510,20 @@ let mk_subst st init_table body =
     |> variables_to_be_inlined
     |> List.sort inliner_table_entry_order in
   let _ =
-    List.iter (fun entry ->
-      inliner_table_entry_to_string ~st_opt:(Some st) entry
-      |> print_endline) table
+    if !Config.cfg.Config.debug then
+      List.iter (fun entry ->
+        inliner_table_entry_to_string ~st_opt:(Some st) entry
+        |> print_endline) table
 in
   inliner_to_subst table
   |> (fun subst ->
         subst_to_string ~st_opt:(Some st) subst
-        |> (fun s -> print_endline ("Pre-substitution: " ^ s)); List.rev subst)
+        |> (fun s ->
+          if !Config.cfg.Config.debug then print_endline ("Pre-substitution: " ^ s));
+        List.rev subst)
   |> inline_substvars_in_subst ~st_opt:(Some st) []
   |> (fun subst ->
         subst_to_string ~st_opt:(Some st) subst
-        |> (fun s -> print_endline ("Substitution: " ^ s)); subst)
+        |> (fun s ->
+          if !Config.cfg.Config.debug then print_endline ("Substitution: " ^ s));
+        subst)

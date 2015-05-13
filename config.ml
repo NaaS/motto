@@ -15,6 +15,7 @@ type configuration =
       i.e., -I searched_dir_2 -I searched_dir_1*)
     include_directories : string list;
     disable_inlining : bool;
+    debug : bool;
   }
 
 let cfg : configuration ref = ref {
@@ -24,4 +25,5 @@ let cfg : configuration ref = ref {
   cost_function_file = None;
   include_directories = [];
   disable_inlining = false;
+  debug = false;
 }

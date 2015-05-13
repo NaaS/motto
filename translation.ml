@@ -506,7 +506,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       lift_assign assign_acc (Var if_result_idx) in
     (Naasty_aux.concat (List.concat [[sts_acc_cond; translated]; nstmt]), ctxt_acc_else, assign_acc_else, st_else);
       
-  | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string 0 e, e))
+  | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string no_indent e, e))
 
 (*Split a (possibly bidirectional) Crisp channel into a collection of
   unidirectional NaaSty channels.*)

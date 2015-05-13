@@ -423,21 +423,49 @@ let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = false)
     If1 (cond', stmt'')
   | Return e_opt ->
     Return (bind_opt (fun e -> Some (subst_expr subst e)) None e_opt)
+  | _ ->
+    failwith ("Unsupported subst to inline: " ^
+              string_of_naasty_statement no_indent stmt)
 
 (*Inline variables (that are to be substituted for) within a substitution*)
-(*NOTE because of the way this function is implemented, the order of subst
-  matters a great deal! Otherwise intermediate variables won't be inlined.*)
-let rec inline_substvars_in_subst (acc : substitution) (subst : substitution) : substitution =
+(*NOTE the order of subst shouldn't matter, because we keep iterating until all
+  substitutions are ground (wrt other substitution variables), and this should
+  be terminating.*)
+let rec inline_substvars_in_subst ?st_opt:(st_opt : state option = None) (subst_acc : substitution) (subst : substitution) : substitution =
   match subst with
-  | [] -> acc
-  | (id, _) as id_expr :: rest ->
-    if List.mem_assoc id acc then
+  | [] -> subst_acc
+  | (id, definiens) :: rest ->
+    if List.mem_assoc id subst_acc then
       failwith "Substitution variable appears more than once in the substitution"
     else
-      (*Update the substitution*)
-      List.fold_right (fun (id', expr') acc ->
-        (id', subst_expr subst expr') :: acc) rest []
-      |> inline_substvars_in_subst (id_expr :: acc)
+       let is_ground =
+         Identifier_Set.exists (fun ident ->
+           List.exists (fun (id', _) ->
+             (if !Config.cfg.Config.debug then print_endline (string_of_int id' ^ " ?= " ^ string_of_int ident);
+              id' = ident)) (rest @ subst_acc))
+           (free_vars definiens Identifier_Set.empty)
+         |> not in
+       let id_expr' =
+         let definiens' =
+           if is_ground then definiens
+           else subst_expr (rest @ subst_acc) definiens in
+         let _ =
+           if !Config.cfg.Config.debug then
+             print_endline ("def " ^ string_of_int id ^ " " ^
+                            string_of_bool is_ground ^ " : " ^
+                            string_of_naasty_expression ~st_opt definiens ^ " ~~> " ^
+                            string_of_naasty_expression ~st_opt definiens') in
+         (id, definiens') in
+       let subst' =
+         (*Update the substitution*)
+         List.fold_right (fun (id', expr') acc ->
+           (id', subst_expr (rest @ subst_acc) expr') :: acc) rest
+          (if is_ground then [] else [id_expr']) in
+       let subst_acc' =
+         if is_ground then
+           id_expr' :: subst_acc
+         else subst_acc
+       in inline_substvars_in_subst ~st_opt subst_acc' subst'
 
 let subst_to_string ?st_opt:((st_opt : state option) = None)
       (subst : substitution) =
@@ -490,7 +518,7 @@ in
   |> (fun subst ->
         subst_to_string ~st_opt:(Some st) subst
         |> (fun s -> print_endline ("Pre-substitution: " ^ s)); List.rev subst)
-  |> inline_substvars_in_subst []
+  |> inline_substvars_in_subst ~st_opt:(Some st) []
   |> (fun subst ->
         subst_to_string ~st_opt:(Some st) subst
         |> (fun s -> print_endline ("Substitution: " ^ s)); subst)

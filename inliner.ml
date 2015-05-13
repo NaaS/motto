@@ -222,6 +222,13 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
   | For ((cursor, test, update), body) ->
     inliner_analysis st body ctxt_acc table
 
+  | If (cond, then_body, else_body) ->
+    inliner_analysis st then_body ctxt_acc table
+    |> inliner_analysis st else_body ctxt_acc
+
+  | If1 (cond, body) ->
+    inliner_analysis st body ctxt_acc table
+
   | Seq (stmt1, stmt2) ->
     inliner_analysis st stmt1 ctxt_acc table
     |> inliner_analysis st stmt2 ctxt_acc

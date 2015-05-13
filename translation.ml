@@ -490,21 +490,29 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
   | Crisp_syntax.ITE (be, e1, e2_opt) -> 
      (*FIXME: if are expressions, so they should assume the value of either the then or the else branch, so 
-      we should allocate a variable for that and assign the expression of one of the two to that variable *)
-    let (_, cond_result_idx, st_before_cond) = mk_fresh Term ~ty_opt:(Some (Bool_Type None) (*Fixme: not sure about the None *)) "ifcond_" 0 st in
+       we should allocate a variable for that and assign the expression of one of the two to that variable *)
+     (*FIXME currently assuming that e2_opt is defined; it may only be not given
+       for unit-typed expressions, in which case we'll implicitly set the else
+       branch to unity by using the one-handed If (If1) in NaaSty.*)
+    let (_, cond_result_idx, st_before_cond) =
+      mk_fresh Term ~ty_opt:(Some (Bool_Type None)) "ifcond_" 0 st in
     let (sts_acc_cond, ctxt_acc_cond, assign_acc_cond, st_cond) =
       naasty_of_flick_expr st_before_cond be local_name_map sts_acc (cond_result_idx :: ctxt_acc) [cond_result_idx] in
-    assert (assign_acc_cond = []); (* should this be empty? not sure *)
-    let (_, if_result_idx, st_before_then) = mk_fresh Term ~ty_opt:(Some (Int_Type (None, default_int_metadata))) (*Fixme: not sure about type *) "ifresult_" 0 st_cond in
+    assert (assign_acc_cond = []); (* We shouldn't get anything back to assign to *)
+    let (_, if_result_idx, st_before_then) =
+      (*FIXME here we use Int_Type, but this should be inferred from the if
+        expression*)
+      mk_fresh Term ~ty_opt:(Some (Int_Type (None, default_int_metadata))) "ifresult_" 0 st_cond in
     let (then_block, ctxt_acc_then, assign_acc_then, st_then) = 
       naasty_of_flick_expr st_before_then e1 local_name_map Skip (if_result_idx :: ctxt_acc_cond) [if_result_idx] in
     let (else_block, ctxt_acc_else, assign_acc_else, st_else) = 
-      naasty_of_flick_expr st_then (the e2_opt) local_name_map Skip ctxt_acc_then [if_result_idx] in
+      naasty_of_flick_expr st_then (the(*FIXME we assume the value's there*) e2_opt) local_name_map Skip ctxt_acc_then [if_result_idx] in
     let translated = 
-      Naasty.If ( Var cond_result_idx, then_block, else_block) in
+      Naasty.If (Var cond_result_idx, then_block, else_block) in
     let nstmt =
-      lift_assign assign_acc (Var if_result_idx) in
-    (Naasty_aux.concat (List.concat [[sts_acc_cond; translated]; nstmt]), ctxt_acc_else, assign_acc_else, st_else);
+      lift_assign assign_acc (Var if_result_idx)
+      |> Naasty_aux.concat in
+    (Naasty_aux.concat [sts_acc_cond; translated; nstmt], ctxt_acc_else, assign_acc_else, st_else);
       
   | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string no_indent e, e))
 

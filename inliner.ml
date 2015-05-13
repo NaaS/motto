@@ -241,6 +241,13 @@ let variables_to_be_inlined : inliner_table_entry list -> inliner_table_entry li
     entry.update_count = 1 &&
     entry.ref_count = 1)
 
+(*Pick out any variables that are never read; all their assignments and their
+  declaration can be erased.*)
+let variables_to_be_erased : inliner_table_entry list -> inliner_table_entry list =
+  List.filter (fun entry ->
+    entry.parameter = false &&
+    entry.ref_count = 0)
+
 let rec naasty_expression_weight = function
   | Int_Value _
   | Bool_Value _ -> 0
@@ -477,7 +484,7 @@ let subst_to_string ?st_opt:((st_opt : state option) = None)
 
 (*Erase declarations and assignments to inlined variables.
   NOTE we need to descend into For, If, etc*)
-let rec erase_inlined (subst : substitution) (stmt : naasty_statement) : naasty_statement =
+let rec erase_vars (stmt : naasty_statement) (idents : identifier list) : naasty_statement =
   match stmt with
   | Declaration (ty, _) ->
     begin
@@ -485,21 +492,21 @@ let rec erase_inlined (subst : substitution) (stmt : naasty_statement) : naasty_
     | None ->
       failwith "Declaration must contain an identifier name, not just mention a type!"
     | Some idx ->
-      if List.mem_assoc idx subst then Skip else stmt
+      if List.mem idx idents then Skip else stmt
     end
   | Seq (stmt1, stmt2) ->
-    mk_seq (erase_inlined subst stmt1) (erase_inlined subst stmt2)
+    mk_seq (erase_vars stmt1 idents) (erase_vars stmt2 idents)
   | Assign (Var id, _) ->
-    if List.mem_assoc id subst then Skip else stmt
+    if List.mem id idents then Skip else stmt
   | For ((ty, cond, inc), body) ->
-    let body' = erase_inlined subst body in
+    let body' = erase_vars body idents in
     For ((ty, cond, inc), body')
   | If (cond, stmt1, stmt2) ->
-    let stmt1' = erase_inlined subst stmt1 in
-    let stmt2' = erase_inlined subst stmt2 in
+    let stmt1' = erase_vars stmt1 idents in
+    let stmt2' = erase_vars stmt2 idents in
     If (cond, stmt1', stmt2')
   | If1 (cond, stmt') ->
-    let stmt'' = erase_inlined subst stmt' in
+    let stmt'' = erase_vars stmt' idents in
     If1 (cond, stmt'')
   | _ -> stmt
 
@@ -527,3 +534,9 @@ in
         |> (fun s ->
           if !Config.cfg.Config.debug then print_endline ("Substitution: " ^ s));
         subst)
+
+let mk_erase_ident_list st init_table body : identifier list =
+  inliner_analysis st body [] init_table
+  |> count_var_references_in_naasty_stmt st body
+  |> variables_to_be_erased
+  |> List.map (fun record -> record.id)

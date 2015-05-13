@@ -20,6 +20,8 @@ while !arg_idx < Array.length Sys.argv do
     | "--cost_function_file" -> failwith "Unsupported feature" (*TODO*)
     | "--disable_inlining" ->
       cfg := { !cfg with disable_inlining = true }
+    | "--disable_var_erasure" ->
+      cfg := { !cfg with disable_var_erasure = true }
     | "--debug_output" ->
       cfg := { !cfg with debug = true }
     | "-o" ->

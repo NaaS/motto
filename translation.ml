@@ -633,21 +633,34 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
             arg_tys = n_arg_tys;
             ret_ty = n_res_ty;
             body =
-              if !Config.cfg.Config.disable_inlining then body''
-              else
-                let arg_idxs = List.map (fun x ->
-                  idx_of_naasty_type x
-                  |> the) n_arg_tys in
-                (*Initialise table for the inliner.
-                  Mention the parameters in the initial table*)
-                let init_table = Inliner.init_table arg_idxs in
-                let subst = Inliner.mk_subst st5 init_table body'' in
+              (*Initialise some data that might be needed during the final
+                passes (inlining and variable erasure)*)
+              let arg_idxs = List.map (fun x ->
+                idx_of_naasty_type x
+                |> the) n_arg_tys in
+              (*Initialise table for the inliner.
+                Mention the parameters in the initial table*)
+              let init_table = Inliner.init_table arg_idxs in
 
-                (*If all variables mentioned in an assignment/declaration are to be deleted,
-                  then delete the assignment/declaration*)
-                Inliner.erase_inlined subst body''
-                (*Do the inlining*)
-                |> Inliner.subst_stmt subst
+              let inlined_body init_table st body =
+                if !Config.cfg.Config.disable_inlining then body
+                else
+                  let subst = Inliner.mk_subst st init_table body in
+                  (*If all variables mentioned in an assignment/declaration are to be deleted,
+                    then delete the assignment/declaration*)
+                  Inliner.erase_vars body (List.map fst subst)
+                  (*Do the inlining*)
+                  |> Inliner.subst_stmt subst in
+
+              let var_erased_body init_table st body =
+                if !Config.cfg.Config.disable_var_erasure then body
+                else
+                  Inliner.mk_erase_ident_list st init_table body
+                  |> Inliner.erase_vars body
+
+              in
+                inlined_body init_table st5 body''
+                |> var_erased_body init_table st5
           },
         st5)
 

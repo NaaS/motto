@@ -14,7 +14,11 @@ type configuration =
       this is in the reverse order they are provided on the command line.
       i.e., -I searched_dir_2 -I searched_dir_1*)
     include_directories : string list;
+    (*Disable the inlining of intermediate variable introduced during the
+      translation.*)
     disable_inlining : bool;
+    (*Disable the erasure of declarations and assignments of unread variables*)
+    disable_var_erasure : bool;
     debug : bool;
   }
 
@@ -25,5 +29,6 @@ let cfg : configuration ref = ref {
   cost_function_file = None;
   include_directories = [];
   disable_inlining = false;
+  disable_var_erasure = false;
   debug = false;
 }

@@ -385,6 +385,7 @@ let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_ex
 let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = false)
           (subst : substitution) (stmt : naasty_statement) : naasty_statement =
   match stmt with
+  | Skip
   | Break
   | Continue -> stmt
   | St_of_E e -> St_of_E (subst_expr subst e)

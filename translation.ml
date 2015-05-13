@@ -224,9 +224,17 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   match e with
   | Variable value_name ->
     if assign_acc = [] then
-      (*We're expecting this variable to be assigned to something -- and that
-        something should have been in assign_acc*)
-      failwith "assign_acc should not be empty at this point."
+      (*If assign_acc is empty it means that we've got an occurrence of a
+        variable that doesn't contribute to an expression. For instance, you
+        could have Seq (Variable _, _). In this case we emit a warning, to alert
+        the programmer of the dead code, and emit a comment in NaaSty.*)
+      let _  = prerr_endline ("warning: unused variable " ^ value_name)
+      (*FIXME would be nice to be able to report line & column numbers*) in
+      let translated =
+        Commented (Skip, "Evaluated variable " ^ expression_to_string no_indent e)
+      in (mk_seq sts_acc translated, ctxt_acc,
+          [](*since assign_acc=[] to start with*),
+          st)
     else
       let translated =
         try_local_name value_name local_name_map
@@ -239,15 +247,24 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
           st)
   | Seq (e1, e2) ->
     let (sts_acc', ctxt_acc', assign_acc', st') =
-      naasty_of_flick_expr st e1 local_name_map sts_acc ctxt_acc assign_acc
-    in naasty_of_flick_expr st' e2 local_name_map sts_acc' ctxt_acc' assign_acc'
+      (*We given the evaluation of e1 an empty assign_acc, since the assign_acc
+        we received is intended for e2.*)
+      naasty_of_flick_expr st e1 local_name_map sts_acc ctxt_acc []
+    in
+      assert (assign_acc' = []); (*We shouldn't be getting anything to assign
+                                   from e1, particularly as we gave it an empty
+                                   assign_acc*)
+      naasty_of_flick_expr st' e2 local_name_map sts_acc' ctxt_acc' assign_acc
 
   | True
   | False ->
       let translated =
         lift_assign assign_acc (Bool_Value (e = True))
         |> Naasty_aux.concat
-      in (mk_seq sts_acc translated, ctxt_acc, assign_acc, st)
+      in
+      (*having assigned to assign_acc, we've done our duty, so we return an
+        empty assign_acc*)
+      (mk_seq sts_acc translated, ctxt_acc, [], st)
   | And (e1, e2)
   | Or (e1, e2)
   | Equals (e1, e2)

@@ -71,8 +71,6 @@ let the_ty_of_decl = function
   | Type ty_decl -> ty_decl.type_value
   | _ -> failwith "Was expecting a type declaration."
 
-(*NOTE we only check the outer constants -- we don't traverse inside the
-  expression*)
 let rec ty_of_expr ?strict:(strict : bool = false) (env : (string * type_value) list) : expression -> type_value = function
   | Variable label ->
     begin
@@ -83,8 +81,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : (string * type_value) 
 
   (*Boolean expressions*)
   | True
-  | False
-    -> Boolean (None, [])
+  | False -> Boolean (None, [])
   | And (e1, e2)
   | Or (e1, e2) ->
     let ans = Boolean (None, []) in
@@ -95,35 +92,83 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : (string * type_value) 
       assert (e1_ty = ans)
     else ();
     ans
-  | Not _
+  | Not e ->
+    let ans = Boolean (None, []) in
+    if strict then
+      let e_ty = ty_of_expr ~strict env e in
+      assert (e_ty = ans)
+    else ();
+    ans
 
   (*Definable over arbitrary types of expressions*)
-  | Equals (_, _)
+  | Equals (e1, e2) ->
+    let ans = Boolean (None, []) in
+    if strict then
+      let f = ty_of_expr ~strict env in
+      let (e1_ty, e2_ty) = f e1, f e2 in
+      assert (e1_ty = e2_ty);
+    else ();
+    ans
 
   (*Definable over arithmetic expressions*)
-  | GreaterThan (_, _)
-  | LessThan (_, _)
-    -> Boolean (None, [])
+  | GreaterThan (e1, e2)
+  | LessThan (e1, e2) ->
+    let ans = Boolean (None, []) in
+    let expected = Integer (None, []) in
+    if strict then
+      let f = ty_of_expr ~strict env in
+      let (e1_ty, e2_ty) = f e1, f e2 in
+      assert (e1_ty = e2_ty);
+      assert (e1_ty = expected)
+    else ();
+    ans
 
   (*Arithmetic expressions*)
   | Int _ -> Integer (None, [])
 
   (*NOTE for these expressions we might want to look deeper, to differentiate
     between different kinds of numbers -- ints, floats, etc*)
-  | Plus (_, _)
-  | Minus (_, _)
-  | Times (_, _)
-  | Mod (_, _)
-  | Quotient (_, _)
-  | Abs _ ->
-    Integer (None, [])
+  | Plus (e1, e2)
+  | Minus (e1, e2)
+  | Times (e1, e2)
+  | Mod (e1, e2)
+  | Quotient (e1, e2) ->
+    let ans = Integer (None, []) in
+    if strict then
+      let f = ty_of_expr ~strict env in
+      let (e1_ty, e2_ty) = f e1, f e2 in
+      assert (e1_ty = e2_ty);
+      assert (e1_ty = ans)
+    else ();
+    ans
+  | Abs e ->
+    let ans = Integer (None, []) in
+    if strict then
+      let e_ty = ty_of_expr ~strict env e in
+      assert (e_ty = ans)
+    else ();
+    ans
 
   (*Native representation of an IPv4 address*)
   | IPv4_address (_, _, _, _) -> IPv4Address None
   (*Integer to IP address*)
-  | Int_to_address _ -> IPv4Address None
+  | Int_to_address e ->
+    let ans = IPv4Address None in
+    let expected = Integer (None, []) in
+    if strict then
+      let e_ty = ty_of_expr ~strict env e in
+      assert (e_ty = expected)
+    else ();
+    ans
   (*IP address to integer*)
-  | Address_to_int _ -> Integer (None, [])
+  | Address_to_int e ->
+    let ans = Integer (None, []) in
+    let expected = IPv4Address None in
+    if strict then
+      let e_ty = ty_of_expr ~strict env e in
+      assert (e_ty = expected)
+    else ();
+    ans
 
   (*NOTE currently we don't support dependently-typed lists*)
   | _ -> failwith ("TODO")

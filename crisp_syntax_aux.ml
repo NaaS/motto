@@ -170,23 +170,42 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : (string * type_value) 
     else ();
     ans
 
+  | TupleValue es ->
+    let tys = List.map (ty_of_expr ~strict env) es in
+    Tuple (None, tys)
+
+  | Seq (e1, e2) ->
+    if strict then ignore(ty_of_expr ~strict env e1);
+    ty_of_expr ~strict env e2
+
+  | ITE (b_exp, e1, e2_opt) ->
+    let f = ty_of_expr ~strict env in
+    let ans = f e1 in
+    if strict then
+      begin
+      assert (f b_exp = Boolean (None, []));
+      match e2_opt with
+      | None -> ()
+      | Some e2 ->
+        assert (ans = f e2);
+      end
+    else ();
+    ans
+
+  | Str _ -> String (None, [])
+
   (*NOTE currently we don't support dependently-typed lists*)
   | _ -> failwith ("TODO")
 (*
-  | EmptyList
-  | ConsList of expression * expression
-  | AppendList of expression * expression
+  | Iterate of label * expression *
+               (label * expression) option *
+               expression * bool
 
-  | TupleValue of expression list
-
-  | Seq of expression * expression
-  | ITE of expression * expression * expression option
   | LocalDef of typing * expression (*def value_name : type = expression*)
   | Update of value_name * expression (*value_name := expression*)
   (*value_name[idx] := expression*)
   | UpdateIndexable of value_name * expression * expression
 
-  (*This work for both tuples and records.*)
   | Projection of expression * label
 
   | Function_Call of function_name * fun_arg list
@@ -194,30 +213,21 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : (string * type_value) 
   | Record of (label * expression) list
   | RecordUpdate of (expression * (label * expression))
 
-  (*Case elimination on variants; formation of variant
-    instances will look like function application in the
-    language, therefore it doesn't require special syntax.*)
-  | CaseOf of expression * (expression * expression) list
-
-  (*The first parameter could be generalised to an expression,
-    but I don't think we need that expressiveness at the moment.
-    Also, the second parameter could be specialised to a natural
-    number -- we might go for that for the moment.*)
   | IndexableProjection of label * expression
 
   | IntegerRange of expression * expression
   | Map of label * expression * expression * bool
-  | Iterate of label * expression *
-               (label * expression) option *
-               expression * bool
 
-  (*Channel operations. Can be overloaded to, say, send values
+  | CaseOf of expression * (expression * expression) list
+
+  | EmptyList
+  | ConsList of expression * expression
+  | AppendList of expression * expression
+   (*Channel operations. Can be overloaded to, say, send values
     on a channel, or to first obtain values from a channel then send it to
     another.*)
   | Send of expression * expression
   | Receive of expression * expression
   (*Send and receive between two channels*)
   | Exchange of expression * expression
-
-  | Str of string
 *)

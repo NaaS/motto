@@ -72,7 +72,7 @@ let the_ty_of_decl = function
   | _ -> failwith "Was expecting a type declaration."
 
 
-type ty_env = (string * type_value) list
+type ty_env = (string * (type_value list * type_value)) list
 let extend_env env x =  x :: env
 let decompose_container (ty : type_value) : type_value list =
   match ty with
@@ -88,7 +88,10 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
   | Variable label ->
     let env_extension = [] in
     begin
-      try (List.assoc label env, env_extension)
+      try
+        let args, res = List.assoc label env in
+        if args = [] then res, env_extension
+        else failwith "Variables cannot have function type"
       with Not_found ->
         failwith ("Missing declaration for '" ^ label ^ "'")
     end
@@ -216,9 +219,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
       match type_value_opt with
       | None -> ()
       | Some ty_value -> assert (ty = ty_value) in
-    (ty, [value_name, ty])
+    (ty, [value_name, ([], ty)])
   | Update (value_name, e) ->
-    let expected_ty = List.assoc value_name env in
+    let expected_ty =
+      let args, res = List.assoc value_name env in
+      if args = [] then res
+      else failwith "Not expecting a function type" in
     let ty, _ = ty_of_expr ~strict env e in
     let _ = if strict then assert (expected_ty = ty) in
     (ty, [])
@@ -232,17 +238,32 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
       | None -> env, None
       | Some (acc_label, acc_e) ->
         let ty, _ = ty_of_expr ~strict env acc_e in
-        (extend_env env (acc_label, ty), Some ty) in
+        (extend_env env (acc_label, ([], ty)), Some ty) in
     let env'' =
       let cursor_ty =
         match fst (ty_of_expr ~strict env range_e) with
         | List (_, ty', _, _) -> ty'
         | _ -> failwith "Was expecting list type" in
-      extend_env env' (label, cursor_ty) in
+      extend_env env' (label, ([], cursor_ty)) in
     (*FIXME if strict, match the type of acc_e with that of body_e.
             NOTE need to use matching not equality, since might
                  have type variables*)
     let ty, _ = ty_of_expr ~strict env'' body_e in
+    (ty, [])
+
+  | Map (label, src_e, body_e, unordered) ->
+    let env' =
+      let cursor_ty =
+        match fst (ty_of_expr ~strict env src_e) with
+        | List (_, ty', _, _) -> ty'
+        | _ -> failwith "Was expecting list type" in
+      extend_env env (label, ([], cursor_ty)) in
+    let ty, _ = ty_of_expr ~strict env' body_e in
+    let _ =
+      if strict then
+        match ty with
+        | List (_, _, _, _) -> ()
+        | _ -> failwith "Was expecting list type" in
     (ty, [])
 
   (*NOTE currently we don't support dependently-typed lists*)
@@ -251,17 +272,13 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
 
   (*value_name[idx] := expression*)
   | UpdateIndexable of value_name * expression * expression
-
+  | IndexableProjection of label * expression
   | Projection of expression * label
 
   | Function_Call of function_name * fun_arg list
 
   | Record of (label * expression) list
   | RecordUpdate of (expression * (label * expression))
-
-  | IndexableProjection of label * expression
-
-  | Map of label * expression * expression * bool
 
   | CaseOf of expression * (expression * expression) list
 

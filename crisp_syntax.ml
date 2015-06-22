@@ -24,6 +24,7 @@ type univ_type = string (*FIXME hack*)
 
 type dependency_index = string
 
+(*FIXME use sets instead of lists for records and unions*)
 (*Labels are used to implement labelled variants over disjoint unions.*)
 type type_value =
   (*A reference to a type defined earlier in the program*)
@@ -44,6 +45,8 @@ type type_value =
   | Tuple of label option * type_value list
   | Dictionary of label option * type_value
   | Reference of label option * type_value
+  (*Type variable; if it hasn't been named yet then we have no label*)
+  | Alpha of label option
 ;;
 
 let rec type_value_to_string mixfix_lists ending_newline indent ty_value =

@@ -266,13 +266,43 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
         | _ -> failwith "Was expecting list type" in
     (ty, [])
 
+  (*value_name[idx] := expression*)
+  | UpdateIndexable (map_name, idx_e, body_e) ->
+    let ty, _ = ty_of_expr ~strict env body_e in
+    let _ =
+      if strict then
+        let idx_ty, _ = ty_of_expr ~strict env idx_e in
+        let map_args, map_res_ty = List.assoc map_name env in
+        let _ =
+          match map_args with
+          | [map_idx_ty] ->
+            (*NOTE could use stronger relation than equality in order to
+                   support record subtyping of index types, say.*)
+            if map_idx_ty = idx_ty then ()
+            else failwith "Unexpected index type"
+          | _ -> failwith "Unexpected map type" in
+        if map_res_ty = ty then ()
+        else failwith "Unexpected result type" in
+    (ty, [])
+  (*value_name[idx]*)
+  | IndexableProjection (map_name, idx_e) ->
+    let map_args, map_res_ty = List.assoc map_name env in
+    let _ =
+      if strict then
+        let idx_ty, _ = ty_of_expr ~strict env idx_e in
+        match map_args with
+        | [map_idx_ty] ->
+          (*NOTE could use stronger relation than equality in order to
+                 support record subtyping of index types, say.*)
+          if map_idx_ty = idx_ty then ()
+          else failwith "Unexpected index type"
+        | _ -> failwith "Unexpected map type" in
+    (map_res_ty, [])
+
   (*NOTE currently we don't support dependently-typed lists*)
   | _ -> failwith ("TODO")
-(*
 
-  (*value_name[idx] := expression*)
-  | UpdateIndexable of value_name * expression * expression
-  | IndexableProjection of label * expression
+(*
   | Projection of expression * label
 
   | Function_Call of function_name * fun_arg list

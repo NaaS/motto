@@ -73,6 +73,16 @@ let the_ty_of_decl = function
 
 
 type ty_env = (string * type_value) list
+let extend_env env x =  x :: env
+let decompose_container (ty : type_value) : type_value list =
+  match ty with
+  | List (_, ty', _, _) -> [ty']
+  | Dictionary (_, ty') -> [ty']
+  | Tuple (_, tys') -> tys'
+  | Reference (_, ty') -> [ty']
+  | RecordType (_, tys', _) -> tys'
+  | Disjoint_Union (_, tys') -> tys'
+  | _ -> failwith "Type is not a container"
 
 let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -> type_value * ty_env = function
   | Variable label ->
@@ -200,15 +210,45 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
 
   | Str _ -> (String (None, []), [])
 
+  | LocalDef ((value_name, type_value_opt), e) ->
+    let ty, _ = ty_of_expr ~strict env e in
+    let _ =
+      match type_value_opt with
+      | None -> ()
+      | Some ty_value -> assert (ty = ty_value) in
+    (ty, [value_name, ty])
+  | Update (value_name, e) ->
+    let expected_ty = List.assoc value_name env in
+    let ty, _ = ty_of_expr ~strict env e in
+    let _ = if strict then assert (expected_ty = ty) in
+    (ty, [])
+
+  | IntegerRange (_, _) ->
+    (List (None, Integer (None, []), None, []), [])
+
+  | Iterate (label, range_e, acc_opt, body_e, unordered) ->
+    let env', acc_opt_ty =
+      match acc_opt with
+      | None -> env, None
+      | Some (acc_label, acc_e) ->
+        let ty, _ = ty_of_expr ~strict env acc_e in
+        (extend_env env (acc_label, ty), Some ty) in
+    let env'' =
+      let cursor_ty =
+        match fst (ty_of_expr ~strict env range_e) with
+        | List (_, ty', _, _) -> ty'
+        | _ -> failwith "Was expecting list type" in
+      extend_env env' (label, cursor_ty) in
+    (*FIXME if strict, match the type of acc_e with that of body_e.
+            NOTE need to use matching not equality, since might
+                 have type variables*)
+    let ty, _ = ty_of_expr ~strict env'' body_e in
+    (ty, [])
+
   (*NOTE currently we don't support dependently-typed lists*)
   | _ -> failwith ("TODO")
 (*
-  | Iterate of label * expression *
-               (label * expression) option *
-               expression * bool
 
-  | LocalDef of typing * expression (*def value_name : type = expression*)
-  | Update of value_name * expression (*value_name := expression*)
   (*value_name[idx] := expression*)
   | UpdateIndexable of value_name * expression * expression
 
@@ -221,7 +261,6 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
 
   | IndexableProjection of label * expression
 
-  | IntegerRange of expression * expression
   | Map of label * expression * expression * bool
 
   | CaseOf of expression * (expression * expression) list
@@ -229,6 +268,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
   | EmptyList
   | ConsList of expression * expression
   | AppendList of expression * expression
+
    (*Channel operations. Can be overloaded to, say, send values
     on a channel, or to first obtain values from a channel then send it to
     another.*)

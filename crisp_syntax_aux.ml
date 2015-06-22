@@ -303,12 +303,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
   | _ -> failwith ("TODO")
 
 (*
-  | Projection of expression * label
-
+    (*also used to form Coproducts, as well as make function calls*)
   | Function_Call of function_name * fun_arg list
 
   | Record of (label * expression) list
   | RecordUpdate of (expression * (label * expression))
+  | RecordProjection of expression * label
 
   | CaseOf of expression * (expression * expression) list
 

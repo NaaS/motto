@@ -239,7 +239,7 @@ and expression =
   | UpdateIndexable of value_name * expression * expression
 
   (*This work for both tuples and records.*)
-  | Projection of expression * label
+  | RecordProjection of expression * label
 
   | Function_Call of function_name * fun_arg list
 
@@ -374,7 +374,7 @@ let rec expression_to_string indent = function
     indn indent ^ "<" ^
       String.concat ", " (List.map (expression_to_string 0) xs) ^ ">"
 
-  | Projection (e, l) ->
+  | RecordProjection (e, l) ->
     indn indent ^ expression_to_string 0 e ^ "." ^ l
 
   | Function_Call (f, es) ->

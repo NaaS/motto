@@ -560,9 +560,9 @@ expression:
     {Crisp_syntax.TupleValue t}
 
   | e = expression; PERIOD; l = INTEGER
-    {Crisp_syntax.Projection (e, string_of_int l)}
+    {Crisp_syntax.RecordProjection (e, string_of_int l)}
   | e = expression; PERIOD; l = IDENTIFIER
-    {Crisp_syntax.Projection (e, l)}
+    {Crisp_syntax.RecordProjection (e, l)}
 
   | f_name = IDENTIFIER; LEFT_R_BRACKET; args = function_arguments
     {Crisp_syntax.Function_Call (f_name, args)}

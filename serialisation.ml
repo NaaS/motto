@@ -8,7 +8,7 @@ open State
 open Crisp_syntax
 open Naasty
 open Data_model
-open Type_infer
+open Type_infer (*FIXME currently unused*)
 
 (*Thrown when we try to generate a de/serialiser for a type that cannot be
   serialised -- either because of its nature (e.g., unit) or because it lacks

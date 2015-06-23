@@ -63,7 +63,9 @@ let expand_includes (include_directories : string list) (p : Crisp_syntax.progra
 let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.state =
   List.fold_right (fun decl st' ->
     match decl with
-    | Function {fn_name; fn_params; _}  ->
+    | Function {fn_name; fn_params; _} ->
+(*FIXME check that have distinct parameter names, otherwise using named
+  parameters could be confusing*)
       { st' with crisp_funs = (fn_name, fn_params) :: st'.crisp_funs }
     | Type _
     | Process _ -> st' (*NOTE currently we ignore type and process declarations*)

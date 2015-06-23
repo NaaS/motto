@@ -110,7 +110,12 @@ let order_fun_args (fname : function_name) (st : State.state) (args : fun_arg li
     let ((chans, arg_tys), ret_tys) =
       List.assoc fname st.State.crisp_funs
       |> extract_function_types in
-    let arg_labels = [] in
+    let arg_labels =
+      List.fold_right (fun ty acc ->
+        match label_of_type ty with
+        | None -> failwith "Expecting type to be labelled"
+        | Some l -> l :: acc) arg_tys []
+      |> List.rev in
     assert (chans = []); (*FIXME currently functions cannot be given channel
                            parameters*)
     List.fold_right (fun arg acc ->

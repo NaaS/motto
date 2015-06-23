@@ -247,7 +247,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
           st)
   | Seq (e1, e2) ->
     let (sts_acc', ctxt_acc', assign_acc', st') =
-      (*We given the evaluation of e1 an empty assign_acc, since the assign_acc
+      (*We give the evaluation of e1 an empty assign_acc, since the assign_acc
         we received is intended for e2.*)
       naasty_of_flick_expr st e1 local_name_map sts_acc ctxt_acc []
     in
@@ -528,6 +528,39 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   | Address_to_int e ->
     (*We store IPv4 addresses as ints, therefore the conversion doesn't do anything.*)
     naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc assign_acc
+
+  | Function_Call (function_name, fun_args) ->
+    (*Canonicalise the function's arguments -- eliminating any named-parameter
+      occurrences.*)
+    let arg_expressions = Crisp_syntax_aux.order_fun_args function_name st fun_args in
+
+    let ((chans, arg_tys), ret_tys) =
+      List.assoc function_name st.State.crisp_funs
+      |> Crisp_syntax_aux.extract_function_types in
+    assert (chans = []); (*FIXME currently functions cannot be given channel
+                           parameters*)
+
+    (*Translate each function argument as an expression.*)
+    let (result_indices, sts_acc', ctxt_acc', _, st') =
+      List.fold_right (fun (e, ty) (result_indices, sts_acc, ctxt_acc, assign_acc, st) ->
+        let (naasty_ty, st') = naasty_of_flick_type st ty in
+        let (_, e_result_idx, st'') = mk_fresh Term ~ty_opt:(Some naasty_ty) "funarg_" 0 st' in
+        let (sts_acc', ctxt_acc', assign_acc', st''') =
+          naasty_of_flick_expr st'' e local_name_map sts_acc (e_result_idx :: ctxt_acc)
+            [e_result_idx] in
+        (e_result_idx :: result_indices, sts_acc', ctxt_acc', assign_acc', st'''))
+        (List.combine arg_expressions arg_tys) ([], sts_acc, ctxt_acc, assign_acc, st) in
+
+    let parameters = List.map (fun x -> Var x)(*whither eta?*) result_indices in
+    let translated =
+      try_local_name function_name local_name_map
+      |> check_and_resolve_name
+      |> (fun x -> Call_Function (x, parameters))
+      |> lift_assign assign_acc
+      |> Naasty_aux.concat
+    in (mk_seq sts_acc' translated, ctxt_acc',
+        [](*Having assigned to assign_accs, we can forget them.*),
+        st')
 
   | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string no_indent e, e))
 

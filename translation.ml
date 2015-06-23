@@ -562,6 +562,29 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         [](*Having assigned to assign_accs, we can forget them.*),
         st')
 
+  | LocalDef ((name, ty_opt), e) ->
+    let (naasty_ty, st') =
+      match ty_opt with
+      | None ->
+        (*FIXME currently defaulting to Int, but we should use type inference
+                on e here*)
+        let int_ty = Int_Type (None, default_int_metadata) in
+        (int_ty, st)
+      | Some ty -> naasty_of_flick_type st ty in
+      let (_, name_idx, st'') = mk_fresh Term ~ty_opt:(Some naasty_ty) name 0 st' in
+      let (sts_acc', ctxt_acc', assign_acc', st''') =
+        naasty_of_flick_expr st'' e local_name_map sts_acc (name_idx :: ctxt_acc)
+          [name_idx] in
+      assert (assign_acc' = []);
+      (*The recursive call to naasty_of_flick_expr takes care of assigning to
+        name_idx. Now we take care of assigning name_idx to assign_acc.*)
+      let translated =
+        lift_assign assign_acc (Var name_idx)
+        |> Naasty_aux.concat
+      in (mk_seq sts_acc' translated, ctxt_acc',
+          [](*Having assigned to assign_accs, we can forget them.*),
+          st''')
+
   | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string no_indent e, e))
 
 (*Split a (possibly bidirectional) Crisp channel into a collection of

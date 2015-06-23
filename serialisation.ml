@@ -59,6 +59,18 @@ let expand_includes (include_directories : string list) (p : Crisp_syntax.progra
       | _ -> decl :: acc) p []
   in List.rev (expand_includes' p)
 
+(*Gather declaration information from a program, and encode in the state.*)
+let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.state =
+  List.fold_right (fun decl st' ->
+    match decl with
+    | Function {fn_name; fn_params; _}  ->
+      { st' with crisp_funs = (fn_name, fn_params) :: st'.crisp_funs }
+    | Type _
+    | Process _ -> st' (*NOTE currently we ignore type and process declarations*)
+    | Include _ ->
+      failwith "Inclusions should have been expanded before reaching this point.")
+    p st
+
 (*Given a program whose Includes have been expanded out, separate out the
   declarations of types, processes, and functions -- but keep their relative
   order stable. That is, if we rewrite the program to contain the types, then

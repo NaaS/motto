@@ -59,3 +59,8 @@ let the x_opt =
 let concat_pair (l : ('a list * 'b list) list) : 'a list * 'b list =
   List.fold_right (fun (item : 'a list * 'b list) (acc : 'a list * 'b list) ->
     (fst item @ fst acc, snd item @ snd acc)) l ([], [])
+
+let selfpair x = (x, x)
+let apfst f (x, y) = (f x, y)
+let apsnd f (x, y) = (x, f y)
+let uncurry f (x, y) = f x y

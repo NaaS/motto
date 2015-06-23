@@ -24,6 +24,8 @@ type state =
     next_symbol : identifier;
     type_symbols : (string * identifier * naasty_type option) list;
     term_symbols : (string * identifier * naasty_type option) list;
+    crisp_funs : (function_name * function_type) list;
+(*    fun_sigs : (identifier * identifier list) list; FIXME not sure if needed*)
   }
 
 let initial_state =
@@ -32,6 +34,7 @@ let initial_state =
     next_symbol = 1;
     type_symbols = [];
     term_symbols = [];
+    crisp_funs = [];
   }
 
 type scope =

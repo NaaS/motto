@@ -3,6 +3,7 @@
    Nik Sultana, Cambridge University Computer Lab, February 2015
 *)
 
+open General
 open Config
 
 type arg_params =
@@ -54,11 +55,13 @@ match !cfg.source_file with
 | Some source_file ->
   Crisp_parse.parse source_file
   |> Serialisation.expand_includes !cfg.include_directories
-  |> Serialisation.split_declaration_kinds
+  |> selfpair
+  |> apfst (Serialisation.collect_decl_info State.initial_state)
+  |> apsnd (Serialisation.split_declaration_kinds)
   (*FIXME "Serialisation" doesn't seem like most sensible module in which to
            keep this code.*)
   (*FIXME Functorise to take backend-specific code as parameter*)
-  |> Serialisation.translate_serialise_stringify State.initial_state
+  |> uncurry Serialisation.translate_serialise_stringify
   |> Output.write_files !cfg.output_location
 | _ ->
   begin

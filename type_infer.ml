@@ -1,6 +1,12 @@
 (*
    Type inference for Crisp expressions.
    Nik Sultana, Cambridge University Computer Lab, June 2015
+
+   TODO
+     - ty_env does not feel like the full data structure -- it might need
+       extension to encode more state as needed by the type inference algorithm.
+     - need to implement matching for types, since we'll have type variables in
+       types.
 *)
 
 open Crisp_syntax

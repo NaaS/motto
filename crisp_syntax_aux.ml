@@ -326,6 +326,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
     let _ =
       if strict then
         let idx_ty, _ =
+          (*FIXME check if body_e's type matches that of label*)
           ty_of_expr ~strict env body_e in
         () in
     (ty, [])

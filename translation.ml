@@ -550,6 +550,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
             [e_result_idx] in
         (e_result_idx :: result_indices, sts_acc', ctxt_acc', assign_acc', st'''))
         (List.combine arg_expressions arg_tys) ([], sts_acc, ctxt_acc, assign_acc, st) in
+    let result_indices = List.rev result_indices in
 
     let parameters = List.map (fun x -> Var x)(*whither eta?*) result_indices in
     let translated =
@@ -609,6 +610,51 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       lift_assign assign_acc (Var name_idx)
       |> Naasty_aux.concat
     in (mk_seq sts_acc' translated, ctxt_acc',
+        [](*Having assigned to assign_accs, we can forget them.*),
+        st')
+
+  | TupleValue es ->
+    (*Each tuple could be a different type*)
+    (*FIXME fuse equivalent tuple types -- this could be done during an early
+              static analysis during compilation*)
+    let (_, tuple_instance_ty_idx, st') =
+      mk_fresh Type ~ty_opt:None "tupletype_" 0 st in
+    let tuple_instance_ty =
+      let component_tys =
+        List.map (fun _ ->
+          (*FIXME use type inference*)
+          Int_Type (None, default_int_metadata)) es in
+        Record_Type (tuple_instance_ty_idx, component_tys) in
+    let (_, tuple_instance_idx, st'') =
+      update_symbol_type tuple_instance_ty_idx tuple_instance_ty Type st'
+      |> mk_fresh Term ~ty_opt:(Some tuple_instance_ty) "tuple_" 0 in
+
+    (*NOTE this bit is similar to part of Function_Call*)
+    let (result_indices, sts_acc', ctxt_acc', _, st''') =
+      List.fold_right (fun e (result_indices, sts_acc, ctxt_acc, assign_acc, st) ->
+        let naasty_ty =
+          (*FIXME use type inference*)
+          Int_Type (None, default_int_metadata) in
+        let (_, e_result_idx, st') = mk_fresh Term ~ty_opt:(Some naasty_ty) "tuplefield_" 0 st in
+        let (sts_acc', ctxt_acc', assign_acc', st'') =
+          naasty_of_flick_expr st' e local_name_map sts_acc (e_result_idx :: ctxt_acc)
+            [e_result_idx] in
+        (e_result_idx :: result_indices, sts_acc', ctxt_acc', assign_acc', st''))
+        es ([], sts_acc, ctxt_acc, assign_acc, st'') in
+    let result_indices = List.rev result_indices in
+
+    let tuple =
+      Assign (Var tuple_instance_idx,
+              Record_Value
+                (List.map (fun idx -> (idx, Var idx)) result_indices)) in
+
+    let translated =
+      Var tuple_instance_idx
+      |> lift_assign assign_acc
+      |> Naasty_aux.concat
+    in (Naasty_aux.concat [sts_acc'; tuple; translated],
+        (*add declaration for the fresh name we have for this tuple instance*)
+        tuple_instance_idx :: ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         st')
 

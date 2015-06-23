@@ -25,7 +25,6 @@ type state =
     type_symbols : (string * identifier * naasty_type option) list;
     term_symbols : (string * identifier * naasty_type option) list;
     crisp_funs : (function_name * function_type) list;
-(*    fun_sigs : (identifier * identifier list) list; FIXME not sure if needed*)
   }
 
 let initial_state =

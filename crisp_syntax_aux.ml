@@ -71,9 +71,6 @@ let the_ty_of_decl = function
   | Type ty_decl -> ty_decl.type_value
   | _ -> failwith "Was expecting a type declaration."
 
-
-type ty_env = (string * (type_value list * type_value)) list
-let extend_env env x =  x :: env
 let decompose_container (ty : type_value) : type_value list =
   match ty with
   | List (_, ty', _, _) -> [ty']
@@ -97,6 +94,41 @@ let label_of_type : type_value -> label option = function
   | Empty -> failwith "Empty type cannot be given a label"
   | IPv4Address l_opt
   | Alpha l_opt -> l_opt
+
+(*Eliminate named parameters, by ordering parameters according to how
+  the function expects them to be given.*)
+let order_fun_args (fname : function_name) (st : State.state) (args : fun_arg list) : expression list =
+  match args with
+  | [] -> []
+  | (Exp e) :: rest ->
+    List.fold_right (fun arg acc ->
+      match arg with
+      | Exp e -> e :: acc
+      | Named _ -> failwith "fun_arg values should be either all Exp, or all Named. Expected all Exp.") rest [e]
+    |> List.rev
+  | (Named _) :: _ ->
+    let ((chans, arg_tys), ret_tys) =
+      List.assoc fname st.State.crisp_funs
+      |> extract_function_types in
+    let arg_labels = [] in
+    assert (chans = []); (*FIXME currently functions cannot be given channel
+                           parameters*)
+    List.fold_right (fun arg acc ->
+      match arg with
+      | Named (l, e) ->
+        begin
+        match General.find_idx arg_labels l with
+        | None -> failwith ("Parameter name not found : " ^ l)
+        | Some i -> (i, e) :: acc
+        end
+      | Exp _ -> failwith "fun_arg values should be either all Exp, or all Named. Expected all Named.") args []
+    |> List.sort
+         (fun (i, _) (j, _) ->
+            if i < j then -1 else if i > j then 1 else 0)
+    |> List.map snd
+
+type ty_env = (string * (type_value list * type_value)) list
+let extend_env env x =  x :: env
 
 let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -> type_value * ty_env = function
   | Variable label ->

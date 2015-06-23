@@ -267,7 +267,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       (mk_seq sts_acc translated, ctxt_acc, [], st)
   | And (e1, e2)
   | Or (e1, e2)
-  | Equals (e1, e2)
+  | Equals (e1, e2) (*FIXME if e1 and e2 are strings then need to use strcmp.
+                            different types may have different comparator syntax.*)
   | GreaterThan (e1, e2)
   | LessThan (e1, e2)
   | Minus (e1, e2)
@@ -513,7 +514,21 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       lift_assign assign_acc (Var if_result_idx)
       |> Naasty_aux.concat in
     (Naasty_aux.concat [sts_acc_cond; translated; nstmt], ctxt_acc_else, assign_acc_else, st_else);
-      
+
+  | IPv4_address (oct1, oct2, oct3, oct4) ->
+    let addr =
+      oct1 lsl 24 + oct2 lsl 16 + oct3 lsl 8 + oct4 in
+    let translated = Int_Value addr in
+    let nstmt =
+      lift_assign assign_acc translated
+      |> Naasty_aux.concat
+    in
+    (mk_seq sts_acc nstmt, ctxt_acc, [], st)
+  | Int_to_address e
+  | Address_to_int e ->
+    (*We store IPv4 addresses as ints, therefore the conversion doesn't do anything.*)
+    naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc assign_acc
+
   | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string no_indent e, e))
 
 (*Split a (possibly bidirectional) Crisp channel into a collection of

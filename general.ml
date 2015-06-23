@@ -60,7 +60,18 @@ let concat_pair (l : ('a list * 'b list) list) : 'a list * 'b list =
   List.fold_right (fun (item : 'a list * 'b list) (acc : 'a list * 'b list) ->
     (fst item @ fst acc, snd item @ snd acc)) l ([], [])
 
+(*Some useful combinators for dataflow-style programming*)
 let selfpair x = (x, x)
 let apfst f (x, y) = (f x, y)
 let apsnd f (x, y) = (x, f y)
 let uncurry f (x, y) = f x y
+
+(*Return the index of the first occurrence of an element in a list, or None.*)
+let find_idx (l : 'a list) (x : 'a) : int option =
+  List.fold_right (fun y (i, acc) ->
+    match acc with
+    | Some _ -> (i, acc)
+    | None ->
+      if x = y then (i, Some i)
+      else (i + 1, None)) l (0, None)
+  |> snd

@@ -440,16 +440,6 @@ let rec expression_to_string indent = function
 
   | Str s -> "\"" ^ s ^ "\""
 
-type ty_decl =
-  {type_name : type_name;
-   type_value : type_value}
-let ty_decl_to_string {type_name; type_value} =
-  type_name ^ ": " ^ type_value_to_string default_use_mixfix_lists true min_indentation type_value
-type fn_decl =
-  {fn_name : function_name;
-   fn_params : function_type;
-   fn_body : expression}
-
 type process_name = string
 
 type state_decl =
@@ -494,6 +484,16 @@ type process =
     process_body : process_body;
   }
 
+type ty_decl =
+  {type_name : type_name;
+   type_value : type_value}
+let ty_decl_to_string {type_name; type_value} =
+  type_name ^ ": " ^ type_value_to_string default_use_mixfix_lists true min_indentation type_value
+type fn_decl =
+  {fn_name : function_name;
+   fn_params : function_type;
+   fn_body : process_body}
+
 (*Top-level declarations. We cannot define types or functions within functions*)
 type toplevel_decl =
   | Type of ty_decl
@@ -507,7 +507,7 @@ let toplevel_decl_to_string = function
      "\n" ^ process_body_to_string indentation process.process_body
   | Function fn_decl ->
     "fun " ^ fn_decl.fn_name ^ " : " ^ function_type_to_string fn_decl.fn_params ^
-     "\n" ^ expression_to_string indentation fn_decl.fn_body
+     "\n" ^ process_body_to_string indentation fn_decl.fn_body
   | Include s ->
     "include \"" ^ s ^ "\""
 

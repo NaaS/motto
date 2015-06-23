@@ -696,7 +696,7 @@ let unidirect_channel (st : state) (Channel (channel_type, channel_name)) : naas
 
 (*Turns a Flick function body into a NaaSty one. The content of processes could
   also be regarded to be function bodies.*)
-let naasty_of_flick_function_body (ctxt : Naasty.identifier list)
+let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
       (waiting : Naasty.identifier list) (init_statmt : naasty_statement)
       (flick_body : Crisp_syntax.expression) (st : state) =
   let (body, ctxt', waiting', st') =
@@ -745,14 +745,23 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
         (*FIXME restriction*)
         failwith "Currently only functions with single return type are supported." in
 
+    (*FIXME other parts of the body (i.e, state and exceptions) currently are
+            not being processed.*)
+    let fn_expr_body =
+      match fn_decl.fn_body with
+      | ProcessBody (sts, e, excs) ->
+        if sts <> [] || excs <> [] then
+          failwith "Currently state and exceptions are not handled in functions"
+        else e in
+
     let init_statmt = Skip in
     let body'', st4 =
       if n_res_ty = Unit_Type then
         let init_ctxt = [] in
         let init_assign_acc = [] in
         let body', st4 =
-          naasty_of_flick_function_body init_ctxt init_assign_acc init_statmt
-            fn_decl.fn_body st'' in
+          naasty_of_flick_function_expr_body init_ctxt init_assign_acc init_statmt
+            fn_expr_body st'' in
         let body'' =
           (*Add "Return" to end of function body*)
           Seq (body', Return None)
@@ -764,8 +773,8 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
         let init_ctxt = [result_idx] in
         let init_assign_acc = [result_idx] in
         let body', st4 =
-          naasty_of_flick_function_body init_ctxt init_assign_acc init_statmt
-            fn_decl.fn_body st''' in
+          naasty_of_flick_function_expr_body init_ctxt init_assign_acc init_statmt
+            fn_expr_body st''' in
         let body'' =
           assert (n_res_ty <> Unit_Type); (*Unit functions should have been
                                             handled in a different branch.*)

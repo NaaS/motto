@@ -664,10 +664,10 @@ process_decl: PROC; name = IDENTIFIER; COLON; pt = process_type; INDENT;
                          Crisp_syntax.process_body = pb}}
 
 function_decl: FUN; name = IDENTIFIER; COLON; ft = function_type; INDENT;
-  e = expression; UNDENT
+  pb = process_body; UNDENT
     {Crisp_syntax.Function {Crisp_syntax.fn_name = name;
                             Crisp_syntax.fn_params = ft;
-                            Crisp_syntax.fn_body = e}}
+                            Crisp_syntax.fn_body = pb}}
 
 toplevel_decl:
   | ty_decl = type_decl {Crisp_syntax.Type ty_decl}

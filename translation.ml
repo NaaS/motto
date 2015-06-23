@@ -585,6 +585,33 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
           [](*Having assigned to assign_accs, we can forget them.*),
           st''')
 
+  | Update (value_name, expression) ->
+    (*NOTE similar to how we handle LocalDef, except that we require that
+           a suitable declaration took place earlier.*)
+    (*FIXME check that expression is of a compatible type*)
+    let name_idx =
+      match lookup_name Term st value_name with
+      | None -> failwith ("Could not find previous declaration of " ^ value_name)
+      | Some idx -> idx in
+(*
+    (*FIXME check that name is of a reference type*)
+    let idx_ty =
+      match lookup_symbol_type name_idx Term st with
+      | None -> failwith ("Could not find type declared for " ^ value_name)
+      | Some ty -> ty in
+*)
+    let (sts_acc', ctxt_acc', assign_acc', st') =
+      naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc [name_idx] in
+    assert (assign_acc' = []);
+    (*The recursive call to naasty_of_flick_expr takes care of assigning to
+      name_idx. Now we take care of assigning name_idx to assign_acc.*)
+    let translated =
+      lift_assign assign_acc (Var name_idx)
+      |> Naasty_aux.concat
+    in (mk_seq sts_acc' translated, ctxt_acc',
+        [](*Having assigned to assign_accs, we can forget them.*),
+        st')
+
   | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string no_indent e, e))
 
 (*Split a (possibly bidirectional) Crisp channel into a collection of

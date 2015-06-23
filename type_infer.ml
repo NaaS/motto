@@ -1,6 +1,6 @@
 (*
    Type inference for Crisp expressions.
-   Nik Sultana, Cambridge University Computer Lab, March 2015
+   Nik Sultana, Cambridge University Computer Lab, June 2015
 *)
 
 open Crisp_syntax

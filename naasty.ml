@@ -65,7 +65,11 @@ type naasty_type =
 type naasty_expression =
   | Var of identifier
   | Int_Value of int
+  | Char_Value of int
   | Bool_Value of bool
+  | Array_Value of naasty_expression list (*NOTE values within an array must be of same type*)
+  | Record_Value of (identifier * naasty_expression) list
+  | Union_Value of identifier * naasty_expression
   | And of naasty_expression * naasty_expression
   | Or of naasty_expression * naasty_expression
   | Not of naasty_expression

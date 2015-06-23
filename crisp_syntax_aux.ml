@@ -83,6 +83,20 @@ let decompose_container (ty : type_value) : type_value list =
   | RecordType (_, tys', _) -> tys'
   | Disjoint_Union (_, tys') -> tys'
   | _ -> failwith "Type is not a container"
+let label_of_type : type_value -> label option = function
+  | UserDefinedType (l_opt, _)
+  | String (l_opt, _)
+  | Integer (l_opt, _)
+  | Boolean (l_opt, _)
+  | Tuple (l_opt, _)
+  | Dictionary (l_opt, _)
+  | Reference (l_opt, _)
+  | Disjoint_Union (l_opt, _) -> l_opt
+  | RecordType (l_opt, _, _) -> l_opt
+  | List (l_opt, _, _, _) -> l_opt
+  | Empty -> failwith "Empty type cannot be given a label"
+  | IPv4Address l_opt
+  | Alpha l_opt -> l_opt
 
 let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -> type_value * ty_env = function
   | Variable label ->
@@ -299,16 +313,43 @@ let rec ty_of_expr ?strict:(strict : bool = false) (env : ty_env) : expression -
         | _ -> failwith "Unexpected map type" in
     (map_res_ty, [])
 
+  | Record fields ->
+    let labels, idx_ty =
+      List.map (fun (label, e) ->
+        let ty, _ = ty_of_expr ~strict env e in
+        (label, ty)) fields
+      |> List.split in
+    (*FIXME check labels if strict*)
+    (RecordType (None, idx_ty, []), [])
+  | RecordUpdate (e, (label, body_e)) ->
+    let ty, _ = ty_of_expr ~strict env e in
+    let _ =
+      if strict then
+        let idx_ty, _ =
+          ty_of_expr ~strict env body_e in
+        () in
+    (ty, [])
+  | RecordProjection (e, label) ->
+    let e_ty, _ = ty_of_expr ~strict env e in
+    let l_ty =
+      match e_ty with
+      | RecordType (_, tys', _) ->
+        let filtered_tys =
+          List.filter (fun ty' -> label_of_type ty' = Some label) tys' in
+        begin
+        match filtered_tys with
+        | [ty] -> ty
+        | _ -> failwith "Zero or several fields had the label sought"
+        end
+      | _ -> failwith "Was expecting record type" in
+    (l_ty, [])
+
   (*NOTE currently we don't support dependently-typed lists*)
   | _ -> failwith ("TODO")
 
 (*
     (*also used to form Coproducts, as well as make function calls*)
   | Function_Call of function_name * fun_arg list
-
-  | Record of (label * expression) list
-  | RecordUpdate of (expression * (label * expression))
-  | RecordProjection of expression * label
 
   | CaseOf of expression * (expression * expression) list
 

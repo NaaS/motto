@@ -31,8 +31,6 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
   List.fold_right (fun decl st' ->
     match decl with
     | Function {fn_name; fn_params; _} ->
-(*FIXME check that have distinct parameter names, otherwise using named
-  parameters could be confusing*)
       { st' with crisp_funs = (fn_name, fn_params) :: st'.crisp_funs }
     | Type _
     | Process _ -> st' (*NOTE currently we ignore type and process declarations*)
@@ -161,10 +159,33 @@ let translate_serialise_stringify
   List.map (stringify_compilation_unit st'')
     (translated_type_units @ translated_function_units)
 
+(*Check that have distinct parameter names, otherwise using named
+  parameters could be confusing. Also checks that all parameters
+  have names (otherwise we won't be able to refer to them in the function
+  body) -- though this should already have been checked by the parser.*)
+let check_distinct_parameter_names (st : state) : state =
+  let _ =
+    begin
+    List.iter (fun (function_name, function_type) ->
+      let ((chans, arg_tys), ret_tys) =
+        Crisp_syntax_aux.extract_function_types function_type in
+      assert (chans = []); (*FIXME currently functions cannot be given channel
+                             parameters*)
+      ignore (List.fold_right (fun ty acc ->
+        match Crisp_syntax_aux.label_of_type ty with
+        | None -> failwith ""
+        | Some label ->
+          if List.exists (fun lbl -> lbl = label) acc then
+            failwith ""
+          else label :: acc) arg_tys [])) st.crisp_funs
+    end
+  in st
+
 let compile (cfg : Config.configuration ref) (program : Crisp_syntax.program) : (string * string) list =
   expand_includes !cfg.Config.include_directories program
   |> selfpair
-  |> apfst (collect_decl_info State.initial_state)
-  |> apsnd (split_declaration_kinds)
+  |> apfst (collect_decl_info initial_state)
+  |> apfst check_distinct_parameter_names
+  |> apsnd split_declaration_kinds
   (*FIXME Functorise to take backend-specific code as parameter*)
   |> uncurry translate_serialise_stringify

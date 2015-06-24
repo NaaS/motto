@@ -9,4 +9,4 @@ ocamlbuild -cflag -g -lflag -g -tag thread -use-ocamlfind -use-menhir \
 ocamlbuild -cflag -g -lflag -g -tag thread -use-ocamlfind -use-menhir \
   -package core \
   -no-hygiene \
-  flick.byte
+  otto.byte

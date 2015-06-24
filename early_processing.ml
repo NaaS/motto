@@ -20,7 +20,10 @@ let expand_includes (include_directories : string list) (p : Crisp_syntax.progra
         (*FIXME when all the include directories have been exhausted and the
                 file hasn't been found yet, then try the current directory.*)
         let inclusion =
-          Crisp_parse.parse source_file
+          Crisp_parse.parse_file source_file
+          |> (fun p -> match p with
+               | Program p -> p
+               | _ -> failwith "Inclusion file does not contain a program")
           |> List.rev
         in expand_includes' inclusion @ acc
       | _ -> decl :: acc) p []

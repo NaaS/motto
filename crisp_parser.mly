@@ -105,6 +105,9 @@
 
 %token UNDERSCORE
 
+%token FAT_BRACKET_OPEN
+%token FAT_BRACKET_CLOSE
+
 (*Names*)
 (*
 %token <string> UPPER_ALPHA
@@ -141,8 +144,12 @@
 %left PERIOD
 %nonassoc PERIODPERIOD
 
-%start <Crisp_syntax.program> program
+%start <Crisp_syntax.source_file_contents> source_file_contents
 %%
+
+source_file_contents:
+  | FAT_BRACKET_OPEN; e = expression; FAT_BRACKET_CLOSE {Crisp_syntax.Expression e}
+  | p = program {Crisp_syntax.Program p}
 
 program:
   | EOF {[]}

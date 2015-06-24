@@ -155,10 +155,14 @@ rule main = parse
   | "dictionary" {TYPE_DICTIONARY}
   | "ref" {TYPE_REF}
 
+  | "(|" {FAT_BRACKET_OPEN}
+  | "|)" {FAT_BRACKET_CLOSE}
+
   (*FIXME need to check for escapes, particularly that of doublequotes*)
   | '"' ([^'"']* as str) '"' {STRING str}
 
   | ['a'-'z''A'-'Z']['a'-'z''A'-'Z''0'-'9''_''\'']* as id {IDENTIFIER id}
 
   | "_" {UNDERSCORE}
+
 (*FIXME string primitives as keywords -- e.g., concat, etc*)

@@ -10,8 +10,8 @@ open Crisp_parse
 
 let loop filename () =
   print_endline "Starting source program";
-  parse filename
-  |> Crisp_syntax.program_to_string
+  parse_file filename
+  |> Crisp_syntax.source_file_contents_to_string
   |> print_endline;
   print_endline "Finished source program";
 (*FIXME this next block is very rudimentary
@@ -158,6 +158,9 @@ let string_of_token = function
   | TYPE_REF -> "TYPE_REF"
 
   | UNDERSCORE -> "UNDERSCORE"
+
+  | FAT_BRACKET_OPEN -> "FAT_BRACKET_OPEN"
+  | FAT_BRACKET_CLOSE -> "FAT_BRACKET_CLOSE"
 ;;
 
 let test filepath =

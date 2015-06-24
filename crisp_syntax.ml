@@ -515,3 +515,12 @@ type program = toplevel_decl list
 let program_to_string (p : program) =
   List.map toplevel_decl_to_string p
   |> String.concat "\n"
+
+type source_file_contents =
+  | Program of program
+  | Expression of expression
+let source_file_contents_to_string (p : source_file_contents) =
+  match p with
+  | Program p -> program_to_string p
+  | Expression e ->
+    "(| " ^ expression_to_string min_indentation e ^ " |)"

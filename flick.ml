@@ -9,6 +9,7 @@ open Config
 type arg_params =
   | OutputDir
   | IncludeDir
+  | TypeInfer
 ;;
 
 let next_arg : arg_params option ref = ref None in
@@ -35,6 +36,10 @@ while !arg_idx < Array.length Sys.argv do
       if !next_arg <> None then
         failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
       else next_arg := Some IncludeDir
+    | "--infer_type" ->
+      if !next_arg <> None then
+        failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
+      else next_arg := Some TypeInfer
     | s ->
       match !next_arg with
       | None ->
@@ -48,6 +53,16 @@ while !arg_idx < Array.length Sys.argv do
       | Some IncludeDir ->
         cfg := { !cfg with include_directories = s :: !cfg.include_directories};
         next_arg := None
+      | Some TypeInfer ->
+        let e =
+          match Crisp_parse.parse_string s with
+          | Crisp_syntax.Expression e -> e
+          | _ -> failwith "String is not an expression" in
+        let ty, ty_env =
+          Type_infer.ty_of_expr ~strict:true [] e in
+        let ty_s =
+          Crisp_syntax.type_value_to_string true false Crisp_syntax.min_indentation ty in
+        Printf.printf "%s" ty_s
   in
   handle_arg !arg_idx;
   arg_idx := !arg_idx + 1
@@ -55,10 +70,12 @@ done;
 
 match !cfg.source_file with
 | Some source_file ->
-  Crisp_parse.parse source_file
+  Crisp_parse.parse_file source_file
+  |> (fun p -> match p with
+       | Crisp_syntax.Program p -> p
+       | _ -> failwith "Source file does not contain a program")
   |> Early_processing.compile cfg
   |> Output.write_files !cfg.output_location
 | _ ->
-  begin
-    failwith "Input file needs to be specified";
-  end
+  if !cfg.output_location <> No_output then
+    Printf.printf "(No input file specified)"

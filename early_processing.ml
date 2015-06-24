@@ -160,3 +160,11 @@ let translate_serialise_stringify
   if !Config.cfg.Config.debug then State_aux.state_to_str true st'' |> print_endline;
   List.map (stringify_compilation_unit st'')
     (translated_type_units @ translated_function_units)
+
+let compile (cfg : Config.configuration ref) (program : Crisp_syntax.program) : (string * string) list =
+  expand_includes !cfg.Config.include_directories program
+  |> selfpair
+  |> apfst (collect_decl_info State.initial_state)
+  |> apsnd (split_declaration_kinds)
+  (*FIXME Functorise to take backend-specific code as parameter*)
+  |> uncurry translate_serialise_stringify

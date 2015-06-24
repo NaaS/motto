@@ -54,12 +54,7 @@ done;
 match !cfg.source_file with
 | Some source_file ->
   Crisp_parse.parse source_file
-  |> Early_processing.expand_includes !cfg.include_directories
-  |> selfpair
-  |> apfst (Early_processing.collect_decl_info State.initial_state)
-  |> apsnd (Early_processing.split_declaration_kinds)
-  (*FIXME Functorise to take backend-specific code as parameter*)
-  |> uncurry Early_processing.translate_serialise_stringify
+  |> Early_processing.compile cfg
   |> Output.write_files !cfg.output_location
 | _ ->
   begin

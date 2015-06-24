@@ -134,4 +134,10 @@ let parse filename =
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
   let result = parse_and_print lexbuf in
     In_channel.close inx;
-  result
+    result
+
+let parse_string s =
+  let lexbuf = Lexing.from_string s in
+  lexbuf.lex_curr_p <- lexbuf.lex_curr_p;
+  let result = parse_and_print lexbuf in
+    result

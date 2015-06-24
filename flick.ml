@@ -58,5 +58,5 @@ match !cfg.source_file with
   |> Output.write_files !cfg.output_location
 | _ ->
   begin
-    failwith "Output directory and input file need to be specified";
+    failwith "Input file needs to be specified";
   end

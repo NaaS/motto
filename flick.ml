@@ -54,14 +54,12 @@ done;
 match !cfg.source_file with
 | Some source_file ->
   Crisp_parse.parse source_file
-  |> Serialisation.expand_includes !cfg.include_directories
+  |> Early_processing.expand_includes !cfg.include_directories
   |> selfpair
-  |> apfst (Serialisation.collect_decl_info State.initial_state)
-  |> apsnd (Serialisation.split_declaration_kinds)
-  (*FIXME "Serialisation" doesn't seem like most sensible module in which to
-           keep this code.*)
+  |> apfst (Early_processing.collect_decl_info State.initial_state)
+  |> apsnd (Early_processing.split_declaration_kinds)
   (*FIXME Functorise to take backend-specific code as parameter*)
-  |> uncurry Serialisation.translate_serialise_stringify
+  |> uncurry Early_processing.translate_serialise_stringify
   |> Output.write_files !cfg.output_location
 | _ ->
   begin

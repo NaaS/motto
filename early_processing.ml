@@ -1,5 +1,5 @@
 (*
-   Generation of de/serialisers from Flick types
+   High-level transformations applied to the source program.
    Nik Sultana, Cambridge University Computer Lab, February 2015
 *)
 
@@ -9,40 +9,6 @@ open Crisp_syntax
 open Naasty
 open Data_model
 open Type_infer (*FIXME currently unused*)
-
-(*Thrown when we try to generate a de/serialiser for a type that cannot be
-  serialised -- either because of its nature (e.g., unit) or because it lacks
-  annotations.*)
-exception Unserialisable
-
-type translated_type =
-  { naasty_type : naasty_type;
-    serialiser : naasty_function option;
-    deserialiser : naasty_function option }
-
-(*FIXME this kind of code seems beyond the scope of this module, so i'll
-        probably move the code elsewhere later.*)
-(*
-   1. Given a parsed Flick program
-   (1b. here would segment the process into possibly several processes, and
-   specify which is the main one)
-   2. form a project, splitting it into separate files, and keep track of
-      inclusions
-   3. translate each file into one or more naasty programs
-      for type:
-        traverse AST
-        get type declaration
-        attempt to translate it
-        then generate datamodel for it, completing the struct definition
-        then generate the code for the datamodel, completing the serialiser
-   ?. need to keep track of names? in what way?
-   4. generate task graph
-
-   Handling exceptions:
-   - arithmetic: overflow, division by zero
-   - channels: breakages of channels
-   - out of memory
-*)
 
 let expand_includes (include_directories : string list) (p : Crisp_syntax.program) =
   let rec expand_includes' (p : Crisp_syntax.program) =

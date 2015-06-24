@@ -7,6 +7,7 @@
        extension to encode more state as needed by the type inference algorithm.
      - need to implement matching for types, since we'll have type variables in
        types.
+     - does matcher also need to propagate serialisation annotations?
 *)
 
 open Crisp_syntax

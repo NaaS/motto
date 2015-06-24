@@ -9,7 +9,7 @@ $ ./build.sh
 
 To run:
 ```
-$ ./flick.byte -o output_directory source_file
+$ ./otto.byte -o output_directory source_file
 ```
 where `output_directory` is the name of the directory (that doesn't yet
 exist) that's intended to hold the compiler's output.
@@ -24,3 +24,9 @@ To run the parser regression tests:
 ```
 $ ocamlrun crisp_test.byte
 ```
+
+To run type inference on expressions:
+```
+$ ./otto.byte -q --infer_type "(| E |)"
+```
+where `E` is an expression.

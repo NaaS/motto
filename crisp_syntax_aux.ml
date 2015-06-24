@@ -71,6 +71,7 @@ let the_ty_of_decl = function
   | Type ty_decl -> ty_decl.type_value
   | _ -> failwith "Was expecting a type declaration."
 
+(*Determine the type(s) being carried by a container type.*)
 let decompose_container (ty : type_value) : type_value list =
   match ty with
   | List (_, ty', _, _) -> [ty']
@@ -80,6 +81,8 @@ let decompose_container (ty : type_value) : type_value list =
   | RecordType (_, tys', _) -> tys'
   | Disjoint_Union (_, tys') -> tys'
   | _ -> failwith "Type is not a container"
+
+(*Extract the label from a type value.*)
 let label_of_type : type_value -> label option = function
   | UserDefinedType (l_opt, _)
   | String (l_opt, _)

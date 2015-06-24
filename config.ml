@@ -20,6 +20,8 @@ type configuration =
     (*Disable the erasure of declarations and assignments of unread variables*)
     disable_var_erasure : bool;
     debug : bool;
+    parser_test_files : string list;
+    parser_test_dirs : string list;
   }
 
 let cfg : configuration ref = ref {
@@ -31,4 +33,6 @@ let cfg : configuration ref = ref {
   disable_inlining = false;
   disable_var_erasure = false;
   debug = false;
+  parser_test_files = [];
+  parser_test_dirs = [];
 }

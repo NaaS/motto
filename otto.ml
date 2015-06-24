@@ -10,6 +10,8 @@ type arg_params =
   | OutputDir
   | IncludeDir
   | TypeInfer
+  | TestParseFile
+  | TestParseDir
 ;;
 
 let next_arg : arg_params option ref = ref None in
@@ -40,6 +42,14 @@ while !arg_idx < Array.length Sys.argv do
       if !next_arg <> None then
         failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
       else next_arg := Some TypeInfer
+    | "--parser_test_file" ->
+      if !next_arg <> None then
+        failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
+      else next_arg := Some TestParseFile
+    | "--parser_test_dir" ->
+      if !next_arg <> None then
+        failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
+      else next_arg := Some TestParseDir
     | s ->
       match !next_arg with
       | None ->
@@ -62,7 +72,14 @@ while !arg_idx < Array.length Sys.argv do
           Type_infer.ty_of_expr ~strict:true [] e in
         let ty_s =
           Crisp_syntax.type_value_to_string true false Crisp_syntax.min_indentation ty in
-        Printf.printf "%s" ty_s
+        Printf.printf "%s" ty_s;
+        next_arg := None
+      | Some TestParseFile ->
+        cfg := { !cfg with parser_test_files = s :: !cfg.parser_test_files};
+        next_arg := None
+      | Some TestParseDir ->
+        cfg := { !cfg with parser_test_dirs = s :: !cfg.parser_test_dirs};
+        next_arg := None
   in
   handle_arg !arg_idx;
   arg_idx := !arg_idx + 1
@@ -77,5 +94,7 @@ match !cfg.source_file with
   |> Early_processing.compile cfg
   |> Output.write_files !cfg.output_location
 | _ ->
+  if !cfg.parser_test_files <> [] || !cfg.parser_test_dirs <> [] then
+    Crisp_test.run_parser_test !cfg.parser_test_dirs !cfg.parser_test_files;
   if !cfg.output_location <> No_output then
-    Printf.printf "(No input file specified)"
+    Printf.printf "(Not given a file to compile)"

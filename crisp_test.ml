@@ -194,14 +194,10 @@ let test_whole_dir testdir =
     Unix.closedir dh
 ;;
 
-print_endline "*crisp* *crisp*";
-
-if Array.length Sys.argv = 1 then
+let run_parser_test directories files =
   begin
-  test_whole_dir "tests";
-  test_whole_dir "examples";
+  print_endline "*crisp* *crisp*";
+
+  List.iter test_whole_dir (List.rev directories);
+  List.iter test (List.rev files);
   end
-else
-  for i = 1 to Array.length Sys.argv - 1 do
-    test Sys.argv.(i)
-  done

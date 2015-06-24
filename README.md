@@ -20,9 +20,13 @@ For testing, I'm currently using the following as `source_file`:
 * `examples/hadoop_wc_type.cp`
 * `tests/simple_function.cp`
 
-To run the parser regression tests:
+To run the parser regression tests on both the `examples` and `tests` directories:
 ```
-$ ocamlrun crisp_test.byte
+$ ./otto.byte -q --parser_test_dir examples --parser_test_dir tests
+```
+Or you might wish to only test a single file:
+```
+./otto.byte -q --parser_test_file tests/types_process.cp
 ```
 
 To run type inference on expressions:

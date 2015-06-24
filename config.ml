@@ -3,7 +3,7 @@
    Nik Sultana, Cambridge University Computer Lab, May 2015
 *)
 
-type output_location = Stdout | Directory of string;;
+type output_location = Stdout | Directory of string | No_output;;
 
 type configuration =
   { source_file : string option;

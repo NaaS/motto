@@ -25,6 +25,8 @@ while !arg_idx < Array.length Sys.argv do
       cfg := { !cfg with disable_var_erasure = true }
     | "--debug_output" ->
       cfg := { !cfg with debug = true }
+    | "-q" ->
+      cfg := { !cfg with output_location = No_output }
     | "-o" ->
       if !next_arg <> None then
         failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))

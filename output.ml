@@ -10,7 +10,8 @@ open Config
 let write_files (ol : output_location) (file_contents : (string * string) list) : unit =
   let output =
     match ol with
-    | Stdout -> Stdout
+    | No_output
+    | Stdout -> ol
     | Directory dir ->
       begin
         match dir with
@@ -39,5 +40,6 @@ let write_files (ol : output_location) (file_contents : (string * string) list) 
     | Directory dir ->
         let channel = open_out (dir ^ "/" ^ filename) in
         output_string channel contents;
-        close_out channel;)
+        close_out channel
+    | No_output -> ())
     file_contents ()

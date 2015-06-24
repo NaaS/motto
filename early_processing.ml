@@ -173,10 +173,11 @@ let check_distinct_parameter_names (st : state) : state =
                              parameters*)
       ignore (List.fold_right (fun ty acc ->
         match Crisp_syntax_aux.label_of_type ty with
-        | None -> failwith ""
+        | None -> failwith "All function parameters must be named"
         | Some label ->
           if List.exists (fun lbl -> lbl = label) acc then
-            failwith ""
+            (*This is the problem that this analysis is designed to catch.*)
+            failwith ("Function " ^ function_name ^ " has two parameters called " ^ label)
           else label :: acc) arg_tys [])) st.crisp_funs
     end
   in st

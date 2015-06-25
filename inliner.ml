@@ -56,7 +56,7 @@ let rec count_var_references_in_naasty_expr (st : state)
       failwith ("Undeclared variable: " ^ string_of_int no_idx_entries ^
                 " records for the same idx " ^
                 string_of_int idx ^ " -- variable " ^
-                resolve_idx Term no_prefix (Some st) idx)
+                resolve_idx (Term Value) no_prefix (Some st) idx)
   | Int_Value _
   | Bool_Value _ -> table
   | Not e
@@ -123,7 +123,7 @@ let inliner_table_entry_to_string ?st_opt:((st_opt : state option) = None)
       (entry : inliner_table_entry) =
   "id=" ^ string_of_int entry.id ^
   bind_opt (fun st ->
-    " (" ^ resolve_idx Term no_prefix st_opt entry.id ^ ")") "" st_opt ^ "; " ^
+    " (" ^ resolve_idx (Term Undetermined) no_prefix st_opt entry.id ^ ")") "" st_opt ^ "; " ^
   "parameter=" ^ string_of_bool entry.parameter ^ "; " ^
   "update_count=" ^ string_of_int entry.update_count ^ "; " ^
   "ref_count=" ^ string_of_int entry.ref_count ^ "; " ^
@@ -191,7 +191,7 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
       failwith ("Impossible: " ^ string_of_int no_idx_entries ^
                 " records for the same idx " ^
                 string_of_int idx ^ " -- variable " ^
-                resolve_idx Term no_prefix (Some st) idx)
+                resolve_idx (Term Value) no_prefix (Some st) idx)
 
   | Increment (idx, expr) ->
     let no_idx_entries =
@@ -214,7 +214,7 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
     else
       failwith ("Impossible: multiple records for the same idx " ^
                 string_of_int idx ^ " -- variable " ^
-                resolve_idx Term no_prefix (Some st) idx)
+                resolve_idx (Term Value) no_prefix (Some st) idx)
 
   | Commented (stmt', _) ->
     inliner_analysis st stmt' ctxt_acc table

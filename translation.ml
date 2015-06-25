@@ -38,14 +38,14 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
           else
             (idx, st)
       end in
-  let check_and_generate_name label_opt =
+  let check_and_generate_name (ik : identifier_kind) label_opt =
     match label_opt with
     | None -> (None, st)
     | Some identifier ->
       begin
-        match lookup_name Term st identifier with
+        match lookup_name (Term ik) st identifier with
         | None ->
-          let (idx, st') = extend_scope_unsafe Term st identifier
+          let (idx, st') = extend_scope_unsafe (Term ik) st identifier
           in (Some idx, st')
         | Some idx ->
           if forbid_shadowing then
@@ -71,25 +71,25 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
     failwith "Unsupported"
   | UserDefinedType (label_opt, type_name) ->
     let type_name' = check_and_resolve_typename type_name in
-    let (label_opt', st') = check_and_generate_name label_opt in
+    let (label_opt', st') = check_and_generate_name Value label_opt in
     let ty' = UserDefined_Type (label_opt', type_name')
     in (ty', st')
   | Boolean (label_opt, type_ann) ->
     if (type_ann <> []) then
       failwith "Boolean serialisation annotation not supported"; (*TODO*)
-    let (label_opt', st') = check_and_generate_name label_opt in
+    let (label_opt', st') = check_and_generate_name Value label_opt in
     let translated_ty = Bool_Type label_opt' in
     let st'' =
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx translated_ty Term st'
+        update_symbol_type idx translated_ty (Term Value) st'
     in (translated_ty, st'')
   | Integer (label_opt, type_ann) ->
     if type_ann = [] && require_annotations then
       raise (Translation_type ("No annotation given", ty))
     else
-      let (label_opt', st') = check_and_generate_name label_opt in
+      let (label_opt', st') = check_and_generate_name Value label_opt in
       let metadata =
         List.fold_right (fun (name, ann) md ->
           match ann with
@@ -117,20 +117,20 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx translated_ty Term st'
+        update_symbol_type idx translated_ty (Term Value) st'
     in (translated_ty, st'')
   | IPv4Address label_opt ->
-    let (label_opt', st') = check_and_generate_name label_opt in
+    let (label_opt', st') = check_and_generate_name Value label_opt in
     let metadata = { signed = false; precision = 32; hadoop_vint = false } in
     let translated_ty = Int_Type (label_opt', metadata) in
     let st'' =
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx translated_ty Term st'
+        update_symbol_type idx translated_ty (Term Value) st'
     in (translated_ty, st'')
   | String (label_opt, type_ann) ->
-    let (label_opt', st') = check_and_generate_name label_opt in
+    let (label_opt', st') = check_and_generate_name Value label_opt in
     let vlen = Undefined (*FIXME determine from type_ann*) in
     let container_type =
       match vlen with
@@ -147,17 +147,17 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx container_type Term st'
+        update_symbol_type idx container_type (Term Value) st'
     in (container_type, st'')
   | Reference (label_opt, ty) ->
-    let (label_opt', st') = check_and_generate_name label_opt in
+    let (label_opt', st') = check_and_generate_name Value label_opt in
     let (ty', st'') = naasty_of_flick_type st' ty in
     let translated_ty = Pointer_Type (label_opt', ty') in
     let st''' =
       match label_opt' with
       | None -> st''
       | Some idx ->
-        update_symbol_type idx translated_ty Term st''
+        update_symbol_type idx translated_ty (Term Value) st''
     in (translated_ty, st''')
   | RecordType (label_opt, tys, type_ann) ->
     if (type_ann <> []) then
@@ -178,9 +178,9 @@ let try_local_name (l : label)
 (*Add a local name: a mapping from a programmer-chosen name (within this scope)
   to the name that the compiler decided to use for this. The latter may be
   based on the former, but could be different in order to deal with shadowing.*)
-let extend_local_names (local_name_map : (label * label) list)
+let extend_local_names (local_name_map : (label * label) list) (ik : identifier_kind)
       (name : label) (name' : identifier) (st : state) : (label * label) list =
-  (name, resolve_idx Term no_prefix (Some st) name') :: local_name_map
+  (name, resolve_idx (Term ik) no_prefix (Some st) name') :: local_name_map
 
 (* Based on "Translation from Flick to IR" in
    https://github.com/NaaS/system/blob/master/crisp/flick/flick.tex
@@ -219,7 +219,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                                             identifier list (*assign_acc*) *
                                             state) =
   let check_and_resolve_name identifier =
-    match lookup_name Term st identifier with
+    match lookup_name (Term Undetermined) st identifier with
     | None -> failwith ("Undeclared identifier: " ^ identifier)
     | Some i -> i in
   match e with
@@ -300,12 +300,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                                                 uses?*))
         in int_ty, int_ty
       | _ -> failwith "Impossible" in
-    let (_, e1_result_idx, st') = mk_fresh Term ~ty_opt:(Some ty1) "x_" 0 st in
+    let (_, e1_result_idx, st') = mk_fresh (Term Value) ~ty_opt:(Some ty1) "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
       naasty_of_flick_expr st' e1 local_name_map sts_acc (e1_result_idx :: ctxt_acc)
         [e1_result_idx] in
     let (_, e2_result_idx, st''') =
-      mk_fresh Term ~ty_opt:(Some ty2) "x_" e1_result_idx st'' in
+      mk_fresh (Term Value) ~ty_opt:(Some ty2) "x_" e1_result_idx st'' in
     let (sts_acc'', ctxt_acc'', assign_acc'', st4) =
       naasty_of_flick_expr st''' e2 local_name_map sts_acc' (e2_result_idx :: ctxt_acc')
         [e2_result_idx] in
@@ -354,7 +354,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                                               from and what kind of numbers it
                                               uses?*))
       | _ -> failwith "Impossible" in
-    let (_, e_result_idx, st') = mk_fresh Term ~ty_opt:(Some ty) "x_" 0 st in
+    let (_, e_result_idx, st') = mk_fresh (Term Value) ~ty_opt:(Some ty) "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', st'') =
       naasty_of_flick_expr st' e' local_name_map sts_acc (e_result_idx :: ctxt_acc)
         [e_result_idx] in
@@ -411,12 +411,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
           Int_Type (None, default_int_metadata) in
         (*Since this is a newly-declared variable, make sure it's fresh.*)
         let (_, acc_label_idx, st') =
-          mk_fresh Term ~ty_opt:(Some acc_init_ty) (acc_label ^ "_") 0 st in
+          mk_fresh (Term Value) ~ty_opt:(Some acc_init_ty) (acc_label ^ "_") 0 st in
         let translate_initialisation =
           naasty_of_flick_expr st' acc_init local_name_map sts_acc
             (acc_label_idx :: ctxt_acc) [acc_label_idx] in
         (translate_initialisation,
-         extend_local_names local_name_map acc_label acc_label_idx st',
+         extend_local_names local_name_map Value acc_label acc_label_idx st',
          Some acc_label_idx) in
     assert (assign_acc' = []);
 
@@ -431,14 +431,14 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       match range_e with
       | IntegerRange (from_e, until_e)->
         let (_, from_idx, st'') =
-          mk_fresh Term ~ty_opt:(Some int_ty) "from_" 0 st' in
+          mk_fresh (Term Value) ~ty_opt:(Some int_ty) "from_" 0 st' in
         let (sts_acc'', ctxt_acc'', assign_acc'', st''') =
           naasty_of_flick_expr st'' from_e local_name_map sts_acc'
             (from_idx :: ctxt_acc') [from_idx] in
         assert (assign_acc'' = []);
 
         let (_, to_idx, st4) =
-          mk_fresh Term ~ty_opt:(Some int_ty) "to_" 0 st''' in
+          mk_fresh (Term Value) ~ty_opt:(Some int_ty) "to_" 0 st''' in
         let (sts_acc''', ctxt_acc''', assign_acc''', st5) =
           naasty_of_flick_expr st4 until_e local_name_map sts_acc''
             (to_idx :: ctxt_acc'') [to_idx] in
@@ -448,16 +448,16 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | _ -> failwith "Unsupported iteration range" in
 
     let (_, idx, st''') =
-      mk_fresh Term ~ty_opt:(Some int_ty) (label ^ "_") 0 st'' in
-    let idx_ty = the (lookup_symbol_type idx Term st''') in
+      mk_fresh (Term Value) ~ty_opt:(Some int_ty) (label ^ "_") 0 st'' in
+    let idx_ty = the (lookup_symbol_type idx (Term Value) st''') in
     let (_, body_result_idx, st''') =
-      mk_fresh Term
+      mk_fresh (Term Value)
         ~ty_opt:(Some int_ty)(*FIXME this should be same as type of acc, since
                                      after all we'll be assigning this to acc*)
         ("body_result_") 0 st''' in
 
     let local_name_map'' =
-      extend_local_names local_name_map' label idx st''' in
+      extend_local_names local_name_map' Value label idx st''' in
 
     let condition = LEq (Var from_idx, Var to_idx) in
     let increment = Increment (idx, Int_Value 1) in
@@ -497,14 +497,14 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
        for unit-typed expressions, in which case we'll implicitly set the else
        branch to unity by using the one-handed If (If1) in NaaSty.*)
     let (_, cond_result_idx, st_before_cond) =
-      mk_fresh Term ~ty_opt:(Some (Bool_Type None)) "ifcond_" 0 st in
+      mk_fresh (Term Value) ~ty_opt:(Some (Bool_Type None)) "ifcond_" 0 st in
     let (sts_acc_cond, ctxt_acc_cond, assign_acc_cond, st_cond) =
       naasty_of_flick_expr st_before_cond be local_name_map sts_acc (cond_result_idx :: ctxt_acc) [cond_result_idx] in
     assert (assign_acc_cond = []); (* We shouldn't get anything back to assign to *)
     let (_, if_result_idx, st_before_then) =
       (*FIXME here we use Int_Type, but this should be inferred from the if
         expression*)
-      mk_fresh Term ~ty_opt:(Some (Int_Type (None, default_int_metadata))) "ifresult_" 0 st_cond in
+      mk_fresh (Term Value) ~ty_opt:(Some (Int_Type (None, default_int_metadata))) "ifresult_" 0 st_cond in
     let (then_block, ctxt_acc_then, assign_acc_then, st_then) = 
       naasty_of_flick_expr st_before_then e1 local_name_map Skip (if_result_idx :: ctxt_acc_cond) [if_result_idx] in
     let (else_block, ctxt_acc_else, assign_acc_else, st_else) = 
@@ -545,7 +545,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let (result_indices, sts_acc', ctxt_acc', _, st') =
       List.fold_right (fun (e, ty) (result_indices, sts_acc, ctxt_acc, assign_acc, st) ->
         let (naasty_ty, st') = naasty_of_flick_type st ty in
-        let (_, e_result_idx, st'') = mk_fresh Term ~ty_opt:(Some naasty_ty) "funarg_" 0 st' in
+        let (_, e_result_idx, st'') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "funarg_" 0 st' in
         let (sts_acc', ctxt_acc', assign_acc', st''') =
           naasty_of_flick_expr st'' e local_name_map sts_acc (e_result_idx :: ctxt_acc)
             [e_result_idx] in
@@ -573,7 +573,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         let int_ty = Int_Type (None, default_int_metadata) in
         (int_ty, st)
       | Some ty -> naasty_of_flick_type st ty in
-      let (_, name_idx, st'') = mk_fresh Term ~ty_opt:(Some naasty_ty) name 0 st' in
+      let (_, name_idx, st'') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) name 0 st' in
       let (sts_acc', ctxt_acc', assign_acc', st''') =
         naasty_of_flick_expr st'' e local_name_map sts_acc (name_idx :: ctxt_acc)
           [name_idx] in
@@ -592,7 +592,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
            a suitable declaration took place earlier.*)
     (*FIXME check that expression is of a compatible type*)
     let name_idx =
-      match lookup_name Term st value_name with
+      match lookup_name (Term Undetermined) st value_name with
       | None -> failwith ("Could not find previous declaration of " ^ value_name)
       | Some idx -> idx in
 (*
@@ -628,7 +628,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         Record_Type (tuple_instance_ty_idx, component_tys) in
     let (_, tuple_instance_idx, st'') =
       update_symbol_type tuple_instance_ty_idx tuple_instance_ty Type st'
-      |> mk_fresh Term ~ty_opt:(Some tuple_instance_ty) "tuple_" 0 in
+      |> mk_fresh (Term Value) ~ty_opt:(Some tuple_instance_ty) "tuple_" 0 in
 
     (*NOTE this bit is similar to part of Function_Call*)
     let (result_indices, sts_acc', ctxt_acc', _, st''') =
@@ -636,7 +636,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         let naasty_ty =
           (*FIXME use type inference*)
           Int_Type (None, default_int_metadata) in
-        let (_, e_result_idx, st') = mk_fresh Term ~ty_opt:(Some naasty_ty) "tuplefield_" 0 st in
+        let (_, e_result_idx, st') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "tuplefield_" 0 st in
         let (sts_acc', ctxt_acc', assign_acc', st'') =
           naasty_of_flick_expr st' e local_name_map sts_acc (e_result_idx :: ctxt_acc)
             [e_result_idx] in
@@ -667,7 +667,7 @@ let unidirect_channel (st : state) (Channel (channel_type, channel_name)) : naas
   let subchan ty direction suffix is_array st =
     let ty', st' = naasty_of_flick_type st ty in
     let _, name_idx, st'' =
-      mk_fresh Term ~ty_opt:(Some ty')
+      mk_fresh (Term Value) ~ty_opt:(Some ty')
         (channel_name ^ suffix) 0(*FIXME const*) st'
     in ([Chan_Type (Some name_idx, is_array, Input, ty')], st'') in
   match channel_type with
@@ -711,7 +711,7 @@ let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
   let body' =
     List.fold_right (fun idx stmt ->
       let ty =
-        match lookup_symbol_type idx Term(*all ctxt symbols are term-level*)
+        match lookup_symbol_type idx (Term Value)(*all ctxt symbols are term-level*)
                 st' with
         | None -> failwith ("Couldn't resolve type of ctxt idx " ^
                             string_of_int idx)
@@ -768,7 +768,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           Seq (body', Return None)
         in (body'', st4)
       else
-        let (_, result_idx, st''') = mk_fresh Term ~ty_opt:(Some n_res_ty) "x_" 0 st'' in
+        let (_, result_idx, st''') = mk_fresh (Term Value) ~ty_opt:(Some n_res_ty) "x_" 0 st'' in
         (*Add type declaration for result_idx, which should be the same as res_ty
           since result_idx will carry the value that's computed in this function.*)
         let init_ctxt = [result_idx] in
@@ -785,7 +785,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
 
     let (fn_idx, st5) =
       if is_fresh fn_decl.fn_name st4 then
-        extend_scope_unsafe Term st4 ~ty_opt:None(*FIXME put function's type here?*)
+        extend_scope_unsafe (Term Function_Name) st4 ~ty_opt:None(*FIXME put function's type here?*)
                           fn_decl.fn_name
       else
         failwith ("Function name " ^ fn_decl.fn_name ^ " isn't fresh.")

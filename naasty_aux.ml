@@ -30,7 +30,7 @@ let no_prefix = ""
 let ty_prefix = "ty_"
 let ty_name = resolve_idx Type ty_prefix
 let id_prefix = "id_"
-let id_name = resolve_idx Term id_prefix
+let id_name = resolve_idx (Term Undetermined) id_prefix
 
 (*Extract identifier from a type*)
 let idx_of_naasty_type = function
@@ -349,7 +349,7 @@ let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent pro
 
 (*Extends a scope by adding a mapping between a name and an index.
   NOTE we don't check for clashes! thus the _unsafe prefix*)
-let extend_scope_unsafe (scope : scope) (st : state) ?ty_opt:(ty_opt = None) (id : string) : Naasty.identifier * state =
+let extend_scope_unsafe (scope : scope) (st : state) ?src_ty_opt:(src_ty_opt = None) ?ty_opt:(ty_opt = None) (id : string) : Naasty.identifier * state =
   let ty_opt' =
     (*If we're given a type, but it isn't associated with a variable index, then
       update the type to associate it with the index we have.*)
@@ -363,10 +363,16 @@ let extend_scope_unsafe (scope : scope) (st : state) ?ty_opt:(ty_opt = None) (id
        type_symbols = (id, st.next_symbol, ty_opt') :: st.type_symbols;
        next_symbol = 1 + st.next_symbol;
      })
-  | Term ->
+  | Term ik ->
     (st.next_symbol,
+     let metadata =
+     {
+       source_type = src_ty_opt;
+       naasty_type = ty_opt';
+       identifier_kind = ik;
+     } in
      { st with
-       term_symbols = (id, st.next_symbol, ty_opt') :: st.term_symbols;
+       term_symbols = (id, st.next_symbol, metadata) :: st.term_symbols;
        next_symbol = 1 + st.next_symbol;
      })
 
@@ -387,7 +393,7 @@ let mk_fresh (scope : scope) ?ty_opt:(ty_opt = None) (id : string) (min_idx : in
 
 (*Indicates if a name is fresh in either scope*)
 let is_fresh (id : string) (st : state) : bool =
-  lookup_name Term st id = None && lookup_name Type st id = None
+  lookup_name (Term Undetermined) st id = None && lookup_name Type st id = None
 
 (*
   Applies a transformation 'f' to the state-index of a symbol that's in turn
@@ -432,7 +438,7 @@ let substitute (fresh : bool) (names : string list) (type_mode : bool)
     let id', st' =
       if not fresh then
         (*Look it up from the state*)
-        let scope = if type_mode then Type else Term in
+        let scope = if type_mode then Type else Term Value in
         match lookup_name scope st local_name with
         | None ->
             failwith ("Undeclared " ^ scope_to_str scope ^ ": " ^ local_name)
@@ -449,9 +455,9 @@ let substitute (fresh : bool) (names : string list) (type_mode : bool)
             else
               (idx, st)
         else
-          match lookup_name Term st local_name with
+          match lookup_name (Term Value) st local_name with
           | None ->
-            extend_scope_unsafe Term st local_name
+            extend_scope_unsafe (Term Value) st local_name
           | Some idx ->
             if forbid_shadowing then
               failwith ("Already declared identifier: " ^ local_name)

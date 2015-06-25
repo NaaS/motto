@@ -31,15 +31,24 @@ let expand_includes (include_directories : string list) (p : Crisp_syntax.progra
 
 (*Gather declaration information from a program, and encode in the state.*)
 let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.state =
-  List.fold_right (fun decl st' ->
+  let fun_decls, ty_decls, proc_decls, st' =
+  List.fold_right (fun decl (acc_fun_decls, acc_ty_decls, acc_proc_decls, st) ->
     match decl with
     | Function {fn_name; fn_params; _} ->
-      { st' with crisp_funs = (fn_name, fn_params) :: st'.crisp_funs }
-    | Type _
-    | Process _ -> st' (*NOTE currently we ignore type and process declarations*)
+      ((fn_name, fn_params) :: acc_fun_decls, acc_ty_decls, acc_proc_decls, st)
+    | Type {type_name; type_value} ->
+      let nst_ty, st' = Translation.naasty_of_flick_type st type_value in
+      (acc_fun_decls, (type_name, type_value, nst_ty) :: acc_ty_decls, acc_proc_decls, st')
+    | Process _ ->
+      (*FIXME currently we ignore process declarations*)
+      (acc_fun_decls, acc_ty_decls, acc_proc_decls, st)
     | Include _ ->
       failwith "Inclusions should have been expanded before reaching this point.")
-    p st
+    p ([], [], [], st) in
+  { st' with crisp_funs =
+               (*NOTE order of declarations is preserved*)
+               st'.crisp_funs @ List.rev fun_decls;
+             type_declarations = st'.type_declarations @ List.rev ty_decls}
 
 (*Given a program whose Includes have been expanded out, separate out the
   declarations of types, processes, and functions -- but keep their relative

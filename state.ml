@@ -20,7 +20,7 @@ let term_type_separation = false
 
 type state =
   { pragma_inclusions : string list;
-    type_declarations : naasty_type list;
+    type_declarations : (type_name * type_value * naasty_type) list;
     next_symbol : identifier;
     type_symbols : (string * identifier * naasty_type option) list;
     term_symbols : (string * identifier * naasty_type option) list;

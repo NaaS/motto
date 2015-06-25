@@ -45,9 +45,8 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
     | Include _ ->
       failwith "Inclusions should have been expanded before reaching this point.")
     p ([], [], [], st) in
-  { st' with crisp_funs =
-               (*NOTE order of declarations is preserved*)
-               st'.crisp_funs @ List.rev fun_decls;
+  (*NOTE order of declarations is preserved*)
+  { st' with crisp_funs = st'.crisp_funs @ List.rev fun_decls;
              type_declarations = st'.type_declarations @ List.rev ty_decls}
 
 (*Given a program whose Includes have been expanded out, separate out the

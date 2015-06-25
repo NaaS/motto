@@ -35,7 +35,28 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
   List.fold_right (fun decl (acc_fun_decls, acc_ty_decls, acc_proc_decls, st) ->
     match decl with
     | Function {fn_name; fn_params; _} ->
-      ((fn_name, fn_params) :: acc_fun_decls, acc_ty_decls, acc_proc_decls, st)
+      let st' =
+        match lookup_term_data (Term Function_Name) st.term_symbols fn_name with
+        | None ->
+          let md =
+            {
+              (*NOTE type info for functions is stored separately in the symbol
+                     table at the moment, in the "crisp_funs" field.
+                FIXME would be cleaner to store type info in the same place*)
+              source_type = None;
+              naasty_type = None;
+              identifier_kind = Function_Name;
+            } in
+          let (fn_idx, st') =
+            if Naasty_aux.is_fresh fn_name st then
+              Naasty_aux.extend_scope_unsafe (Term Function_Name) st ~ty_opt:None(*FIXME put function's type here?*)
+                                fn_name
+            else
+              failwith ("Function name " ^ fn_name ^ " isn't fresh.") in
+          (*NOTE order of declarations isn't preserved within term_symbols*)
+          st'
+        | Some (_, _) -> failwith ("Function " ^ fn_name ^ " declared more than once") in
+      ((fn_name, fn_params) :: acc_fun_decls, acc_ty_decls, acc_proc_decls, st')
     | Type {type_name; type_value} ->
       let nst_ty, st' = Translation.naasty_of_flick_type st type_value in
       (acc_fun_decls, (type_name, type_value, nst_ty) :: acc_ty_decls, acc_proc_decls, st')

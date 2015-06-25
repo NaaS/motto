@@ -783,12 +783,11 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           Seq (body', Return (Some (Var result_idx))) in
         (body'', st4) in
 
-    let (fn_idx, st5) =
-      if is_fresh fn_decl.fn_name st4 then
-        extend_scope_unsafe (Term Function_Name) st4 ~ty_opt:None(*FIXME put function's type here?*)
-                          fn_decl.fn_name
-      else
-        failwith ("Function name " ^ fn_decl.fn_name ^ " isn't fresh.")
+    let (fn_idx, st5) = (*FIXME code style here sucks*)
+      match lookup_term_data (Term Function_Name) st4.term_symbols fn_decl.fn_name with
+      | None ->
+        failwith ("Function name " ^ fn_decl.fn_name ^ " not found in symbol table.")
+      | Some (idx, _) -> (idx, st4)
     in (Fun_Decl
           {
             id = fn_idx;

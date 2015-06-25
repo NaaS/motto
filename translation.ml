@@ -19,6 +19,7 @@ let unidir_chan_send_suffix = "_send_"
 exception Translation_type of string * type_value
 exception Translation_expr of string * expression
 
+(*FIXME register labels (of disjuncts or fields) in the state*)
 let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * state) =
   let check_and_resolve_typename type_name =
     match lookup_name Type st type_name with

@@ -59,6 +59,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
       ((fn_name, fn_params) :: acc_fun_decls, acc_ty_decls, acc_proc_decls, st')
     | Type {type_name; type_value} ->
       let nst_ty, st' = Translation.naasty_of_flick_type st type_value in
+      (*FIXME descend through compound types, adding labels to the symbol table*)
       (acc_fun_decls, (type_name, type_value, nst_ty) :: acc_ty_decls, acc_proc_decls, st')
     | Process _ ->
       (*FIXME currently we ignore process declarations*)

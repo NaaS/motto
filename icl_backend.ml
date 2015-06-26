@@ -7,7 +7,7 @@ open General
 open State
 open Naasty
 
-module Backend : Backend.Instance =
+module ICL_Backend : Backend.Instance =
 struct
   type unit_name = string
   type unit_contents = string
@@ -95,10 +95,8 @@ let translate_function_compilation_unit (st : state)
 (*FIXME currently ignoring processes*)
 let translate_serialise_stringify
   (st : State.state)
-  ((types_unit, functions_unit, processes_unit) :
-     Crisp_project.compilation_unit *
-     Crisp_project.compilation_unit *
-     Crisp_project.compilation_unit) =
+  ({Backend.types_unit; Backend.functions_unit; Backend.processes_unit} :
+     Backend.compilation_record) =
   let stringify_compilation_unit (st : state) (cu : Naasty_project.compilation_unit) =
     (Naasty_project.filename_of_compilationunit cu,
      Naasty_project.string_of_compilationunit ~st_opt:(Some st) cu) in
@@ -114,4 +112,8 @@ let translate = translate_serialise_stringify
 
 end
 
-let translate = Backend.translate
+let translate st (tys, funs, procs) =
+  ICL_Backend.translate st
+    {Backend.types_unit = tys;
+     Backend.functions_unit = funs;
+     Backend.processes_unit = procs}

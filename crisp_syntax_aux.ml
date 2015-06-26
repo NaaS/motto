@@ -134,3 +134,29 @@ let order_fun_args (fname : function_name) (st : State.state) (args : fun_arg li
          (fun (i, _) (j, _) ->
             if i < j then -1 else if i > j then 1 else 0)
     |> List.map snd
+
+(*Lists the constants (and their types) that should be added to the signature.
+  Constants are disjunct or field names, in coproducts and labelled products
+  respectively.*)
+let consts_in_type (ty : type_value) : (string * State.identifier_kind * type_value) list option =
+  let rec consts_in_type' (ik : State.identifier_kind) = function
+    | RecordType (_, tys, _) as ty ->
+      List.map (consts_in_type' (State.Field ty)) tys
+      |> List.concat
+    | Disjoint_Union (_, tys) as ty ->
+      List.map (consts_in_type' (State.Disjunct ty)) tys
+      |> List.concat
+    | ty ->
+      match label_of_type ty with
+      | None -> failwith "Anonymous field -- this may be fine, but check."
+      | Some label -> [(label, ik, ty)]
+  in match ty with
+  | RecordType (_, tys, _) ->
+    List.map (consts_in_type' (State.Field ty)) tys
+    |> List.concat
+    |> (fun x -> Some x)
+  | Disjoint_Union (_, tys) ->
+    List.map (consts_in_type' (State.Disjunct ty)) tys
+    |> List.concat
+    |> (fun x -> Some x)
+  | _ -> None

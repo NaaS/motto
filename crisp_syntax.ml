@@ -44,7 +44,9 @@ type type_value =
   (*We send records, not tuples, over the wire, so tuples
     don't need type annotations.*)
   | Tuple of label option * type_value list
-  | Dictionary of label option * type_value
+  | Dictionary of label option * type_value (*FIXME should also specify type of
+                                                    the index, as well as the contained
+                                                    type?*)
   | Reference of label option * type_value
 ;;
 

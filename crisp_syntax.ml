@@ -24,7 +24,8 @@ type univ_type = string (*FIXME hack*)
 
 type dependency_index = string
 
-(*FIXME use sets instead of lists for records and unions*)
+(*NOTE cannot use sets instead of lists for records since order
+       might matter (certainly if the type needs to be serialised).*)
 (*Labels are used to implement labelled variants over disjoint unions.*)
 type type_value =
   (*A reference to a type defined earlier in the program*)

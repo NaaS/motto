@@ -7,6 +7,8 @@ open Crisp_syntax
 open Crisp_syntax_aux
 open State
 
+(*FIXME need to carry expected type? this can be used to disambiguate
+        expressions like "[]"*)
 let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
   type_value * state = function
   | Variable label ->

@@ -46,8 +46,6 @@ type type_value =
   | Tuple of label option * type_value list
   | Dictionary of label option * type_value
   | Reference of label option * type_value
-  (*Type variable; if it hasn't been named yet then we have no label*)
-  | Alpha of label option
 ;;
 
 let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfix_lists ending_newline indent ty_value =

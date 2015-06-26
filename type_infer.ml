@@ -1,11 +1,6 @@
 (*
    Type inference for Crisp expressions.
    Nik Sultana, Cambridge University Computer Lab, June 2015
-
-   TODO
-     - need to implement matching for types, since we'll have type variables in
-       types.
-     - does matcher also need to propagate serialisation annotations?
 *)
 
 open Crisp_syntax

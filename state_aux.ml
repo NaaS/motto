@@ -27,7 +27,7 @@ let state_to_str (resolve : bool)
     "identifier_kind=" ^ string_of_identifier_kind md.identifier_kind ^ "}" in
   let type_decls_s =
     List.map (fun (type_name, src_type, nst_type) ->
-      let nst_type_s = string_of_naasty_type ~st_opt:st_opt prog_indentation nst_type in
+      let nst_type_s = str_of_ty_opt nst_type in
       let src_type_s = Crisp_syntax.type_value_to_string true false prog_indentation src_type in
       type_name ^ "(" ^ src_type_s ^ ", " ^ nst_type_s ^ ")") type_declarations
     |> String.concat "; " in

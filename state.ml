@@ -45,7 +45,7 @@ type term_symbol_metadata =
 
 type state =
   { pragma_inclusions : string list;
-    type_declarations : (type_name * type_value * naasty_type) list;
+    type_declarations : (type_name * type_value * naasty_type option) list;
     next_symbol : identifier;
     type_symbols : (string * identifier * naasty_type option) list;
     term_symbols : (string * identifier * term_symbol_metadata) list;

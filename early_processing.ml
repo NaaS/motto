@@ -38,15 +38,6 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
       let st' =
         match lookup_term_data (Term Function_Name) st.term_symbols fn_name with
         | None ->
-          let md =
-            {
-              (*NOTE type info for functions is stored separately in the symbol
-                     table at the moment, in the "crisp_funs" field.
-                FIXME would be cleaner to store type info in the same place*)
-              source_type = None;
-              naasty_type = None;
-              identifier_kind = Function_Name;
-            } in
           let (fn_idx, st') =
             if Naasty_aux.is_fresh fn_name st then
               Naasty_aux.extend_scope_unsafe (Term Function_Name) st ~ty_opt:None(*FIXME put function's type here?*)

@@ -233,6 +233,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
           else failwith "Unexpected index type"
         | _ -> failwith "Unexpected map type" in
     (map_res_ty, [])
+*)
 
   | Record fields ->
     let labels, idx_ty =
@@ -241,7 +242,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         (label, ty)) fields
       |> List.split in
     (*FIXME check labels if strict*)
-    (RecordType (None, idx_ty, []), [])
+    (RecordType (None, idx_ty, []), st)
   | RecordUpdate (e, (label, body_e)) ->
     let ty, _ = ty_of_expr ~strict st e in
     let _ =
@@ -250,7 +251,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
           (*FIXME check if body_e's type matches that of label*)
           ty_of_expr ~strict st body_e in
         () in
-    (ty, [])
+    (ty, st)
   | RecordProjection (e, label) ->
     let e_ty, _ = ty_of_expr ~strict st e in
     let l_ty =
@@ -264,8 +265,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         | _ -> failwith "Zero or several fields had the label sought"
         end
       | _ -> failwith "Was expecting record type" in
-    (l_ty, [])
-*)
+    (l_ty, st)
 
   (*NOTE currently we don't support dependently-typed lists*)
   | _ -> failwith ("TODO")

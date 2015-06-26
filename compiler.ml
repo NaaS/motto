@@ -1,5 +1,5 @@
 (*
-   High-level transformations applied to the source program.
+   High-level spec of the compiler.
    Nik Sultana, Cambridge University Computer Lab, February 2015
 *)
 

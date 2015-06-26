@@ -49,7 +49,7 @@ type type_value =
   | Alpha of label option
 ;;
 
-let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
+let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfix_lists ending_newline indent ty_value =
   let endline = if ending_newline then "\n" else "" in
   let use_mixfix_list_syntax_for = function
     | UserDefinedType _
@@ -72,11 +72,13 @@ let rec type_value_to_string mixfix_lists ending_newline indent ty_value =
     opt_string (indn indent) label " : " ^ "boolean" ^
     ann_string indent indentation ann ^ endline
   | RecordType (label, tys, ann) ->
-      opt_string (indn indent) label " : " ^ "record" ^
+    opt_string (indn indent) label " : " ^ "record" ^
+    if summary_types then "" else
       ann_string indent indentation ann ^  "\n" ^
       mk_block (indent + indentation) (type_value_to_string mixfix_lists ending_newline) tys
   | Disjoint_Union (label, tys) ->
-      opt_string (indn indent) label " : " ^ "variant" ^ "\n" ^
+    opt_string (indn indent) label " : " ^ "variant" ^ "\n" ^
+    if summary_types then "" else
       mk_block (indent + indentation) (type_value_to_string mixfix_lists ending_newline) tys
   | List (label, ty, dep_idx_opt, ann) ->
     let s =

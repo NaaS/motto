@@ -8,7 +8,7 @@ open State
 open Naasty_aux
 
 
-let state_to_str (resolve : bool)
+let state_to_str ?summary_types:(summary_types : bool = false) (resolve : bool)
       ({pragma_inclusions; type_declarations; next_symbol;
         type_symbols; term_symbols} as st: state) =
   let st_opt = if resolve then Some st else None in
@@ -20,15 +20,15 @@ let state_to_str (resolve : bool)
     match src_ty_opt with
     | None -> "?"
     | Some ty ->
-      Crisp_syntax.type_value_to_string true false Crisp_syntax.min_indentation ty in
+      Crisp_syntax.type_value_to_string ~summary_types true false Crisp_syntax.min_indentation ty in
   let str_of_term_symbol_metadata md =
     "{source_type=" ^ str_of_src_ty_opt md.source_type ^ "; " ^
     "naasty_type=" ^ str_of_ty_opt md.naasty_type ^ "; " ^
-    "identifier_kind=" ^ string_of_identifier_kind md.identifier_kind ^ "}" in
+    "identifier_kind=" ^ string_of_identifier_kind ~summary_types md.identifier_kind ^ "}" in
   let type_decls_s =
     List.map (fun (type_name, src_type, nst_type) ->
       let nst_type_s = str_of_ty_opt nst_type in
-      let src_type_s = Crisp_syntax.type_value_to_string true false prog_indentation src_type in
+      let src_type_s = str_of_src_ty_opt (Some src_type) in
       type_name ^ "(" ^ src_type_s ^ ", " ^ nst_type_s ^ ")") type_declarations
     |> String.concat "; " in
   "pragma_inclusions : [" ^ String.concat "; " pragma_inclusions ^ "]" ^ "\n" ^
@@ -41,5 +41,5 @@ let state_to_str (resolve : bool)
   "term_symbols : [" ^ String.concat "; "
                      (List.map (fun (s, i, md) -> "(" ^ s ^ ", " ^
                               string_of_int i ^ ", " ^
-                              str_of_term_symbol_metadata md^ ")")
+                              str_of_term_symbol_metadata md ^ ")")
                      term_symbols) ^ "]" ^ "\n"

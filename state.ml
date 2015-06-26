@@ -26,13 +26,13 @@ type identifier_kind =
   | Field of type_value (*the type of the record in which this field occurs*)
   | Function_Name (*details should be looked up in the dedicated field in the symbol table*)
   | Channel_Name (*details should be looked up in the dedicated field in the symbol table*)
-let string_of_identifier_kind = function
+let string_of_identifier_kind ?summary_types:(summary_types : bool = false) = function
   | Undetermined -> "Undetermined"
   | Value -> "Value"
   | Disjunct tv ->
     "Disjunct (" ^ Crisp_syntax.type_value_to_string true false min_indentation tv ^ ")"
   | Field tv ->
-    "Field (" ^ Crisp_syntax.type_value_to_string true false min_indentation tv ^ ")"
+    "Field (" ^ Crisp_syntax.type_value_to_string ~summary_types true false min_indentation tv ^ ")"
   | Function_Name -> "Function_Name"
   | Channel_Name -> "Channel_Name"
 

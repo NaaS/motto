@@ -136,7 +136,7 @@ let compile (cfg : Config.configuration ref) (program : Crisp_syntax.program) : 
   |> apsnd split_declaration_kinds
   |> (fun ((st, p) as data) ->
     (if !Config.cfg.Config.debug then
-       State_aux.state_to_str true st
+       State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types) true st
        |> print_endline;
        data))
   (*FIXME Functorise to take backend-specific code as parameter*)

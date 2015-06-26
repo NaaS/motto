@@ -27,6 +27,8 @@ type configuration =
                               at the moment. In the future there may be multiple
                               backends, so this switch should turn into a
                               selector from multiple alternatives.*)
+    (*If true, then summarise compound types (records and unions.*)
+    summary_types : bool;
   }
 
 let cfg : configuration ref = ref {
@@ -41,4 +43,5 @@ let cfg : configuration ref = ref {
   parser_test_files = [];
   parser_test_dirs = [];
   translate = false;
+  summary_types = true;
 }

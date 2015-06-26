@@ -91,7 +91,7 @@ match !cfg.source_file with
   |> (fun p -> match p with
        | Crisp_syntax.Program p -> p
        | _ -> failwith "Source file does not contain a program")
-  |> Early_processing.compile cfg
+  |> Compiler.compile cfg
   |> Output.write_files !cfg.output_location
 | _ ->
   if !cfg.parser_test_files <> [] || !cfg.parser_test_dirs <> [] then

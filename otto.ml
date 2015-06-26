@@ -69,7 +69,7 @@ while !arg_idx < Array.length Sys.argv do
           | Crisp_syntax.Expression e -> e
           | _ -> failwith "String is not an expression" in
         let ty, ty_env =
-          Type_infer.ty_of_expr ~strict:true [] e in
+          Type_infer.ty_of_expr ~strict:true State.initial_state e in
         let ty_s =
           Crisp_syntax.type_value_to_string true false Crisp_syntax.min_indentation ty in
         Printf.printf "%s" ty_s;

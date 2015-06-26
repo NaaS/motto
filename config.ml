@@ -22,6 +22,11 @@ type configuration =
     debug : bool;
     parser_test_files : string list;
     parser_test_dirs : string list;
+    translate : bool; (*FIXME this is a crude flag indicating whether we want to
+                              run code generation or not. It's unset by default
+                              at the moment. In the future there may be multiple
+                              backends, so this switch should turn into a
+                              selector from multiple alternatives.*)
   }
 
 let cfg : configuration ref = ref {
@@ -35,4 +40,5 @@ let cfg : configuration ref = ref {
   debug = false;
   parser_test_files = [];
   parser_test_dirs = [];
+  translate = false;
 }

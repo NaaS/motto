@@ -19,25 +19,32 @@ let unidir_chan_send_suffix = "_send_"
 exception Translation_type of string * type_value
 exception Translation_expr of string * expression
 
-(*FIXME register labels (of disjuncts or fields) in the state*)
-let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * state) =
+(*default_label is used when translating type declarations*)
+let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = None)
+          ?default_label:(default_label : string option = None) (st : state) (ty : type_value) : (naasty_type * state) =
   let check_and_resolve_typename type_name =
     match lookup_name Type st type_name with
     | None -> failwith ("Undeclared type: " ^ type_name)
     | Some i -> i in
   let check_and_generate_typename typename_opt =
-    match typename_opt with
-    | None -> failwith "Was expecting type name."
-    | Some type_name ->
-      begin
-        match lookup_name Type st type_name with
-        | None -> extend_scope_unsafe Type st type_name
-        | Some idx ->
-          if forbid_shadowing then
-            failwith ("Already declared type: " ^ type_name)
-          else
-            (idx, st)
-      end in
+    let type_name =
+      match typename_opt with
+      | None ->
+        begin
+        match default_label with
+        | None -> failwith "Was expecting type name."
+        | Some label -> label
+        end
+      | Some type_name -> type_name in
+    begin
+      match lookup_name Type st type_name with
+      | None -> extend_scope_unsafe Type st type_name
+      | Some idx ->
+        if forbid_shadowing then
+          failwith ("Already declared type: " ^ type_name)
+        else
+          (idx, st)
+    end in
   let check_and_generate_name (ik : identifier_kind) label_opt =
     match label_opt with
     | None -> (None, st)
@@ -77,60 +84,81 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
   | Boolean (label_opt, type_ann) ->
     if (type_ann <> []) then
       failwith "Boolean serialisation annotation not supported"; (*TODO*)
-    let (label_opt', st') = check_and_generate_name Value label_opt in
+    let ik =
+      match default_ik with
+      | None -> Value
+      | Some ik -> ik in
+    let (label_opt', st') = check_and_generate_name ik label_opt in
     let translated_ty = Bool_Type label_opt' in
     let st'' =
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx translated_ty (Term Value) st'
+        update_symbol_type idx translated_ty (Term ik) st'
     in (translated_ty, st'')
   | Integer (label_opt, type_ann) ->
-    if type_ann = [] && require_annotations then
-      raise (Translation_type ("No annotation given", ty))
-    else
-      let (label_opt', st') = check_and_generate_name Value label_opt in
-      let metadata =
-        List.fold_right (fun (name, ann) md ->
-          match ann with
-          | Ann_Int i ->
-            if name = "byte_size" then
-              let bits =
-                match i with
-                | 2 -> 16
-                | 4 -> 32
-                | 8 -> 64
-                | _ -> failwith ("Unsupported integer precision: " ^
-                                 string_of_int i ^ " bytes")
-              in { md with precision = bits }
-            else failwith ("Unrecognised integer annotation: " ^ name)
-          | Ann_Ident s ->
-            if name = "signed" then
-              { md with signed = (bool_of_string s = true) }
-            else if name = "hadoop_vint" then
-              { md with hadoop_vint = (bool_of_string s = true) }
-            else failwith ("Unrecognised integer annotation: " ^ name)
-          | _ -> failwith ("Unrecognised integer annotation: " ^ name))
-          type_ann default_int_metadata in
-    let translated_ty = Int_Type (label_opt', metadata) in
+    let ik =
+      match default_ik with
+      | None -> Value
+      | Some ik -> ik in
+    let (label_opt', st') = check_and_generate_name ik label_opt in
+    let translated_ty, st' =
+      if not require_annotations then
+        (Int_Type (label_opt', default_int_metadata), st)
+      else
+        if type_ann = [] then
+          raise (Translation_type ("No annotation given", ty))
+        else
+          let (label_opt', st') = check_and_generate_name ik label_opt in
+          let metadata =
+            List.fold_right (fun (name, ann) md ->
+              match ann with
+              | Ann_Int i ->
+                if name = "byte_size" then
+                  let bits =
+                    match i with
+                    | 2 -> 16
+                    | 4 -> 32
+                    | 8 -> 64
+                    | _ -> failwith ("Unsupported integer precision: " ^
+                                     string_of_int i ^ " bytes")
+                  in { md with precision = bits }
+                else failwith ("Unrecognised integer annotation: " ^ name)
+              | Ann_Ident s ->
+                if name = "signed" then
+                  { md with signed = (bool_of_string s = true) }
+                else if name = "hadoop_vint" then
+                  { md with hadoop_vint = (bool_of_string s = true) }
+                else failwith ("Unrecognised integer annotation: " ^ name)
+              | _ -> failwith ("Unrecognised integer annotation: " ^ name))
+              type_ann default_int_metadata in
+        (Int_Type (label_opt', metadata), st') in
     let st'' =
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx translated_ty (Term Value) st'
+        update_symbol_type idx translated_ty (Term ik) st'
     in (translated_ty, st'')
   | IPv4Address label_opt ->
-    let (label_opt', st') = check_and_generate_name Value label_opt in
+    let ik =
+      match default_ik with
+      | None -> Value
+      | Some ik -> ik in
+    let (label_opt', st') = check_and_generate_name ik label_opt in
     let metadata = { signed = false; precision = 32; hadoop_vint = false } in
     let translated_ty = Int_Type (label_opt', metadata) in
     let st'' =
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx translated_ty (Term Value) st'
+        update_symbol_type idx translated_ty (Term ik) st'
     in (translated_ty, st'')
   | String (label_opt, type_ann) ->
-    let (label_opt', st') = check_and_generate_name Value label_opt in
+    let ik =
+      match default_ik with
+      | None -> Value
+      | Some ik -> ik in
+    let (label_opt', st') = check_and_generate_name ik label_opt in
     let vlen = Undefined (*FIXME determine from type_ann*) in
     let container_type =
       match vlen with
@@ -147,23 +175,28 @@ let rec naasty_of_flick_type (st : state) (ty : type_value) : (naasty_type * sta
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx container_type (Term Value) st'
+        update_symbol_type idx container_type (Term ik) st'
     in (container_type, st'')
   | Reference (label_opt, ty) ->
-    let (label_opt', st') = check_and_generate_name Value label_opt in
+    let ik =
+      match default_ik with
+      | None -> Value
+      | Some ik -> ik in
+    let (label_opt', st') = check_and_generate_name ik label_opt in
     let (ty', st'') = naasty_of_flick_type st' ty in
     let translated_ty = Pointer_Type (label_opt', ty') in
     let st''' =
       match label_opt' with
       | None -> st''
       | Some idx ->
-        update_symbol_type idx translated_ty (Term Value) st''
+        update_symbol_type idx translated_ty (Term ik) st''
     in (translated_ty, st''')
   | RecordType (label_opt, tys, type_ann) ->
     if (type_ann <> []) then
       failwith "Record serialisation annotation not supported"; (*TODO*)
     let (type_identifier, st') = check_and_generate_typename label_opt in
-    let (tys', st'') = fold_map ([], st') naasty_of_flick_type tys in
+    let (tys', st'') =
+      fold_map ([], st') (naasty_of_flick_type ~default_ik:(Some (Field ty))) tys in
     let translated_ty = Record_Type (type_identifier, List.rev tys') in
     let st''' =
         update_symbol_type type_identifier translated_ty Type st''

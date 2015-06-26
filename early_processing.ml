@@ -7,8 +7,7 @@ open General
 open State
 open Crisp_syntax
 open Naasty
-open Data_model
-open Type_infer (*FIXME currently unused*)
+open Type_infer
 
 let expand_includes (include_directories : string list) (p : Crisp_syntax.program) =
   let rec expand_includes' (p : Crisp_syntax.program) =
@@ -49,9 +48,26 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
         | Some (_, _) -> failwith ("Function " ^ fn_name ^ " declared more than once") in
       ((fn_name, fn_params) :: acc_fun_decls, acc_ty_decls, acc_proc_decls, st')
     | Type {type_name; type_value} ->
-      let nst_ty, st' = Translation.naasty_of_flick_type st type_value in
-      (*FIXME descend through compound types, adding labels to the symbol table*)
-      (acc_fun_decls, (type_name, type_value, nst_ty) :: acc_ty_decls, acc_proc_decls, st')
+      let st' =
+        match Crisp_syntax_aux.consts_in_type type_value with
+        | None -> st
+        | Some consts ->
+          List.fold_right (fun (name, ik, ty) st ->
+            let (_, st') =
+              if Naasty_aux.is_fresh name st then
+                Naasty_aux.extend_scope_unsafe (Term ik) st ~src_ty_opt:(Some ty) ~ty_opt:None name
+              else
+                failwith ("Constant " ^ name ^ " isn't fresh.") in
+            (*NOTE order of declarations isn't preserved within term_symbols*)
+            st') consts st in
+      let nst_ty, st'' =
+        if !Config.cfg.Config.translate then
+          let nst_ty, st'' =
+            Translation.naasty_of_flick_type ~default_label:(Some type_name)
+             st' type_value in
+          (Some nst_ty, st'')
+        else (None, st') in
+      (acc_fun_decls, (type_name, type_value, nst_ty) :: acc_ty_decls, acc_proc_decls, st'')
     | Process _ ->
       (*FIXME currently we ignore process declarations*)
       (acc_fun_decls, acc_ty_decls, acc_proc_decls, st)
@@ -99,16 +115,18 @@ let translate_type_compilation_unit (st : state)
       (cunits : Naasty_project.compilation_unit list) ->
        let name = Crisp_syntax_aux.name_of_type decl in
        let (translated, st'') =
-         Translation.naasty_of_flick_program ~st:st' [decl] in
+         if !Config.cfg.Config.translate then
+           Translation.naasty_of_flick_program ~st:st' [decl]
+         else ([], st') in
        let module Data_model_instance =
-         Instance(Data_model_consts.Values(
+         Data_model.Instance(Data_model_consts.Values(
          struct
            let datatype_name = name
            let ty = Crisp_syntax_aux.the_ty_of_decl decl
          end)) in
        let (type_data_model_instance, st''') =
          fold_map ([], st'') (fun st scheme ->
-           Naasty_aux.instantiate_type true scheme.identifiers st scheme.type_scheme)
+           Naasty_aux.instantiate_type true scheme.Data_model.identifiers st scheme.Data_model.type_scheme)
            Data_model_instance.instantiate_data_model in
        let header_unit =
          {Naasty_project.name = name;
@@ -128,8 +146,8 @@ let translate_type_compilation_unit (st : state)
          } in
        let (function_data_model_instance, st4) =
          fold_map ([], st''') (fun st scheme ->
-           Naasty_aux.instantiate_function true scheme.identifiers st
-             scheme.function_scheme)
+           Naasty_aux.instantiate_function true scheme.Data_model.identifiers st
+             scheme.Data_model.function_scheme)
            Data_model_instance.instantiate_data_model in
        let cpp_unit =
          {Naasty_project.name = name;
@@ -155,7 +173,9 @@ let translate_function_compilation_unit (st : state)
     (fun (st' : state) (flick_f : Crisp_syntax.toplevel_decl) ->
        let name = "functions"(*FIXME extract name?*) in
        let (translated, st'') =
-         Translation.naasty_of_flick_program ~st:st' [flick_f] in
+         if !Config.cfg.Config.translate then
+           Translation.naasty_of_flick_program ~st:st' [flick_f]
+         else ([], st') in
        ({Naasty_project.name = name;
          Naasty_project.unit_type = Naasty_project.Cpp;
          Naasty_project.inclusions =
@@ -212,5 +232,13 @@ let compile (cfg : Config.configuration ref) (program : Crisp_syntax.program) : 
   |> apfst (collect_decl_info initial_state)
   |> apfst check_distinct_parameter_names
   |> apsnd split_declaration_kinds
+  |> (fun ((st, p) as data) ->
+    (if !Config.cfg.Config.debug then
+       State_aux.state_to_str true st
+       |> print_endline;
+       data))
   (*FIXME Functorise to take backend-specific code as parameter*)
-  |> uncurry translate_serialise_stringify
+  |> (fun x ->
+        if !Config.cfg.Config.translate then
+          uncurry translate_serialise_stringify x
+        else [])

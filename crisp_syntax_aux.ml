@@ -160,3 +160,24 @@ let consts_in_type (ty : type_value) : (string * State.identifier_kind * type_va
     |> List.concat
     |> (fun x -> Some x)
   | _ -> None
+
+(*
+(*FIXME occurs check necessary?
+  polymorphism is very limited -- to empty lists!
+    can't have polymorphism in records..
+  the type of everything else must be ground
+  NOTE could have record subtyping, but not currently implemented.*)
+let type_match (ty1 : type_value) (ty2 : type_value) : (label * type_value) list option =
+  if ty1 = ty2 then Some []
+  else
+    match ty1, ty2 =
+      | RecordType of label option * type_value list * type_annotation
+      | Disjoint_Union of label option * type_value list (*FIXME type annotation?*)
+      | List of label option * type_value *
+                dependency_index option * type_annotation
+      | Tuple of label option * type_value list
+      | Dictionary of label option * type_value
+      | Reference of label option * type_value
+      (*Type variable; if it hasn't been named yet then we have no label*)
+   | Alpha of label option
+*)

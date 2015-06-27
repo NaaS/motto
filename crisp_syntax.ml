@@ -244,6 +244,7 @@ and expression =
   (*This work for both tuples and records.*)
   | RecordProjection of expression * label
 
+  (*FIXME since using this for disjoints, "functor" would be a better name*)
   | Function_Call of function_name * fun_arg list
 
   | Record of (label * expression) list

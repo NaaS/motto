@@ -317,7 +317,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
     (l_ty, st)
 
     (*also used to form Coproducts, as well as make function calls*)
-  | Function_Call (functor_name, fun_args) ->
+  | Functor_App (functor_name, fun_args) ->
     let scope =
       (*scope can be either Term Function_Name or Term Disjunct; this will be
         checked later when we get something back from the symbol table.*)
@@ -385,7 +385,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
              if identifier_kind <> Disjunct ty then
                failwith ("Disjunct " ^ label ^ " has incorrect identifier kind")
         ) expected_disjunct_heads (*FIXME give more info*) in
-    (*within cases, the head must be a Function_Call, a disjunct of ty.*)
+    (*within cases, the head must be a Functor_App, a disjunct of ty.*)
     let actual_disjuncts, body_tys =
       List.map (fun (head_e, body_e) ->
         let head_label,
@@ -393,7 +393,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
               in pattern matching; using this we can type the body_e*)
             arg_vars =
           match head_e with
-          | Function_Call (functor_name, fun_args) ->
+          | Functor_App (functor_name, fun_args) ->
             (*expression matching*)
             (*NOTE for the time being i make the following simplifications:
               1. all fun_args are Exps -- there's to be no parameter naming

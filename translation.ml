@@ -563,7 +563,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (*We store IPv4 addresses as ints, therefore the conversion doesn't do anything.*)
     naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc assign_acc
 
-  | Function_Call (function_name, fun_args) ->
+  | Functor_App (function_name, fun_args) ->
     (*Canonicalise the function's arguments -- eliminating any named-parameter
       occurrences.*)
     let arg_expressions = Crisp_syntax_aux.order_fun_args function_name st fun_args in

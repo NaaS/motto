@@ -244,8 +244,7 @@ and expression =
   (*This work for both tuples and records.*)
   | RecordProjection of expression * label
 
-  (*FIXME since using this for disjoints, "functor" would be a better name*)
-  | Function_Call of function_name * fun_arg list
+  | Functor_App of function_name * fun_arg list
 
   | Record of (label * expression) list
   | RecordUpdate of (expression * (label * expression))
@@ -381,7 +380,7 @@ let rec expression_to_string indent = function
   | RecordProjection (e, l) ->
     indn indent ^ expression_to_string 0 e ^ "." ^ l
 
-  | Function_Call (f, es) ->
+  | Functor_App (f, es) ->
     let fun_arg_to_string = function
       | Exp e -> expression_to_string 0 e
       | Named (l, e) -> l ^ " <- " ^ expression_to_string 0 e

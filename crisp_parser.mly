@@ -572,11 +572,11 @@ expression:
     {Crisp_syntax.RecordProjection (e, l)}
 
   | f_name = IDENTIFIER; LEFT_R_BRACKET; args = function_arguments
-    {Crisp_syntax.Function_Call (f_name, args)}
+    {Crisp_syntax.Functor_App (f_name, args)}
   (*"reverse" function application -- i.e., where the operand precedes
     the operator, and the two are separated by a period.*)
   | e = expression; PERIOD; f_name = IDENTIFIER; LEFT_R_BRACKET; args = function_arguments
-    {Crisp_syntax.Function_Call (f_name,
+    {Crisp_syntax.Functor_App (f_name,
       (*NOTE sticking this argument at the end.*)
       List.rev (Crisp_syntax.Exp e :: List.rev args))}
 

@@ -238,13 +238,52 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
 *)
 
   | Record fields ->
-    let labels, idx_ty =
-      List.map (fun (label, e) ->
+    let (field_tys, (record_tys, labels)) =
+      List.fold_right (fun (label, e) acc ->
         let ty, _ = ty_of_expr ~strict st e in
-        (label, ty)) fields
-      |> List.split in
-    (*FIXME check labels if strict*)
-    (RecordType (None, idx_ty, []), st)
+        let md =
+          match State.lookup_term_data (Term Undetermined) st.term_symbols label with
+          | None -> failwith ("Missing declaration for " ^ label)
+          | Some (_, md) -> md in
+        let _ =
+          (*check if given labels are well-typed*)
+          if strict then
+            match md.source_type with
+            | None -> failwith ("Missing type for " ^ label)
+            | Some ty' ->
+              if ty <> ty' then
+                failwith "Unexpected type"(*FIXME give more info*) in
+        let record_ty =
+          match md.identifier_kind with
+          | Field record_ty -> record_ty
+          | _ -> failwith "Unexpected identifier kind"(*FIXME give more info*) in
+        (ty, (record_ty, label)) :: acc) fields []
+      |> List.split
+      |> General.apsnd List.split in
+    let _ =
+      if strict then
+        begin
+        assert (record_tys <> []); (*doesn't make sense for record to be empty*)
+        let record_ty =
+          (*check if all labels relate to the same record type!*)
+          List.fold_right (fun ty acc ->
+            if ty <> acc then
+              failwith "Labels relate to different types"
+            else acc) (List.tl record_tys) (List.hd record_tys) in
+        (*check if all labels have been given*)
+        match record_ty with
+        | RecordType (_, field_tys, _) ->
+          List.iter (fun ty ->
+            match label_of_type ty with
+            | None -> failwith "Expected type to be labelled"(*FIXME give more info*)
+            | Some label ->
+              let label_defined_in_value =
+                List.exists (fun lbl -> lbl = label) labels in
+              if not label_defined_in_value then
+                failwith ("Missing label in record: " ^ label)) field_tys
+        | _ -> failwith "Expected record type"(*FIXME give more info*)
+        end in
+    (RecordType (None, field_tys, []), st)
   | RecordUpdate (e, (label, body_e)) ->
     let ty, _ = ty_of_expr ~strict st e in
     let _ =

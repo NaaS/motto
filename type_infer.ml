@@ -316,13 +316,57 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       | _ -> failwith "Was expecting record type" in
     (l_ty, st)
 
+    (*also used to form Coproducts, as well as make function calls*)
+  | Function_Call (functor_name, fun_args) ->
+    let scope =
+      (*scope can be either Term Function_Name or Term Disjunct; this will be
+        checked later when we get something back from the symbol table.*)
+      Term Undetermined in
+    begin
+    match lookup_term_data scope st.term_symbols functor_name with
+    | None -> failwith ("Missing declaration for '" ^ functor_name ^ "'")
+    | Some (_, {source_type; identifier_kind; _}) ->
+      match source_type with
+      | None ->
+        let functor_ty =
+          match lookup_function_type st functor_name with
+          | None -> failwith ("Missing declaration for functor " ^ functor_name)
+          | Some f_ty -> f_ty in
+        let ((chans, arg_tys), ret_tys) = extract_function_types functor_ty in
+        assert (chans = []);
+        let ret_ty =
+          match ret_tys with
+          | [ty] ->
+            let _ =
+              if strict then
+                match identifier_kind with
+                | Function_Name -> ()
+                | Disjunct tv ->
+                  if tv <> ty then failwith "Incorrect return type for disjunct" (*FIXME give more info*)
+                | _ -> failwith "Incorrect identifier kind for functor" (*FIXME give more info*) in
+            ty
+          | _ -> failwith ("Functor's return type is invalid, returns more than one value: " ^ functor_name) in
+        let _ =
+          if strict then
+            (*Canonicalise the function's arguments -- eliminating any named-parameter
+              occurrences.*)
+            let arg_expressions = Crisp_syntax_aux.order_fun_args functor_name st fun_args in
+            let fun_args_tys =
+              List.map (ty_of_expr ~strict st) arg_expressions
+              |> List.map fst in
+            List.iter (fun (ty1, ty2) ->
+              if ty1 <> ty2 then failwith "Wrong-typed parameter to functor")(*FIXME give more info*)
+            (List.combine fun_args_tys arg_tys) in
+        (ret_ty, st)
+      | Some _ ->
+        failwith ("Function types currently carried in a different field in the symbol table")
+    end
+
   (*NOTE currently we don't support dependently-typed lists*)
   | _ -> failwith ("TODO")
 
 (*
-    (*also used to form Coproducts, as well as make function calls*)
-  | Function_Call of function_name * fun_arg list
-
+    (*2nd expr must ben Function_Call -- each of them a disjunct*)
   | CaseOf of expression * (expression * expression) list
 
   | EmptyList

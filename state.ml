@@ -208,3 +208,9 @@ let lookup_symbol_type (id : identifier)
   match scope with
   | Term _ -> term_symbol_lookup st.term_symbols None
   | Type -> type_symbol_lookup st.type_symbols None
+
+let lookup_function_type (st : state) (function_name : string) : function_type option =
+  if not (List.mem_assoc function_name st.crisp_funs) then
+    None
+  else
+    Some (List.assoc function_name st.crisp_funs)

@@ -362,13 +362,89 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         failwith ("Function types currently carried in a different field in the symbol table")
     end
 
+  | CaseOf (e, cases) ->
+    let ty, _ = ty_of_expr ~strict st e in
+    (*ty must be a Disjoint_Union*)
+    let expected_disjuncts =
+      match ty with
+      | Disjoint_Union (_, tys) -> tys
+      | _ -> failwith "Was expecting disjoint union" (*FIXME give more info*) in
+    let expected_disjunct_heads =
+      List.map (fun ty ->
+        match label_of_type ty with
+        | None -> failwith "Expected type to be labelled"(*FIXME give more info*)
+        | Some lbl -> lbl) expected_disjuncts in
+    (*check that each disjunct was registered with the symbol table, and has the
+      right identifier_kind*)
+    let _ =
+      if strict then
+         List.iter (fun label ->
+           match lookup_term_data (Term Undetermined) st.term_symbols label with
+           | None -> failwith ("Missing declaration for '" ^ label ^ "'")
+           | Some (_, {identifier_kind; _}) ->
+             if identifier_kind <> Disjunct ty then
+               failwith ("Disjunct " ^ label ^ " has incorrect identifier kind")
+        ) expected_disjunct_heads (*FIXME give more info*) in
+    (*within cases, the head must be a Function_Call, a disjunct of ty.*)
+    let actual_disjuncts, body_tys =
+      List.map (fun (head_e, body_e) ->
+        let head_label,
+            (*extention to type environment, containing typing of variables used
+              in pattern matching; using this we can type the body_e*)
+            arg_vars =
+          match head_e with
+          | Function_Call (functor_name, fun_args) ->
+            (*expression matching*)
+            (*NOTE for the time being i make the following simplifications:
+              1. all fun_args are Exps -- there's to be no parameter naming
+              2. all are Vars -- to avoid having to implement a coverage checker
+              for the time being.*)
+            (functor_name,
+             List.map (fun arg ->
+               match arg with
+               | Exp (Variable label) -> label
+               | _ -> failwith "Invalid disjunct head"(*FIXME give more info*))
+               fun_args)
+          | _ -> failwith "Disjunct heads must be functors"(*FIXME give more info*) in
+        let expected_arg_tys =
+          match lookup_function_type st head_label with
+          | None -> failwith ("Missing declaration for functor " ^ head_label)
+          | Some f_ty ->
+            let ((chans, arg_tys), ret_tys) = extract_function_types f_ty in
+            (*disjuncts cannot be passed channels!*)
+            assert (chans = []);
+            arg_tys in
+        let _ =
+          if List.length expected_arg_tys <> List.length arg_vars then
+            failwith "Disjunct has wrong number of parameters" (*FIXME give more info*) in
+        let st' =
+          List.fold_right (fun (name, ty) st ->
+            let _, st' =
+              Naasty_aux.extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) name
+            in st') (List.combine arg_vars expected_arg_tys) st in
+        let body_ty, _ = ty_of_expr ~strict st' body_e in
+        (head_label, body_ty)) cases
+      |> List.split in
+    (*all the disjuncts of the Disjoint_Union must be mentioned in the heads*)
+    let _ =
+      if strict then
+        List.iter (fun label ->
+          if not (List.exists (fun lbl -> label = lbl) expected_disjunct_heads) then
+            failwith ("Extra disjunct -- this had not been mentioned in the type specification: " ^ label))
+         actual_disjuncts in
+    (*each body must be of the same type, and is the result type of the whole expression*)
+    assert (List.length body_tys > 0);
+    let ty =
+      List.fold_right (fun ty acc ->
+        if ty <> acc then
+          failwith "Bodies don't all have the same type"
+        else acc) (List.tl body_tys) (List.hd body_tys) in
+    (ty, st)
+
   (*NOTE currently we don't support dependently-typed lists*)
   | _ -> failwith ("TODO")
 
 (*
-    (*2nd expr must ben Function_Call -- each of them a disjunct*)
-  | CaseOf of expression * (expression * expression) list
-
   | EmptyList
   | ConsList of expression * expression
   | AppendList of expression * expression

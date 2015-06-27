@@ -364,6 +364,8 @@ let extend_scope_unsafe (scope : scope) (st : state) ?src_ty_opt:(src_ty_opt = N
        next_symbol = 1 + st.next_symbol;
      })
   | Term ik ->
+    (*Must not add polymorphic constants to the symbol table.*)
+    assert (src_ty_opt <> Some Crisp_syntax.Undefined);
     (st.next_symbol,
      let metadata =
      {

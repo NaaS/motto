@@ -48,6 +48,7 @@ type type_value =
                                                     the index, as well as the contained
                                                     type?*)
   | Reference of label option * type_value
+  | Undefined
 ;;
 
 let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfix_lists ending_newline indent ty_value =
@@ -114,7 +115,10 @@ let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfi
       opt_string (indn indent) label " : " ^ "ref " ^
        type_value_to_string mixfix_lists false 0 ty ^
         endline
+  | Undefined -> "undefined"
 ;;
+
+let undefined_ty ty = ty = Undefined
 
 type typing = value_name * type_value option
 

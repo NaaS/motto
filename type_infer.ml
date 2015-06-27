@@ -7,8 +7,6 @@ open Crisp_syntax
 open Crisp_syntax_aux
 open State
 
-(*FIXME need to carry expected type? this can be used to disambiguate
-        expressions like "[]"*)
 let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
   type_value * state = function
   | Variable label ->
@@ -117,10 +115,16 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
     let tys =
       List.map (ty_of_expr ~strict st) es
       |> List.map fst in
+    let _ = if strict then
+      if List.exists undefined_ty tys then
+        failwith "Tuple contained an undefined type" in
     (Tuple (None, tys), st)
 
   | Seq (e1, e2) ->
-    let _, st' = ty_of_expr ~strict st e1 in
+    let e1_ty, st' = ty_of_expr ~strict st e1 in
+    let _ = if strict then
+      if undefined_ty e1_ty then
+        failwith "Cannot have undefined type" in
     ty_of_expr ~strict st' e2
 
   | ITE (b_exp, e1, e2_opt) ->
@@ -135,16 +139,30 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
           | Some e2 ->
             assert (ans = f e2);
         end in
+    let _ = if strict then
+      if undefined_ty (fst ans) then
+        failwith "Cannot have undefined type" in
     ans
 
   | Str _ -> (String (None, []), st)
 
   | LocalDef ((value_name, type_value_opt), e) ->
-    let ty, _ = ty_of_expr ~strict st e in
-    let _ =
+    let ty =
+      let e_ty, _ = ty_of_expr ~strict st e in
       match type_value_opt with
-      | None -> ()
-      | Some ty_value -> assert (ty = ty_value) in
+      | None ->
+        (*We MUST be able to infer the type of e, either from the type
+          annotation, or from e itself. If e's type is Undefined, and no
+          annotation is given, then complain.*)
+        if e_ty = Undefined then
+          failwith "Expression cannot be given ground type"
+        else e_ty
+      | Some ty_value ->
+        if e_ty = Undefined then
+          ty_value
+        else if e_ty <> ty_value then
+          failwith "Expression cannot be given ground type"
+        else e_ty in
     let _, st' =
       Naasty_aux.extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) value_name in
     (ty, st')
@@ -158,8 +176,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       | None -> failwith ("Missing source type for '" ^ value_name ^ "'")
       | Some ty -> ty in
     let ty, _ = ty_of_expr ~strict st e in
-    let _ = if strict then assert (expected_ty = ty) in
-    (ty, st)
+    let _ = if strict then assert (ty = Undefined || expected_ty = ty) in
+    (expected_ty, st)
 
   | IntegerRange (_, _) ->
     (List (None, Integer (None, []), None, []), st)
@@ -170,20 +188,26 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       | None -> st, None
       | Some (acc_label, acc_e) ->
         let ty, _ = ty_of_expr ~strict st acc_e in
-        let _, st' = Naasty_aux.extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) acc_label in
+        assert (ty <> Undefined);
+        let _, st' =
+          Naasty_aux.extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) acc_label in
         (st', Some ty) in
     let st'' =
       let cursor_ty =
         match fst (ty_of_expr ~strict st' range_e) with
-        | List (_, ty', _, _) -> ty'
+        | List (_, ty', _, _) ->
+          assert (ty' <> Undefined);
+          ty'
         | _ -> failwith "Was expecting list type" in
       let _, st'' = Naasty_aux.extend_scope_unsafe (Term Value) st'
                        ~src_ty_opt:(Some cursor_ty) label in
       st'' in
-    (*FIXME if strict, match the type of acc_e with that of body_e.
-            NOTE need to use matching not equality, since might
-                 have type variables*)
     let ty, _ = ty_of_expr ~strict st'' body_e in
+    let _ =
+      if strict then
+        assert (acc_opt_ty = None || acc_opt_ty = Some ty) in
+    (*NOTE we should return st, not st'', since we don't want the bindings made
+           for body_e to spill over to the rest of the scope.*)
     (ty, st)
 
   | Map (label, src_e, body_e, unordered) ->
@@ -241,6 +265,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
     let (field_tys, (record_tys, labels)) =
       List.fold_right (fun (label, e) acc ->
         let ty, _ = ty_of_expr ~strict st e in
+        assert (ty <> Undefined);
         let md =
           match State.lookup_term_data (Term Undetermined) st.term_symbols label with
           | None -> failwith ("Missing declaration for " ^ label)
@@ -251,6 +276,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
             match md.source_type with
             | None -> failwith ("Missing type for " ^ label)
             | Some ty' ->
+              assert (ty' <> Undefined);
               if ty <> ty' then
                 failwith "Unexpected type"(*FIXME give more info*) in
         let record_ty =
@@ -296,7 +322,9 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
             List.exists (fun ty ->
               match label_of_type ty with
               | None -> failwith "Expected type to be labelled"(*FIXME give more info*)
-              | Some lbl -> lbl = label && field_ty = ty) field_tys in
+              | Some lbl ->
+                lbl = label &&
+                (field_ty = ty || field_ty = Undefined)) field_tys in
           if not field_exists_in_record then
             failwith ("Label " ^ label ^ " doesn't belong to a field in record")
         | _ -> failwith "Expected record type"(*FIXME give more info*) in
@@ -342,20 +370,27 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
                 match identifier_kind with
                 | Function_Name -> ()
                 | Disjunct tv ->
-                  if tv <> ty then failwith "Incorrect return type for disjunct" (*FIXME give more info*)
-                | _ -> failwith "Incorrect identifier kind for functor" (*FIXME give more info*) in
+                  if tv <> ty then
+                    failwith "Incorrect return type for disjunct" (*FIXME give more info*)
+                | _ ->
+                  failwith "Incorrect identifier kind for functor" (*FIXME give more info*) in
             ty
           | _ -> failwith ("Functor's return type is invalid, returns more than one value: " ^ functor_name) in
+        assert (ret_ty <> Undefined);
         let _ =
           if strict then
             (*Canonicalise the function's arguments -- eliminating any named-parameter
               occurrences.*)
-            let arg_expressions = Crisp_syntax_aux.order_fun_args functor_name st fun_args in
+            let arg_expressions =
+              Crisp_syntax_aux.order_fun_args functor_name st fun_args in
             let fun_args_tys =
               List.map (ty_of_expr ~strict st) arg_expressions
               |> List.map fst in
             List.iter (fun (ty1, ty2) ->
-              if ty1 <> ty2 then failwith "Wrong-typed parameter to functor")(*FIXME give more info*)
+              if ty1 <> ty2 &&
+                 ty1 <> Undefined &&
+                 ty2 <> Undefined then
+                failwith "Wrong-typed parameter to functor")(*FIXME give more info*)
             (List.combine fun_args_tys arg_tys) in
         (ret_ty, st)
       | Some _ ->

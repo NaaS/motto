@@ -13,6 +13,8 @@ let min_indentation = 0
 (*When we indent, we indent by this amount of space*)
 let indentation = 2
 
+let default_use_mixfix_lists = true;;
+
 (*FIXME could generalise to abstract names*)
 type type_name = string
 (*NOTE this language is first-order, and functions are not values.*)
@@ -23,6 +25,8 @@ type label = string
 type univ_type = string (*FIXME hack*)
 
 type dependency_index = string
+
+type channel_name = string
 
 (*NOTE cannot use sets instead of lists for records since order
        might matter (certainly if the type needs to be serialised).*)
@@ -49,7 +53,13 @@ type type_value =
                                                     type?*)
   | Reference of label option * type_value
   | Undefined
-;;
+    (*NOTE ChanType should not be contained in any other types -- lists,
+           variants, etc*)
+  | ChanType of channel_type
+and channel_type =
+  | ChannelSingle of type_value * type_value
+  | ChannelArray of type_value * type_value * dependency_index option
+and channel = Channel of channel_type * channel_name
 
 let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfix_lists ending_newline indent ty_value =
   let endline = if ending_newline then "\n" else "" in
@@ -116,7 +126,17 @@ let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfi
        type_value_to_string mixfix_lists false 0 ty ^
         endline
   | Undefined -> "undefined"
-;;
+  | ChanType ct -> "channel " ^ channel_type_to_string ct
+and channel_type_to_string = function
+  | ChannelSingle (type_value1, type_value2) ->
+    type_value_to_string default_use_mixfix_lists false 0 type_value1 ^ "/" ^
+    type_value_to_string default_use_mixfix_lists false 0 type_value2
+  | ChannelArray (type_value1, type_value2, dep_idx_opt) ->
+    "[" ^ type_value_to_string default_use_mixfix_lists false 0 type_value1 ^ "/" ^
+    type_value_to_string default_use_mixfix_lists false 0 type_value2 ^ "]" ^
+    opt_string "{" dep_idx_opt "}"
+let channel_to_string (Channel (channel_type, channel_name)) =
+  channel_type_to_string channel_type ^ " " ^ channel_name
 
 let undefined_ty ty = ty = Undefined
 
@@ -129,24 +149,6 @@ type decorator_param =
 type decorator =
   {dec_name : decorator_name;
    dec_params : decorator_param list}
-
-let default_use_mixfix_lists = true;;
-
-type channel_type =
-  | ChannelSingle of type_value * type_value
-  | ChannelArray of type_value * type_value * dependency_index option
-let channel_type_to_string = function
-  | ChannelSingle (type_value1, type_value2) ->
-    type_value_to_string default_use_mixfix_lists false 0 type_value1 ^ "/" ^
-    type_value_to_string default_use_mixfix_lists false 0 type_value2
-  | ChannelArray (type_value1, type_value2, dep_idx_opt) ->
-    "[" ^ type_value_to_string default_use_mixfix_lists false 0 type_value1 ^ "/" ^
-    type_value_to_string default_use_mixfix_lists false 0 type_value2 ^ "]" ^
-    opt_string "{" dep_idx_opt "}"
-type channel_name = string
-type channel = Channel of channel_type * channel_name
-let channel_to_string (Channel (channel_type, channel_name)) =
-  channel_type_to_string channel_type ^ " " ^ channel_name
 
 type process_type =
   ProcessType of dependency_index list * (channel list * type_value list)

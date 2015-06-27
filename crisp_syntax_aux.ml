@@ -96,6 +96,8 @@ let label_of_type : type_value -> label option = function
   | List (l_opt, _, _, _) -> l_opt
   | Empty -> failwith "Empty type cannot be given a label"
   | IPv4Address l_opt -> l_opt
+  | Undefined -> None
+  | ChanType _ -> None
 
 (*Eliminate named parameters, by ordering parameters according to how
   the function expects them to be given.*)
@@ -159,3 +161,13 @@ let consts_in_type (ty : type_value) : (string * State.identifier_kind * type_va
     |> List.concat
     |> (fun x -> Some x)
   | _ -> None
+
+let rx_chan_type (ct : channel_type) =
+  match ct with
+  | ChannelSingle (ty, _) -> ty
+  | ChannelArray (ty, _, _) -> ty
+
+let tx_chan_type (ct : channel_type) =
+  match ct with
+  | ChannelSingle (_, ty) -> ty
+  | ChannelArray (_, ty, _) -> ty

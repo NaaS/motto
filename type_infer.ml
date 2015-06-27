@@ -498,15 +498,23 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
     assert (l1_ty = l2_ty || l1_ty = Undefined || l2_ty = Undefined);
     (l1_ty, st)
 
-  (*NOTE currently we don't support dependently-typed lists*)
-  | _ -> failwith ("TODO")
+  | Send (chan_e, data_e) ->
+    let data_ty, _ = ty_of_expr ~strict st data_e in
+    assert (data_ty <> Undefined);
+    let chan_ty, _ = ty_of_expr ~strict st chan_e in
+    let ty =
+      match chan_ty with
+      | ChanType ct ->
+        if tx_chan_type ct = data_ty then
+          data_ty
+        else failwith "Mismatch between type of data and that of channel" (*FIXME give more info*)
+      | _ -> failwith "Expected type to be channel" (*FIXME give more info*) in
+    (ty, st)
 
 (*
-   (*Channel operations. Can be overloaded to, say, send values
-    on a channel, or to first obtain values from a channel then send it to
-    another.*)
-  | Send of expression * expression
   | Receive of expression * expression
-  (*Send and receive between two channels*)
   | Exchange of expression * expression
 *)
+
+  (*NOTE currently we don't support dependently-typed lists*)
+  | _ -> failwith ("TODO")

@@ -476,14 +476,32 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         else acc) (List.tl body_tys) (List.hd body_tys) in
     (ty, st)
 
+  | EmptyList -> (Undefined, st)
+  | ConsList (h_e, t_e) ->
+    let h_ty, _ = ty_of_expr ~strict st h_e in
+    assert (h_ty <> Undefined);
+    let t_ty, _ = ty_of_expr ~strict st t_e in
+    let ty =
+      match t_ty with
+      | List (_, ty, _, _) as list_ty ->
+        if ty <> Undefined then
+          begin
+          assert (ty = h_ty);
+          list_ty
+          end
+        else List (None, h_ty, None, [])
+      | _ -> failwith "Tail must be of list type" in
+    (ty, st)
+  | AppendList (l1, l2) ->
+    let l1_ty, _ = ty_of_expr ~strict st l1 in
+    let l2_ty, _ = ty_of_expr ~strict st l2 in
+    assert (l1_ty = l2_ty || l1_ty = Undefined || l2_ty = Undefined);
+    (l1_ty, st)
+
   (*NOTE currently we don't support dependently-typed lists*)
   | _ -> failwith ("TODO")
 
 (*
-  | EmptyList
-  | ConsList of expression * expression
-  | AppendList of expression * expression
-
    (*Channel operations. Can be overloaded to, say, send values
     on a channel, or to first obtain values from a channel then send it to
     another.*)

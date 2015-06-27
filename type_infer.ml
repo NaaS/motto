@@ -285,14 +285,22 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         end in
     (RecordType (None, field_tys, []), st)
   | RecordUpdate (e, (label, body_e)) ->
-    let ty, _ = ty_of_expr ~strict st e in
+    let record_ty, _ = ty_of_expr ~strict st e in
     let _ =
       if strict then
-        let idx_ty, _ =
-          (*FIXME check if body_e's type matches that of label*)
+        let field_ty, _ =
           ty_of_expr ~strict st body_e in
-        () in
-    (ty, st)
+        match record_ty with
+        | RecordType (_, field_tys, _) ->
+          let field_exists_in_record =
+            List.exists (fun ty ->
+              match label_of_type ty with
+              | None -> failwith "Expected type to be labelled"(*FIXME give more info*)
+              | Some lbl -> lbl = label && field_ty = ty) field_tys in
+          if not field_exists_in_record then
+            failwith ("Label " ^ label ^ " doesn't belong to a field in record")
+        | _ -> failwith "Expected record type"(*FIXME give more info*) in
+    (record_ty, st)
   | RecordProjection (e, label) ->
     let e_ty, _ = ty_of_expr ~strict st e in
     let l_ty =

@@ -7,6 +7,7 @@ open Crisp_syntax
 open Crisp_syntax_aux
 open State
 
+(*NOTE currently we don't support dependently-typed lists*)
 let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
   type_value * state = function
   | Variable label ->
@@ -537,6 +538,3 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         else failwith "Mismatch between type of data and that of channel" (*FIXME give more info*)
       | _ -> failwith "Expected both types to be channels" (*FIXME give more info*) in
     (ty, st)
-
-  (*NOTE currently we don't support dependently-typed lists*)
-  | _ -> failwith ("TODO")

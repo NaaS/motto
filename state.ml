@@ -25,7 +25,7 @@ type identifier_kind =
                              indicats a disjunct*)
   | Field of type_value (*the type of the record in which this field occurs*)
   | Function_Name (*details should be looked up in the dedicated field in the symbol table*)
-  | Channel_Name (*details should be looked up in the dedicated field in the symbol table*)
+  | Channel_Name
 let string_of_identifier_kind ?summary_types:(summary_types : bool = false) = function
   | Undetermined -> "Undetermined"
   | Value -> "Value"

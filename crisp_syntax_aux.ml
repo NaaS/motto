@@ -204,3 +204,46 @@ and is_fully_defined_channel_type = function
     is_fully_defined_type ty1 && is_fully_defined_type ty2
   | ChannelArray (ty1, ty2, _) ->
     is_fully_defined_type ty1 && is_fully_defined_type ty2
+
+(*Simple form of matching on types.
+  ty1 must be ground.
+  ty2 can have Undefineds in it.*)
+(*NOTE here we require serialisation annotations to be identical*)
+let rec type_match (ty1 : type_value) (ty2 : type_value) : bool =
+  match ty1, ty2 with
+  | (Undefined, _) ->
+    failwith "ty1 must be ground"
+
+  | (UserDefinedType (_, _), UserDefinedType (_, _))
+  | (String (_, _), String (_, _))
+  | (Integer (_, _), Integer (_, _))
+  | (Boolean (_, _), Boolean (_, _))
+  | (Empty, Empty)
+  | (IPv4Address _, IPv4Address _) -> ty1 = ty2
+
+  | (Tuple (_, tys1), Tuple (_, tys2))
+  | (RecordType (_, tys1, _), RecordType (_, tys2, _))
+  | (Disjoint_Union (_, tys1), Disjoint_Union (_, tys2)) ->
+    let ty_pairs = List.combine tys1 tys2 in
+    let f (ty1, ty2) = type_match ty1 ty2 in
+    List.fold_right (&&) (List.map f ty_pairs) true
+
+  | (List (_, ty1, _, _), List (_, ty2, _, _))
+  | (Reference (_, ty1), Reference (_, ty2)) ->
+    type_match ty1 ty2
+
+  | (Dictionary (_, ty1A, ty2A), Dictionary (_, ty1B, ty2B)) ->
+    type_match ty1A ty1B &&
+    type_match ty2A ty2B
+
+  | (ChanType ct1, ChanType ct2) ->
+    channel_type_match ct1 ct2
+  | (_, Undefined) -> true
+  | (_, _) -> false
+and channel_type_match (ct1 : channel_type) (ct2 : channel_type) : bool =
+  match ct1, ct2 with
+  | (ChannelSingle (ty1A, ty2A), ChannelSingle (ty1B, ty2B)) ->
+    type_match ty1A ty1B && type_match ty2A ty2B
+  | (ChannelArray (ty1A, ty2A, _), ChannelArray (ty1B, ty2B, _)) ->
+    type_match ty1A ty1B && type_match ty2A ty2B
+  | (_, _) -> false

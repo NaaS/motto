@@ -26,6 +26,7 @@ type identifier_kind =
   | Field of type_value (*the type of the record in which this field occurs*)
   | Function_Name (*details should be looked up in the dedicated field in the symbol table*)
   | Channel_Name
+  | Map_Name of type_value * type_value
 let string_of_identifier_kind ?summary_types:(summary_types : bool = false) = function
   | Undetermined -> "Undetermined"
   | Value -> "Value"
@@ -35,6 +36,9 @@ let string_of_identifier_kind ?summary_types:(summary_types : bool = false) = fu
     "Field (" ^ Crisp_syntax.type_value_to_string ~summary_types true false min_indentation tv ^ ")"
   | Function_Name -> "Function_Name"
   | Channel_Name -> "Channel_Name"
+  | Map_Name (from_ty, to_ty) ->
+    "Map : " ^ Crisp_syntax.type_value_to_string true false min_indentation from_ty ^
+    " -> " ^ Crisp_syntax.type_value_to_string true false min_indentation to_ty
 
 type term_symbol_metadata =
   {

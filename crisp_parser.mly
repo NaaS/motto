@@ -288,10 +288,11 @@ single_line_type_def:
          (ann : Crisp_type_annotation.type_annotation) ->
        if ann <> [] then failwith "user-defined type shouldn't be annotated"
        else Crisp_syntax.Tuple (name, tl)}
-  | TYPE_DICTIONARY; td = type_def
+  | TYPE_DICTIONARY; LEFT_S_BRACKET; idx_td = type_def; RIGHT_S_BRACKET; td = type_def
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_type_annotation.type_annotation) ->
-       Crisp_syntax.Dictionary (name, td None ann)}
+         (*NOTE no annotations supported for dictionary*)
+       Crisp_syntax.Dictionary (name, idx_td None [], td None [])}
   | TYPE_REF (*FIXME use sigil*); ty = single_line_type_def
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_type_annotation.type_annotation) ->

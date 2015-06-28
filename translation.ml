@@ -66,7 +66,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
   | List (_, _, _, _) ->
     (*Lists can be turned into arrays*)
     failwith "Unsupported"
-  | Dictionary (label_opt, type_name) ->
+  | Dictionary (label_opt, idx_ty, type_name) ->
     failwith "TODO -- link to dictionary provided by libNaaS" (*TODO*)
   | Empty -> failwith "Cannot translate empty type"
   | Tuple (label_opt, []) ->

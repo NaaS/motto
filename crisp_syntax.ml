@@ -48,9 +48,7 @@ type type_value =
   (*We send records, not tuples, over the wire, so tuples
     don't need type annotations.*)
   | Tuple of label option * type_value list
-  | Dictionary of label option * type_value (*FIXME should also specify type of
-                                                    the index, as well as the contained
-                                                    type?*)
+  | Dictionary of label option * type_value * type_value
   | Reference of label option * type_value
   | Undefined
     (*NOTE ChanType should not be contained in any other types -- lists,
@@ -119,8 +117,9 @@ let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfi
       opt_string (indn indent) label " : " ^ "tuple (" ^
        String.concat ", " (List.map (type_value_to_string mixfix_lists false 0) tys) ^
         ")" ^ endline
-  | Dictionary (label, ty) ->
-      opt_string (indn indent) label " : " ^ "dictionary " ^
+  | Dictionary (label, idx_ty, ty) ->
+      opt_string (indn indent) label " : " ^ "dictionary [" ^
+       type_value_to_string mixfix_lists false 0 idx_ty ^ "]" ^
        type_value_to_string mixfix_lists false 0 ty ^
         endline
   | Reference (label, ty) ->

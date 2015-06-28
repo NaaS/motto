@@ -56,9 +56,9 @@ let update_empty_label label (ty : type_value) =
     if label_opt = None then
       Tuple (Some label, tys)
     else failwith "Cannot set an already-set label"
-  | Dictionary (label_opt, ty) ->
+  | Dictionary (label_opt, idx_ty, ty) ->
     if label_opt = None then
-      Dictionary (Some label, ty)
+      Dictionary (Some label, idx_ty, ty)
     else failwith "Cannot set an already-set label"
   | Reference (label_opt, ty) ->
     if label_opt = None then
@@ -75,7 +75,9 @@ let the_ty_of_decl = function
 let decompose_container (ty : type_value) : type_value list =
   match ty with
   | List (_, ty', _, _) -> [ty']
-  | Dictionary (_, ty') -> [ty']
+  | Dictionary (_, _, ty') ->
+    (*NOTE we return the value type, not the index type*)
+    [ty']
   | Tuple (_, tys') -> tys'
   | Reference (_, ty') -> [ty']
   | RecordType (_, tys', _) -> tys'
@@ -89,7 +91,7 @@ let label_of_type : type_value -> label option = function
   | Integer (l_opt, _)
   | Boolean (l_opt, _)
   | Tuple (l_opt, _)
-  | Dictionary (l_opt, _)
+  | Dictionary (l_opt, _, _)
   | Reference (l_opt, _)
   | Disjoint_Union (l_opt, _) -> l_opt
   | RecordType (l_opt, _, _) -> l_opt

@@ -28,12 +28,38 @@ let expand_includes (include_directories : string list) (p : Crisp_syntax.progra
       | _ -> decl :: acc) p []
   in List.rev (expand_includes' p)
 
+(*blob here is either function or process, as long as they both return a single
+  thing. in the case of process it doesn't matter, since nothing is ever returned*)
+let type_check_blob (st : State.state) (chans : channel list)
+      (args : type_value list) (ret : type_value) (pb : process_body) : bool =
+  let st' =
+    List.fold_right (fun ((Channel (ct, name)) : channel) (st : state) ->
+        let scope = Term Channel_Name in
+        Naasty_aux.extend_scope_unsafe scope st ~src_ty_opt:(Some (ChanType ct))
+          name
+        |> snd) chans st
+    |> List.fold_right (fun (arg : type_value) (st : state) ->
+        let scope = Term Value(*FIXME*) in
+        let label =
+          match Crisp_syntax_aux.label_of_type arg with
+          | None -> failwith "Came across anonymous parameter"(*FIXME give more info*)
+          | Some lbl -> lbl in
+        Naasty_aux.extend_scope_unsafe scope st ~src_ty_opt:(Some arg)
+          label
+        |> snd) args in
+
+  (*FIXME currently ignoring state and exceptions*)
+  let (st_decls, e, ex_decls) = Crisp_syntax_aux.extract_process_body_bits pb in
+
+  let actual_ret, _ = ty_of_expr ~strict:true st' e in
+  Crisp_syntax_aux.type_match ret actual_ret
+
 (*Gather declaration information from a program, and encode in the state.*)
 let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.state =
   let fun_decls, ty_decls, proc_decls, st' =
   List.fold_right (fun decl (acc_fun_decls, acc_ty_decls, acc_proc_decls, st) ->
     match decl with
-    | Function {fn_name; fn_params; _} ->
+    | Function {fn_name; fn_params; fn_body} ->
       let st' =
         match lookup_term_data (Term Function_Name) st.term_symbols fn_name with
         | None ->
@@ -43,6 +69,17 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
                                 fn_name
             else
               failwith ("Function name " ^ fn_name ^ " isn't fresh.") in
+
+          let _ =
+            let ((chans, arg_tys), ret_tys) =
+              Crisp_syntax_aux.extract_function_types fn_params in
+            let ret_ty =
+              match ret_tys with
+              | [] -> flick_unit_type
+              | [ty] -> ty
+              | _ -> failwith "Multifunctions not supported"(*FIXME give more info*) in
+            if type_check_blob st chans arg_tys ret_ty fn_body then ()
+            else failwith ("Types don't check in " ^ fn_name) in
           (*NOTE order of declarations isn't preserved within term_symbols*)
           st'
         | Some (_, _) -> failwith ("Function " ^ fn_name ^ " declared more than once") in

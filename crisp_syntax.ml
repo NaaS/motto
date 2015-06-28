@@ -57,7 +57,8 @@ type type_value =
 and channel_type =
   | ChannelSingle of type_value * type_value
   | ChannelArray of type_value * type_value * dependency_index option
-and channel = Channel of channel_type * channel_name
+
+type channel = Channel of channel_type * channel_name
 
 let flick_unit_type = Tuple (None, [])
 

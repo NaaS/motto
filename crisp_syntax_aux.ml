@@ -175,3 +175,32 @@ let tx_chan_type (ct : channel_type) =
   match ct with
   | ChannelSingle (_, ty) -> ty
   | ChannelArray (_, ty, _) -> ty
+
+(*Indicate whether a type is, or contains, an occurrence of Undefined*)
+let rec is_fully_defined_type : type_value -> bool = function
+  | UserDefinedType (_, _)
+  | String (_, _)
+  | Integer (_, _)
+  | Boolean (_, _)
+  | Empty
+  | IPv4Address _ -> true
+
+  | Undefined -> false
+
+  | Tuple (_, tys)
+  | RecordType (_, tys, _)
+  | Disjoint_Union (_, tys) ->
+    List.fold_right (&&) (List.map is_fully_defined_type tys) true
+
+  | List (_, ty, _, _)
+  | Reference (_, ty) -> is_fully_defined_type ty
+
+  | Dictionary (_, ty1, ty2) ->
+    is_fully_defined_type ty1 && is_fully_defined_type ty2
+
+  | ChanType ct -> is_fully_defined_channel_type ct
+and is_fully_defined_channel_type = function
+  | ChannelSingle (ty1, ty2) ->
+    is_fully_defined_type ty1 && is_fully_defined_type ty2
+  | ChannelArray (ty1, ty2, _) ->
+    is_fully_defined_type ty1 && is_fully_defined_type ty2

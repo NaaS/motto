@@ -13,6 +13,10 @@ let name_of_type = function
 let extract_function_types (FunType (FunDomType (chans, arg_tys), FunRetType ret_tys)) =
   ((chans, arg_tys), ret_tys)
 
+(*Unwraps a Crisp process body type into a tuple of its components*)
+let extract_process_body_bits (ProcessBody (st_decls, e, ex_decls)) =
+  (st_decls, e, ex_decls)
+
 (*Sets the label of a type unless it's already defined. This is used to bridge
   the gap between Flick and NaaSty, since the latter expects all type
   declarations to be associated with their names, while the former distributes

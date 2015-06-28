@@ -693,7 +693,43 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         [](*Having assigned to assign_accs, we can forget them.*),
         st')
 
-  | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string no_indent e, e))
+  | TypeAnnotation (e, _) ->
+    (*NOTE could translate this into an explicit type-case, using the second
+           parameter of TypeAnnotation*)
+    naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc assign_acc
+
+(*TODO
+   list related, but constant:
+   | Str s ->
+   IntegerRange
+
+   record-relate:
+   Record
+   RecordProjection
+   RecordUpdate
+
+   disjunction
+   CaseOf
+   (update Functor_App to create well-formed union values in NaaSty)
+
+   look-up related
+   IndexableProjection
+   UpdateIndexable
+
+   list mapping
+   Map
+
+   lists -- must these be dynamic?
+   EmptyList
+   ConsList
+   AppendList
+
+   channels
+   Send
+   Receive
+   Exchange
+*)
+(*  | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string no_indent e, e))*)
 
 (*Split a (possibly bidirectional) Crisp channel into a collection of
   unidirectional NaaSty channels.*)

@@ -61,6 +61,8 @@ and channel_type =
   | ChannelArray of type_value * type_value * dependency_index option
 and channel = Channel of channel_type * channel_name
 
+let flick_unit_type = Tuple (None, [])
+
 let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfix_lists ending_newline indent ty_value =
   let endline = if ending_newline then "\n" else "" in
   let use_mixfix_list_syntax_for = function

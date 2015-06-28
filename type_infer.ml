@@ -510,11 +510,30 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         else failwith "Mismatch between type of data and that of channel" (*FIXME give more info*)
       | _ -> failwith "Expected type to be channel" (*FIXME give more info*) in
     (ty, st)
-
-(*
-  | Receive of expression * expression
-  | Exchange of expression * expression
-*)
+  | Receive (chan_e, data_e) ->
+    let data_ty, _ = ty_of_expr ~strict st data_e in
+    assert (data_ty <> Undefined);
+    let chan_ty, _ = ty_of_expr ~strict st chan_e in
+    let ty =
+      match chan_ty with
+      | ChanType ct ->
+        if rx_chan_type ct = data_ty then
+          data_ty
+        else failwith "Mismatch between type of data and that of channel" (*FIXME give more info*)
+      | _ -> failwith "Expected type to be channel" (*FIXME give more info*) in
+    (ty, st)
+  | Exchange (chan1_e, chan2_e) ->
+    let chan1_ty, _ = ty_of_expr ~strict st chan1_e in
+    let chan2_ty, _ = ty_of_expr ~strict st chan2_e in
+    let ty =
+      match chan1_ty, chan2_ty with
+      | ChanType ct1, ChanType ct2 ->
+        if rx_chan_type ct1 = rx_chan_type ct2 &&
+          tx_chan_type ct1 = tx_chan_type ct2 then
+          flick_unit_type
+        else failwith "Mismatch between type of data and that of channel" (*FIXME give more info*)
+      | _ -> failwith "Expected both types to be channels" (*FIXME give more info*) in
+    (ty, st)
 
   (*NOTE currently we don't support dependently-typed lists*)
   | _ -> failwith ("TODO")

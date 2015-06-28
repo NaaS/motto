@@ -194,6 +194,7 @@ type fun_arg =
 
 and expression =
   | Variable of label
+  | TypeAnnotation of expression * type_value
 
   (*Boolean expressions*)
   | True
@@ -285,6 +286,10 @@ and expression =
 
 let rec expression_to_string indent = function
   | Variable value_name -> indn indent ^ value_name
+  | TypeAnnotation (e, ty) ->
+    indn indent ^ expression_to_string min_indentation e ^ " typed " ^
+    type_value_to_string default_use_mixfix_lists false 0 ty
+
   | Seq (e1, e2) ->
     expression_to_string indent e1 ^ "\n" ^
     expression_to_string indent e2

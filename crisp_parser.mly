@@ -108,6 +108,8 @@
 %token FAT_BRACKET_OPEN
 %token FAT_BRACKET_CLOSE
 
+%token TYPED
+
 (*Names*)
 (*
 %token <string> UPPER_ALPHA
@@ -143,6 +145,7 @@
 %left WITH
 %left PERIOD
 %nonassoc PERIODPERIOD
+%nonassoc TYPED
 
 %start <Crisp_syntax.source_file_contents> source_file_contents
 %%
@@ -492,6 +495,8 @@ expression:
   | NOT; b = expression
     {Crisp_syntax.Not b}
 
+  | e = expression; TYPED; sltd = single_line_type_def
+    {Crisp_syntax.TypeAnnotation (e, sltd None [])}
   | LEFT_R_BRACKET; e = expression; RIGHT_R_BRACKET {e}
   (*The INDENT-UNDENT combo is a form of bracketing*)
   | INDENT; e = expression; UNDENT {e}

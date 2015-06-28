@@ -70,6 +70,7 @@ rule main = parse
   | nl+ (ws as spaces)
       {test_indentation (String.length spaces) [] lexbuf}
   | "type" {TYPE}
+  | "typed" {TYPED}
   | nl+"type" {test_indentation Crisp_syntax.min_indentation [TYPE] lexbuf}
   | "integer" {TYPE_INTEGER}
   | "string" {TYPE_STRING}

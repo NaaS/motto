@@ -1,2 +1,4 @@
-(| 4 typed integer |)
-#FIXME example is too simple
+fun F : () -> ()
+  4 typed integer
+  [] typed list string
+  [] typed [integer]

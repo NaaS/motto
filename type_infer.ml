@@ -226,40 +226,43 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         | List (_, _, _, _) -> ()
         | _ -> failwith "Was expecting list type" in
     (ty, st)
-(*FIXME continue porting
+
   (*value_name[idx] := expression*)
   | UpdateIndexable (map_name, idx_e, body_e) ->
     let ty, _ = ty_of_expr ~strict st body_e in
+    let md =
+      match lookup_term_data (Term Map_Name) st.term_symbols map_name with
+      | None -> failwith ("Missing declaration for map name " ^ map_name)
+      | Some (_, md) -> md in
+    let idx_ty, _ = ty_of_expr ~strict st idx_e in
+    let expected_idx_ty, value_ty =
+      match md.source_type with
+      | Some (Dictionary (lbl_opt, idx_ty, val_ty)) ->
+        assert (lbl_opt = Some map_name);
+        idx_ty, val_ty
+      | _ -> failwith "Expected to find dictionary type" in
     let _ =
       if strict then
-        let idx_ty, _ = ty_of_expr ~strict st idx_e in
-        let map_args, map_res_ty = List.assoc map_name env in
-        let _ =
-          match map_args with
-          | [map_idx_ty] ->
-            (*NOTE could use stronger relation than equality in order to
-                   support record subtyping of index types, say.*)
-            if map_idx_ty = idx_ty then ()
-            else failwith "Unexpected index type"
-          | _ -> failwith "Unexpected map type" in
-        if map_res_ty = ty then ()
-        else failwith "Unexpected result type" in
-    (ty, [])
+        assert (value_ty = ty);
+        assert (expected_idx_ty = idx_ty) in
+    (ty, st)
   (*value_name[idx]*)
   | IndexableProjection (map_name, idx_e) ->
-    let map_args, map_res_ty = List.assoc map_name env in
+    let md =
+      match lookup_term_data (Term Map_Name) st.term_symbols map_name with
+      | None -> failwith ("Missing declaration for map name " ^ map_name)
+      | Some (_, md) -> md in
+    let idx_ty, _ = ty_of_expr ~strict st idx_e in
+    let expected_idx_ty, value_ty =
+      match md.source_type with
+      | Some (Dictionary (lbl_opt, idx_ty, val_ty)) ->
+        assert (lbl_opt = Some map_name);
+        idx_ty, val_ty
+      | _ -> failwith "Expected to find dictionary type" in
     let _ =
       if strict then
-        let idx_ty, _ = ty_of_expr ~strict st idx_e in
-        match map_args with
-        | [map_idx_ty] ->
-          (*NOTE could use stronger relation than equality in order to
-                 support record subtyping of index types, say.*)
-          if map_idx_ty = idx_ty then ()
-          else failwith "Unexpected index type"
-        | _ -> failwith "Unexpected map type" in
-    (map_res_ty, [])
-*)
+        assert (expected_idx_ty = idx_ty) in
+    (value_ty, st)
 
   | Record fields ->
     let (field_tys, (record_tys, labels)) =

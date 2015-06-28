@@ -538,3 +538,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         else failwith "Mismatch between type of data and that of channel" (*FIXME give more info*)
       | _ -> failwith "Expected both types to be channels" (*FIXME give more info*) in
     (ty, st)
+
+  | TypeAnnotation (e, ty) ->
+    assert (is_fully_defined_type ty);
+    let e_ty, _ = ty_of_expr ~strict st e in
+    let _ =
+      if strict then
+        if not (type_match ty e_ty) then
+          failwith "Type annotation cannot match expression" in
+    (ty, st)

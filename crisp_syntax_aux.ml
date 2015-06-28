@@ -164,11 +164,13 @@ let consts_in_type (ty : type_value) : (string * State.identifier_kind * type_va
     |> (fun x -> Some x)
   | _ -> None
 
+(*Extract the type of the values that can be received using a channel*)
 let rx_chan_type (ct : channel_type) =
   match ct with
   | ChannelSingle (ty, _) -> ty
   | ChannelArray (ty, _, _) -> ty
 
+(*Extract the type of the values that can be sent using a channel*)
 let tx_chan_type (ct : channel_type) =
   match ct with
   | ChannelSingle (_, ty) -> ty

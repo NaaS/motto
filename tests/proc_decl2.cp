@@ -1,7 +1,7 @@
 # NOTE this differs from proc_decl.cp only in the last line: i'm testing the use
 #      of indentation for backeting expressions.
 
-proc P : (integer/integer c)
+process P : (integer/integer c)
   local x : boolean := True
   local y : boolean := False
   local w := True

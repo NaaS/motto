@@ -9,7 +9,7 @@ type r : record
   y : [boolean]
   z : [type l]
 
-proc P : {m} => ([[integer]/-]{m} input, -/[integer]{m} output)
+process P : {m} => ([[integer]/-]{m} input, -/[integer]{m} output)
   <>
 
 

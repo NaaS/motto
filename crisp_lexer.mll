@@ -80,7 +80,7 @@ rule main = parse
   | "list" {TYPE_LIST}
   | "tuple" {TYPE_TUPLE}
   | ":" {COLON}
-  | "proc" {test_indentation Crisp_syntax.min_indentation [PROC] lexbuf}
+  | "process" {test_indentation Crisp_syntax.min_indentation [PROC] lexbuf}
   | "/" {SLASH}
   | "[" {LEFT_S_BRACKET}
   | "]" {RIGHT_S_BRACKET}

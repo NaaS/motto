@@ -1,4 +1,4 @@
 
 
-proc Test : (integer/integer input)
+process Test : (integer/integer input)
   # Empty processes are rejected by the compiler

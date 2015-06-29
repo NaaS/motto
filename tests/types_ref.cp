@@ -1,5 +1,5 @@
 
-proc P : (type T1/type T2 c)
+process P : (type T1/type T2 c)
   global count : integer := 0
   increment (count)
   <>

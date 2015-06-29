@@ -519,7 +519,7 @@ type toplevel_decl =
 let toplevel_decl_to_string = function
   | Type ty_decl -> "type " ^ ty_decl_to_string ty_decl
   | Process process ->
-    "proc " ^ process.process_name ^ " : " ^ process_type_to_string process.process_type ^
+    "process " ^ process.process_name ^ " : " ^ process_type_to_string process.process_type ^
      "\n" ^ process_body_to_string indentation process.process_body
   | Function fn_decl ->
     "fun " ^ fn_decl.fn_name ^ " : " ^ function_type_to_string fn_decl.fn_params ^

@@ -29,10 +29,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
     let ans = (Boolean (None, []), st) in
     let _ =
       if strict then
-        let f = ty_of_expr ~strict st in
-        let (e1_ty, e2_ty) = f e1, f e2 in
+        let f e = fst (ty_of_expr ~strict st e) in
+        let (e1_ty, e2_ty) =
+          (*FIXME code style*)
+          forget_label (f e1), forget_label (f e2) in
         assert (e1_ty = e2_ty);
-        assert (e1_ty = ans) in
+        assert (e1_ty = fst ans) in
     ans
   | Not e ->
     let ans = (Boolean (None, []), st) in

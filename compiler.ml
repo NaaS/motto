@@ -78,7 +78,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
               | [] -> flick_unit_type
               | [ty] -> ty
               | _ -> failwith "Multifunctions not supported"(*FIXME give more info*) in
-            if !Config.cfg.skip_type_check then ()
+            if !Config.cfg.Config.skip_type_check then ()
             else
               if type_check_blob st chans arg_tys ret_ty fn_body then ()
               else failwith ("Types don't check in " ^ fn_name) in

@@ -29,6 +29,9 @@ type configuration =
                               selector from multiple alternatives.*)
     (*If true, then summarise compound types (records and unions.*)
     summary_types : bool;
+    (*If true, then we don't type (process and function) declarations after
+      the program is parsed.*)
+    skip_type_check : bool;
   }
 
 let cfg : configuration ref = ref {
@@ -44,4 +47,5 @@ let cfg : configuration ref = ref {
   parser_test_dirs = [];
   translate = false;
   summary_types = true;
+  skip_type_check = false;
 }

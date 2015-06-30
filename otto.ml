@@ -50,6 +50,8 @@ while !arg_idx < Array.length Sys.argv do
       if !next_arg <> None then
         failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
       else next_arg := Some TestParseDir
+    | "--no_type_check" ->
+      cfg := { !cfg with skip_type_check = true }
     | s ->
       match !next_arg with
       | None ->

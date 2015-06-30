@@ -78,8 +78,10 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
               | [] -> flick_unit_type
               | [ty] -> ty
               | _ -> failwith "Multifunctions not supported"(*FIXME give more info*) in
-            if type_check_blob st chans arg_tys ret_ty fn_body then ()
-            else failwith ("Types don't check in " ^ fn_name) in
+            if !Config.cfg.skip_type_check then ()
+            else
+              if type_check_blob st chans arg_tys ret_ty fn_body then ()
+              else failwith ("Types don't check in " ^ fn_name) in
           (*NOTE order of declarations isn't preserved within term_symbols*)
           st'
         | Some (_, _) -> failwith ("Function " ^ fn_name ^ " declared more than once") in

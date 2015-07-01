@@ -89,12 +89,23 @@ done;
 
 match !cfg.source_file with
 | Some source_file ->
-  Crisp_parse.parse_file source_file
-  |> (fun p -> match p with
-       | Crisp_syntax.Program p -> p
-       | _ -> failwith "Source file does not contain a program")
-  |> Compiler.compile cfg
-  |> Output.write_files !cfg.output_location
+  begin
+  try
+    Crisp_parse.parse_file source_file
+    |> (fun p -> match p with
+         | Crisp_syntax.Program p -> p
+         | _ -> failwith "Source file does not contain a program")
+    |> Compiler.compile cfg
+    |> Output.write_files !cfg.output_location
+  with Type_infer.Type_Inference_Exc (msg, e, st) ->
+    print_endline
+     ("Type error: " ^ msg ^ "\n" ^
+      "at expression:" ^ Crisp_syntax.expression_to_string
+                           Crisp_syntax.min_indentation e ^ "\n" ^
+      "state : " ^
+       State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
+         true st)
+  end
 | _ ->
   if !cfg.parser_test_files <> [] || !cfg.parser_test_dirs <> [] then
     Crisp_test.run_parser_test !cfg.parser_test_dirs !cfg.parser_test_files;

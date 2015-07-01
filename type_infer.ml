@@ -7,14 +7,17 @@ open Crisp_syntax
 open Crisp_syntax_aux
 open State
 
+exception Type_Inference_Exc of string * expression * state
+
 (*NOTE currently we don't support dependently-typed lists*)
 let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
   type_value * state = function
-  | Variable label ->
+  | Variable label as e ->
     let scope = Term Undetermined in
     begin
     match lookup_term_data scope st.term_symbols label with
-    | None -> failwith ("Missing declaration for '" ^ label ^ "'")
+    | None ->
+      raise (Type_Inference_Exc ("Missing declaration for '" ^ label ^ "'", e, st))
     | Some (_, {source_type; _}) ->
       match source_type with
       | None -> failwith ("Missing source type for '" ^ label ^ "'")

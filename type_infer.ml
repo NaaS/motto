@@ -10,9 +10,10 @@ open State
 exception Type_Inference_Exc of string * expression * state
 
 (*NOTE currently we don't support dependently-typed lists*)
-let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
-  type_value * state = function
-  | Variable label as e ->
+let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
+  : type_value * state =
+  match e with
+  | Variable label ->
     let scope = Term Undetermined in
     begin
     match lookup_term_data scope st.term_symbols label with
@@ -20,7 +21,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       raise (Type_Inference_Exc ("Missing declaration for '" ^ label ^ "'", e, st))
     | Some (_, {source_type; _}) ->
       match source_type with
-      | None -> failwith ("Missing source type for '" ^ label ^ "'")
+      | None -> raise (Type_Inference_Exc ("Missing source type for '" ^ label ^ "'", e, st))
       | Some ty -> (ty, st)
     end
 
@@ -123,14 +124,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       |> List.map fst in
     let _ = if strict then
       if List.exists undefined_ty tys then
-        failwith "Tuple contained an undefined type" in
+        raise (Type_Inference_Exc ("Tuple contained an undefined type", e, st)) in
     (Tuple (None, tys), st)
 
   | Seq (e1, e2) ->
     let e1_ty, st' = ty_of_expr ~strict st e1 in
     let _ = if strict then
       if undefined_ty e1_ty then
-        failwith "Cannot have undefined type" in
+        raise (Type_Inference_Exc ("Cannot have undefined type", e, st)) in
     ty_of_expr ~strict st' e2
 
   | ITE (b_exp, e1, e2_opt) ->
@@ -147,7 +148,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         end in
     let _ = if strict then
       if undefined_ty (fst ans) then
-        failwith "Cannot have undefined type" in
+        raise (Type_Inference_Exc ("Cannot have undefined type", e, st)) in
     ans
 
   | Str _ -> (String (None, []), st)
@@ -161,13 +162,13 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
           annotation, or from e itself. If e's type is Undefined, and no
           annotation is given, then complain.*)
         if e_ty = Undefined then
-          failwith "Expression cannot be given ground type"
+          raise (Type_Inference_Exc ("Expression cannot be given ground type", e, st))
         else e_ty
       | Some ty_value ->
         if e_ty = Undefined then
           ty_value
         else if e_ty <> ty_value then
-          failwith "Expression cannot be given ground type"
+          raise (Type_Inference_Exc ("Expression cannot be given ground type", e, st))
         else e_ty in
     let _, st' =
       Naasty_aux.extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) value_name in
@@ -176,10 +177,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
     let scope = Term Undetermined in
     let expected_ty =
     match lookup_term_data scope st.term_symbols value_name with
-    | None -> failwith ("Missing declaration for '" ^ value_name ^ "'")
+    | None ->
+      raise (Type_Inference_Exc ("Missing declaration for '" ^ value_name ^ "'", e, st))
     | Some (_, {source_type; _}) ->
       match source_type with
-      | None -> failwith ("Missing source type for '" ^ value_name ^ "'")
+      | None ->
+        raise (Type_Inference_Exc ("Missing source type for '" ^ value_name ^ "'", e, st))
       | Some ty -> ty in
     let ty, _ = ty_of_expr ~strict st e in
     let _ = if strict then assert (ty = Undefined || expected_ty = ty) in
@@ -204,7 +207,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         | List (_, ty', _, _) ->
           assert (ty' <> Undefined);
           ty'
-        | _ -> failwith "Was expecting list type" in
+        | _ ->
+          raise (Type_Inference_Exc ("Was expecting list type", e, st)) in
       let _, st'' = Naasty_aux.extend_scope_unsafe (Term Value) st'
                        ~src_ty_opt:(Some cursor_ty) label in
       st'' in
@@ -221,7 +225,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       let cursor_ty =
         match fst (ty_of_expr ~strict st src_e) with
         | List (_, ty', _, _) -> ty'
-        | _ -> failwith "Was expecting list type" in
+        | _ -> raise (Type_Inference_Exc ("Was expecting list type", e, st)) in
       let _, st' = Naasty_aux.extend_scope_unsafe (Term Value) st
                      ~src_ty_opt:(Some cursor_ty) label in
       st' in
@@ -230,7 +234,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       if strict then
         match ty with
         | List (_, _, _, _) -> ()
-        | _ -> failwith "Was expecting list type" in
+        | _ -> raise (Type_Inference_Exc ("Was expecting list type", e, st)) in
     (ty, st)
 
   (*value_name[idx] := expression*)
@@ -238,7 +242,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
     let ty, _ = ty_of_expr ~strict st body_e in
     let md =
       match lookup_term_data (Term Map_Name) st.term_symbols map_name with
-      | None -> failwith ("Missing declaration for map name " ^ map_name)
+      | None ->
+        raise (Type_Inference_Exc ("Missing declaration for map name " ^ map_name, e, st))
       | Some (_, md) -> md in
     let idx_ty, _ = ty_of_expr ~strict st idx_e in
     let expected_idx_ty, value_ty =
@@ -246,7 +251,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       | Some (Dictionary (lbl_opt, idx_ty, val_ty)) ->
         assert (lbl_opt = Some map_name);
         idx_ty, val_ty
-      | _ -> failwith "Expected to find dictionary type" in
+      | _ -> raise (Type_Inference_Exc ("Expected to find dictionary type", e, st)) in
     let _ =
       if strict then
         assert (value_ty = ty);
@@ -256,7 +261,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
   | IndexableProjection (map_name, idx_e) ->
     let md =
       match lookup_term_data (Term Map_Name) st.term_symbols map_name with
-      | None -> failwith ("Missing declaration for map name " ^ map_name)
+      | None ->
+        raise (Type_Inference_Exc ("Missing declaration for map name " ^ map_name, e, st))
       | Some (_, md) -> md in
     let idx_ty, _ = ty_of_expr ~strict st idx_e in
     let expected_idx_ty, value_ty =
@@ -264,7 +270,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       | Some (Dictionary (lbl_opt, idx_ty, val_ty)) ->
         assert (lbl_opt = Some map_name);
         idx_ty, val_ty
-      | _ -> failwith "Expected to find dictionary type" in
+      | _ ->
+        raise (Type_Inference_Exc ("Expected to find dictionary type", e, st)) in
     let _ =
       if strict then
         assert (expected_idx_ty = idx_ty) in
@@ -277,21 +284,26 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         assert (ty <> Undefined);
         let md =
           match State.lookup_term_data (Term Undetermined) st.term_symbols label with
-          | None -> failwith ("Missing declaration for " ^ label)
+          | None ->
+            raise (Type_Inference_Exc ("Missing declaration for " ^ label, e, st))
           | Some (_, md) -> md in
         let _ =
           (*check if given labels are well-typed*)
           if strict then
             match md.source_type with
-            | None -> failwith ("Missing type for " ^ label)
+            | None ->
+              raise (Type_Inference_Exc ("Missing type for " ^ label, e, st))
             | Some ty' ->
               assert (ty' <> Undefined);
               if ty <> ty' then
-                failwith "Unexpected type"(*FIXME give more info*) in
+                (*FIXME give more info*)
+                raise (Type_Inference_Exc ("Unexpected type", e, st)) in
         let record_ty =
           match md.identifier_kind with
           | Field record_ty -> record_ty
-          | _ -> failwith "Unexpected identifier kind"(*FIXME give more info*) in
+          | _ ->
+            (*FIXME give more info*)
+            raise (Type_Inference_Exc ("Unexpected identifier kind", e, st)) in
         (ty, (record_ty, label)) :: acc) fields []
       |> List.split
       |> General.apsnd List.split in
@@ -303,20 +315,24 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
           (*check if all labels relate to the same record type!*)
           List.fold_right (fun ty acc ->
             if ty <> acc then
-              failwith "Labels relate to different types"
+              raise (Type_Inference_Exc ("Labels relate to different types", e, st))
             else acc) (List.tl record_tys) (List.hd record_tys) in
         (*check if all labels have been given*)
         match record_ty with
         | RecordType (_, field_tys, _) ->
           List.iter (fun ty ->
             match label_of_type ty with
-            | None -> failwith "Expected type to be labelled"(*FIXME give more info*)
+            | None ->
+              (*FIXME give more info*)
+              raise (Type_Inference_Exc ("Expected type to be labelled", e, st))
             | Some label ->
               let label_defined_in_value =
                 List.exists (fun lbl -> lbl = label) labels in
               if not label_defined_in_value then
-                failwith ("Missing label in record: " ^ label)) field_tys
-        | _ -> failwith "Expected record type"(*FIXME give more info*)
+                raise (Type_Inference_Exc ("Missing label in record: " ^ label, e, st)) ) field_tys
+        | _ ->
+           (*FIXME give more info*)
+           raise (Type_Inference_Exc ("Expected record type", e, st))
         end in
     (RecordType (None, field_tys, []), st)
   | RecordUpdate (e, (label, body_e)) ->
@@ -330,13 +346,17 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
           let field_exists_in_record =
             List.exists (fun ty ->
               match label_of_type ty with
-              | None -> failwith "Expected type to be labelled"(*FIXME give more info*)
+              | None ->
+                (*FIXME give more info*)
+                raise (Type_Inference_Exc ("Expected type to be labelled", e, st))
               | Some lbl ->
                 lbl = label &&
                 (field_ty = ty || field_ty = Undefined)) field_tys in
           if not field_exists_in_record then
-            failwith ("Label " ^ label ^ " doesn't belong to a field in record")
-        | _ -> failwith "Expected record type"(*FIXME give more info*) in
+            raise (Type_Inference_Exc ("Label " ^ label ^ " doesn't belong to a field in record", e, st))
+        | _ ->
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Expected record type", e, st)) in
     (record_ty, st)
   | RecordProjection (e, label) ->
     let e_ty, _ = ty_of_expr ~strict st e in
@@ -348,9 +368,10 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         begin
         match filtered_tys with
         | [ty] -> ty
-        | _ -> failwith "Zero or several fields had the label sought"
+        | _ ->
+          raise (Type_Inference_Exc ("Zero or several fields had the label sought", e, st))
         end
-      | _ -> failwith "Was expecting record type" in
+      | _ -> raise (Type_Inference_Exc ("Was expecting record type", e, st)) in
     (l_ty, st)
 
     (*also used to form Coproducts, as well as make function calls*)
@@ -361,13 +382,15 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       Term Undetermined in
     begin
     match lookup_term_data scope st.term_symbols functor_name with
-    | None -> failwith ("Missing declaration for '" ^ functor_name ^ "'")
+    | None ->
+      raise (Type_Inference_Exc ("Missing declaration for '" ^ functor_name ^ "'", e, st))
     | Some (_, {source_type; identifier_kind; _}) ->
       match source_type with
       | None ->
         let functor_ty =
           match lookup_function_type st functor_name with
-          | None -> failwith ("Missing declaration for functor " ^ functor_name)
+          | None ->
+            raise (Type_Inference_Exc ("Missing declaration for '" ^ functor_name ^ "'", e, st))
           | Some f_ty -> f_ty in
         let ((chans, arg_tys), ret_tys) = extract_function_types functor_ty in
         assert (chans = []);
@@ -380,11 +403,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
                 | Function_Name -> ()
                 | Disjunct tv ->
                   if tv <> ty then
-                    failwith "Incorrect return type for disjunct" (*FIXME give more info*)
+                    (*FIXME give more info*)
+                    raise (Type_Inference_Exc ("Incorrect return type for disjunct", e, st))
                 | _ ->
-                  failwith "Incorrect identifier kind for functor" (*FIXME give more info*) in
+                  (*FIXME give more info*)
+                  raise (Type_Inference_Exc ("Incorrect identifier kind for functor", e, st)) in
             ty
-          | _ -> failwith ("Functor's return type is invalid, returns more than one value: " ^ functor_name) in
+          | _ ->
+            raise (Type_Inference_Exc ("Functor's return type is invalid, returns more than one value: " ^ functor_name, e, st)) in
         assert (ret_ty <> Undefined);
         let _ =
           if strict then
@@ -399,11 +425,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
               if ty1 <> ty2 &&
                  ty1 <> Undefined &&
                  ty2 <> Undefined then
-                failwith "Wrong-typed parameter to functor")(*FIXME give more info*)
+                (*FIXME give more info*)
+                raise (Type_Inference_Exc ("Wrong-typed parameter to functor", e, st)))
             (List.combine fun_args_tys arg_tys) in
         (ret_ty, st)
       | Some _ ->
-        failwith ("Function types currently carried in a different field in the symbol table")
+        raise (Type_Inference_Exc ("Function types currently carried in a different field in the symbol table", e, st))
     end
 
   | CaseOf (e, cases) ->
@@ -412,11 +439,15 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
     let expected_disjuncts =
       match ty with
       | Disjoint_Union (_, tys) -> tys
-      | _ -> failwith "Was expecting disjoint union" (*FIXME give more info*) in
+      | _ ->
+        (*FIXME give more info*)
+        raise (Type_Inference_Exc ("Was expecting disjoint union", e, st)) in
     let expected_disjunct_heads =
       List.map (fun ty ->
         match label_of_type ty with
-        | None -> failwith "Expected type to be labelled"(*FIXME give more info*)
+        | None ->
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Expected type to be labelled", e, st))
         | Some lbl -> lbl) expected_disjuncts in
     (*check that each disjunct was registered with the symbol table, and has the
       right identifier_kind*)
@@ -424,10 +455,11 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       if strict then
          List.iter (fun label ->
            match lookup_term_data (Term Undetermined) st.term_symbols label with
-           | None -> failwith ("Missing declaration for '" ^ label ^ "'")
+           | None ->
+             raise (Type_Inference_Exc ("Missing declaration for '" ^ label ^ "'", e, st))
            | Some (_, {identifier_kind; _}) ->
              if identifier_kind <> Disjunct ty then
-               failwith ("Disjunct " ^ label ^ " has incorrect identifier kind")
+               raise (Type_Inference_Exc ("Disjunct " ^ label ^ " has incorrect identifier kind", e, st))
         ) expected_disjunct_heads (*FIXME give more info*) in
     (*within cases, the head must be a Functor_App, a disjunct of ty.*)
     let actual_disjuncts, body_tys =
@@ -447,12 +479,16 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
              List.map (fun arg ->
                match arg with
                | Exp (Variable label) -> label
-               | _ -> failwith "Invalid disjunct head"(*FIXME give more info*))
+               | _ ->
+                 raise (Type_Inference_Exc ("Invalid disjunct head", e, st)))
                fun_args)
-          | _ -> failwith "Disjunct heads must be functors"(*FIXME give more info*) in
+          | _ ->
+            (*FIXME give more info*)
+            raise (Type_Inference_Exc ("Disjunct heads must be functors", e, st)) in
         let expected_arg_tys =
           match lookup_function_type st head_label with
-          | None -> failwith ("Missing declaration for functor " ^ head_label)
+          | None ->
+            raise (Type_Inference_Exc ("Missing declaration for functor " ^ head_label, e, st))
           | Some f_ty ->
             let ((chans, arg_tys), ret_tys) = extract_function_types f_ty in
             (*disjuncts cannot be passed channels!*)
@@ -460,7 +496,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
             arg_tys in
         let _ =
           if List.length expected_arg_tys <> List.length arg_vars then
-            failwith "Disjunct has wrong number of parameters" (*FIXME give more info*) in
+            (*FIXME give more info*)
+            raise (Type_Inference_Exc ("Disjunct has wrong number of parameters", e, st)) in
         let st' =
           List.fold_right (fun (name, ty) st ->
             let _, st' =
@@ -474,14 +511,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       if strict then
         List.iter (fun label ->
           if not (List.exists (fun lbl -> label = lbl) expected_disjunct_heads) then
-            failwith ("Extra disjunct -- this had not been mentioned in the type specification: " ^ label))
+            raise (Type_Inference_Exc ("Extra disjunct -- this had not been mentioned in the type specification: " ^ label, e, st)))
          actual_disjuncts in
     (*each body must be of the same type, and is the result type of the whole expression*)
     assert (List.length body_tys > 0);
     let ty =
       List.fold_right (fun ty acc ->
         if ty <> acc then
-          failwith "Bodies don't all have the same type"
+          raise (Type_Inference_Exc ("Bodies don't all have the same type", e, st))
         else acc) (List.tl body_tys) (List.hd body_tys) in
     (ty, st)
 
@@ -499,7 +536,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
           list_ty
           end
         else List (None, h_ty, None, [])
-      | _ -> failwith "Tail must be of list type" in
+      | _ ->
+        raise (Type_Inference_Exc ("Tail must be of list type", e, st)) in
     (ty, st)
   | AppendList (l1, l2) ->
     let l1_ty, _ = ty_of_expr ~strict st l1 in
@@ -516,8 +554,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       | ChanType ct ->
         if tx_chan_type ct = data_ty then
           data_ty
-        else failwith "Mismatch between type of data and that of channel" (*FIXME give more info*)
-      | _ -> failwith "Expected type to be channel" (*FIXME give more info*) in
+        else
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Mismatch between type of data and that of channel", e, st))
+      | _ ->
+        (*FIXME give more info*)
+        raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in
     (ty, st)
   | Receive (chan_e, data_e) ->
     let data_ty, _ = ty_of_expr ~strict st data_e in
@@ -528,8 +570,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
       | ChanType ct ->
         if rx_chan_type ct = data_ty then
           data_ty
-        else failwith "Mismatch between type of data and that of channel" (*FIXME give more info*)
-      | _ -> failwith "Expected type to be channel" (*FIXME give more info*) in
+        else
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Mismatch between type of data and that of channel", e, st))
+      | _ ->
+        (*FIXME give more info*)
+        raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in
     (ty, st)
   | Exchange (chan1_e, chan2_e) ->
     let chan1_ty, _ = ty_of_expr ~strict st chan1_e in
@@ -540,8 +586,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
         if rx_chan_type ct1 = rx_chan_type ct2 &&
           tx_chan_type ct1 = tx_chan_type ct2 then
           flick_unit_type
-        else failwith "Mismatch between type of data and that of channel" (*FIXME give more info*)
-      | _ -> failwith "Expected both types to be channels" (*FIXME give more info*) in
+        else
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Mismatch between type of data and that of channel", e, st))
+      | _ ->
+        (*FIXME give more info*)
+        raise (Type_Inference_Exc ("Expected both types to be channels", e, st)) in
     (ty, st)
 
   | TypeAnnotation (e, ty) ->
@@ -550,5 +600,5 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) : expression ->
     let _ =
       if strict then
         if not (type_match ty e_ty) then
-          failwith "Type annotation cannot match expression" in
+          raise (Type_Inference_Exc ("Type annotation cannot match expression", e, st)) in
     (ty, st)

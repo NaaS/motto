@@ -55,10 +55,13 @@ while !arg_idx < Array.length Sys.argv do
     | s ->
       match !next_arg with
       | None ->
-        if (!cfg).source_file <> None then
-          failwith "Parameters seem incorrect"
-        else
+        begin
+        match (!cfg).source_file with
+        | None ->
           cfg := { !cfg with source_file = Some s }
+        | Some remaining_params ->
+          failwith ("Parameters seem incorrect. Cannot handle: " ^ remaining_params)
+        end
       | Some OutputDir ->
         cfg := { !cfg with output_location = Directory s };
         next_arg := None

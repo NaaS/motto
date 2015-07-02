@@ -122,6 +122,7 @@
 (*NOTE currently semicolons (i.e., sequential composition)
        are implicit in line-breaks;*)
 %right NL
+%nonassoc local_def
 %nonassoc ite
 %nonassoc ARR_BOTH
 %right ARR_RIGHT
@@ -523,8 +524,10 @@ expression:
     {Crisp_syntax.UpdateIndexable (ident, idx, e)}
 
   | LET; v = IDENTIFIER; EQUALS; e = expression
+    %prec local_def
     {Crisp_syntax.LocalDef ((v, None), e)}
   | LET; v = IDENTIFIER; COLON; ty = single_line_type_def; EQUALS; e = expression
+    %prec local_def
     {Crisp_syntax.LocalDef ((v, Some (ty None [])), e)}
 
   | e1 = expression; EQUALS; e2 = expression

@@ -98,6 +98,7 @@ match !cfg.source_file with
     |> Compiler.compile cfg
     |> Output.write_files !cfg.output_location
   with Type_infer.Type_Inference_Exc (msg, e, st) ->
+    (*FIXME carve this kind of handling code out into a separate module?*)
     print_endline
      ("Type error: " ^ msg ^ "\n" ^
       "at expression:" ^ Crisp_syntax.expression_to_string

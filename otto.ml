@@ -104,6 +104,7 @@ match !cfg.source_file with
     (*FIXME carve this kind of handling code out into a separate module?*)
     print_endline
      ("Type error: " ^ msg ^ "\n" ^
+      "in file " ^ source_file ^ "\n" ^
       "at expression:" ^ Crisp_syntax.expression_to_string
                            Crisp_syntax.min_indentation e ^ "\n" ^
       "state : " ^

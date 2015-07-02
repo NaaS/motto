@@ -9,6 +9,14 @@ open State
 
 exception Type_Inference_Exc of string * expression * state
 
+let assert_eq_types e1_ty e2_ty e st =
+  if e1_ty <> e2_ty then
+    begin
+    let e1_ty_s = type_value_to_string true false min_indentation e1_ty in
+    let e2_ty_s = type_value_to_string true false min_indentation e2_ty in
+    raise (Type_Inference_Exc ("Unequal argument types: " ^ e1_ty_s ^ " and " ^ e2_ty_s, e, st))
+    end
+
 (*NOTE currently we don't support dependently-typed lists*)
 let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   : type_value * state =
@@ -37,12 +45,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         let (e1_ty, e2_ty) =
           (*FIXME code style*)
           forget_label (f e1), forget_label (f e2) in
-        if e1_ty <> e2_ty then
-          begin
-          let e1_ty_s = type_value_to_string true false min_indentation e1_ty in
-          let e2_ty_s = type_value_to_string true false min_indentation e2_ty in
-          raise (Type_Inference_Exc ("Unequal argument types: " ^ e1_ty_s ^ " and " ^ e2_ty_s, e, st))
-          end;
+        assert_eq_types e1_ty e2_ty e st;
         assert (e1_ty = fst ans) in
     ans
   | Not e ->

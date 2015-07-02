@@ -3,6 +3,12 @@ fun F : () -> ()
   True
   True or not False
 
+  let x = True
+  let x' = x
+  let y = not x'
+  let z = x or y
+  let y'' = z and (not y)
+
   if False: x' else: y
   if x or y: True else: False
 

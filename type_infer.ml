@@ -37,7 +37,6 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         let (e1_ty, e2_ty) =
           (*FIXME code style*)
           forget_label (f e1), forget_label (f e2) in
-        assert (e1_ty = e2_ty);
         if e1_ty <> e2_ty then
           (*FIXME add more info*)
           raise (Type_Inference_Exc ("Unequal argument types", e, st));

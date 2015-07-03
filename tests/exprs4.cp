@@ -1,10 +1,10 @@
 
-fun F : () -> ()
-  x = []
+fun F : (y1 : integer, y2 : integer, z : [integer], x2 : [integer]) -> ()
+  let x : [integer] = []
   x = y1 :: y2 :: z
   x @ x2 = y2 :: z
-  [ ]
-  []
-  [1, 2,4, True, 1+4]
+  [ ] typed list boolean
+  [] typed list list list string
+  [1, 2,4, 1+4]
 
   <>

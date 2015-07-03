@@ -574,8 +574,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         raise (Type_Inference_Exc ("Tail must be of list type", e, st)) in
     (ty, st)
   | AppendList (l1, l2) ->
-    let l1_ty, _ = ty_of_expr ~strict st l1 in
-    let l2_ty, _ = ty_of_expr ~strict st l2 in
+    let l1_ty =
+      ty_of_expr ~strict st l1
+      |> fst
+      |> forget_label in
+    let l2_ty =
+      ty_of_expr ~strict st l2
+      |> fst
+      |> forget_label in
     if not (l1_ty = l2_ty || l1_ty = Undefined || l2_ty = Undefined) then
       begin
       let l1_ty_s = type_value_to_string true false min_indentation l1_ty in

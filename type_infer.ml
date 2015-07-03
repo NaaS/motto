@@ -10,6 +10,8 @@ open State
 exception Type_Inference_Exc of string * expression * state
 
 let assert_eq_types e1_ty e2_ty e st =
+  let e1_ty = forget_label e1_ty in
+  let e2_ty = forget_label e2_ty in
   if e1_ty <> e2_ty then
     begin
     let e1_ty_s = type_value_to_string true false min_indentation e1_ty in

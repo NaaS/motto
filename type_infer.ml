@@ -457,6 +457,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
               List.map (ty_of_expr ~strict st) arg_expressions
               |> List.map fst in
             List.iter (fun (ty1, ty2) ->
+              let ty1 = forget_label ty1 in
+              let ty2 = forget_label ty2 in
               if ty1 <> ty2 &&
                  ty1 <> Undefined &&
                  ty2 <> Undefined then

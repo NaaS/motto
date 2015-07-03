@@ -18,7 +18,7 @@ let assert_eq_types e1_ty e2_ty e st =
     end
 
 let assert_not_undefined_type ty e st =
-  if ty <> Undefined then
+  if not (ty <> Undefined) then
     raise (Type_Inference_Exc ("Type should not be Undefined", e, st))
 
 (*NOTE currently we don't support dependently-typed lists*)

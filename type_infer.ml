@@ -32,7 +32,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     begin
     match lookup_term_data scope st.term_symbols label with
     | None ->
-      raise (Type_Inference_Exc ("Missing declaration for '" ^ label ^ "'", e, st))
+      raise (Type_Inference_Exc ("Variable: Missing declaration for '" ^ label ^ "'", e, st))
     | Some (_, {source_type; _}) ->
       match source_type with
       | None -> raise (Type_Inference_Exc ("Missing source type for '" ^ label ^ "'", e, st))
@@ -193,7 +193,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let expected_ty =
     match lookup_term_data scope st.term_symbols value_name with
     | None ->
-      raise (Type_Inference_Exc ("Missing declaration for '" ^ value_name ^ "'", e, st))
+      raise (Type_Inference_Exc ("Update: Missing declaration for '" ^ value_name ^ "'", e, st))
     | Some (_, {source_type; _}) ->
       match source_type with
       | None ->
@@ -269,7 +269,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let md =
       match lookup_term_data (Term Map_Name) st.term_symbols map_name with
       | None ->
-        raise (Type_Inference_Exc ("Missing declaration for map name " ^ map_name, e, st))
+        raise (Type_Inference_Exc ("UpdateIndexable: Missing declaration for map name " ^ map_name, e, st))
       | Some (_, md) -> md in
     let idx_ty, _ = ty_of_expr ~strict st idx_e in
     let expected_idx_ty, value_ty =
@@ -292,7 +292,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let md =
       match lookup_term_data (Term Map_Name) st.term_symbols map_name with
       | None ->
-        raise (Type_Inference_Exc ("Missing declaration for map name " ^ map_name, e, st))
+        raise (Type_Inference_Exc ("IndexableProjection: Missing declaration for map name " ^ map_name, e, st))
       | Some (_, md) -> md in
     let idx_ty, _ = ty_of_expr ~strict st idx_e in
     let expected_idx_ty, value_ty =
@@ -319,7 +319,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         let md =
           match State.lookup_term_data (Term Undetermined) st.term_symbols label with
           | None ->
-            raise (Type_Inference_Exc ("Missing declaration for " ^ label, e, st))
+            raise (Type_Inference_Exc ("Record: Missing declaration for " ^ label, e, st))
           | Some (_, md) -> md in
         let _ =
           (*check if given labels are well-typed*)
@@ -417,14 +417,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     begin
     match lookup_term_data scope st.term_symbols functor_name with
     | None ->
-      raise (Type_Inference_Exc ("Missing declaration for '" ^ functor_name ^ "'", e, st))
+      raise (Type_Inference_Exc ("Functor_App symbol: Missing declaration for '" ^ functor_name ^ "'", e, st))
     | Some (_, {source_type; identifier_kind; _}) ->
       match source_type with
       | None ->
         let functor_ty =
           match lookup_function_type st functor_name with
           | None ->
-            raise (Type_Inference_Exc ("Missing declaration for '" ^ functor_name ^ "'", e, st))
+            raise (Type_Inference_Exc ("Functor_App function: Missing declaration for '" ^ functor_name ^ "'", e, st))
           | Some f_ty -> f_ty in
         let ((chans, arg_tys), ret_tys) = extract_function_types functor_ty in
         assert (chans = []);
@@ -490,7 +490,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
          List.iter (fun label ->
            match lookup_term_data (Term Undetermined) st.term_symbols label with
            | None ->
-             raise (Type_Inference_Exc ("Missing declaration for '" ^ label ^ "'", e, st))
+             raise (Type_Inference_Exc ("CaseOf: Missing declaration for '" ^ label ^ "'", e, st))
            | Some (_, {identifier_kind; _}) ->
              if identifier_kind <> Disjunct ty then
                raise (Type_Inference_Exc ("Disjunct " ^ label ^ " has incorrect identifier kind", e, st))

@@ -460,8 +460,11 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
               if ty1 <> ty2 &&
                  ty1 <> Undefined &&
                  ty2 <> Undefined then
+                let ty1_s = type_value_to_string true false min_indentation ty1 in
+                let ty2_s = type_value_to_string true false min_indentation ty2 in
                 (*FIXME give more info*)
-                raise (Type_Inference_Exc ("Wrong-typed parameter to functor", e, st)))
+                raise (Type_Inference_Exc ("Wrong-typed parameter typed " ^ ty2_s ^
+                                           " to functor expecting type " ^ ty1_s, e, st)))
             (List.combine fun_args_tys arg_tys) in
         (ret_ty, st)
       | Some _ ->

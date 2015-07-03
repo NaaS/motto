@@ -17,6 +17,10 @@ let assert_eq_types e1_ty e2_ty e st =
     raise (Type_Inference_Exc ("Unequal argument types: " ^ e1_ty_s ^ " and " ^ e2_ty_s, e, st))
     end
 
+let assert_not_undefined_type ty e st =
+  if ty <> Undefined then
+    raise (Type_Inference_Exc ("Type should not be Undefined", e, st))
+
 (*NOTE currently we don't support dependently-typed lists*)
 let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   : type_value * state =
@@ -46,14 +50,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           (*FIXME code style*)
           forget_label (f e1), forget_label (f e2) in
         assert_eq_types e1_ty e2_ty e st;
-        assert (e1_ty = fst ans) in
+        assert_eq_types e1_ty (fst ans) e st in
     ans
   | Not e ->
     let ans = (Boolean (None, []), st) in
     let _ =
       if strict then
-        let e_ty = ty_of_expr ~strict st e in
-        assert (e_ty = ans) in
+        let e_ty, _ = ty_of_expr ~strict st e in
+        assert_eq_types e_ty (fst ans) e st in
     ans
 
   (*Definable over arbitrary types of expressions*)
@@ -62,8 +66,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let _ =
       if strict then
         let f = ty_of_expr ~strict st in
-        let (e1_ty, e2_ty) = f e1, f e2 in
-        assert (e1_ty = e2_ty) in
+        let ((e1_ty, _), (e2_ty, _)) = f e1, f e2 in
+        assert_eq_types e1_ty e2_ty e st in
     ans
 
   (*Definable over arithmetic expressions*)
@@ -74,9 +78,9 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let _ =
       if strict then
         let f = ty_of_expr ~strict st in
-        let (e1_ty, e2_ty) = f e1, f e2 in
-        assert (e1_ty = e2_ty);
-        assert (e1_ty = expected) in
+        let ((e1_ty, _), (e2_ty, _)) = f e1, f e2 in
+        assert_eq_types e1_ty e2_ty e st;
+        assert_eq_types e1_ty (fst expected) e st in
     ans
 
   (*Arithmetic expressions*)
@@ -93,16 +97,16 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let _ =
       if strict then
         let f = ty_of_expr ~strict st in
-        let (e1_ty, e2_ty) = f e1, f e2 in
-        assert (e1_ty = e2_ty);
-        assert (e1_ty = ans) in
+        let ((e1_ty, _), (e2_ty, _)) = f e1, f e2 in
+        assert_eq_types e1_ty e2_ty e st;
+        assert_eq_types e1_ty (fst ans) e st in
     ans
   | Abs e ->
     let ans = (Integer (None, []), st) in
     let _ =
       if strict then
-        let e_ty = ty_of_expr ~strict st e in
-        assert (e_ty = ans) in
+        let e_ty, _ = ty_of_expr ~strict st e in
+        assert_eq_types e_ty (fst ans) e st in
     ans
 
   (*Native representation of an IPv4 address*)
@@ -113,17 +117,17 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let expected = (Integer (None, []), st) in
     let _ =
       if strict then
-        let e_ty = ty_of_expr ~strict st e in
-        assert (e_ty = expected) in
-    ans
+        let e_ty, _ = ty_of_expr ~strict st e in
+        assert_eq_types e_ty (fst expected) e st in
+     ans
   (*IP address to integer*)
   | Address_to_int e ->
     let ans = (Integer (None, []), st) in
     let expected = (IPv4Address None, st) in
     let _ =
       if strict then
-        let e_ty = ty_of_expr ~strict st e in
-        assert (e_ty = expected) in
+        let e_ty, _ = ty_of_expr ~strict st e in
+        assert_eq_types e_ty (fst expected) e st in
     ans
 
   | TupleValue es ->
@@ -148,11 +152,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let _ =
       if strict then
         begin
-          assert (f b_exp = (Boolean (None, []), st));
+          let expected_ty = Boolean (None, []) in
+          assert_eq_types (fst (f b_exp)) expected_ty e st;
           match e2_opt with
           | None -> ()
           | Some e2 ->
-            assert (ans = f e2);
+            assert_eq_types (fst ans) (fst (f e2)) e st;
         end in
     let _ = if strict then
       if undefined_ty (fst ans) then
@@ -193,7 +198,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         raise (Type_Inference_Exc ("Missing source type for '" ^ value_name ^ "'", e, st))
       | Some ty -> ty in
     let ty, _ = ty_of_expr ~strict st e in
-    let _ = if strict then assert (ty = Undefined || expected_ty = ty) in
+    let _ =
+      if strict then
+        if not (ty = Undefined || expected_ty = ty) then
+          begin
+          let ty_s = type_value_to_string true false min_indentation ty in
+          let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
+          raise (Type_Inference_Exc ("Cannot match the two types " ^ ty_s ^ " and " ^ expected_ty_s, e, st))
+          end in
     (expected_ty, st)
 
   | IntegerRange (_, _) ->
@@ -205,7 +217,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       | None -> st, None
       | Some (acc_label, acc_e) ->
         let ty, _ = ty_of_expr ~strict st acc_e in
-        assert (ty <> Undefined);
+        assert_not_undefined_type ty acc_e st;
         let _, st' =
           Naasty_aux.extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) acc_label in
         (st', Some ty) in
@@ -213,7 +225,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       let cursor_ty =
         match fst (ty_of_expr ~strict st' range_e) with
         | List (_, ty', _, _) ->
-          assert (ty' <> Undefined);
+          assert_not_undefined_type ty' e st;
           ty'
         | _ ->
           raise (Type_Inference_Exc ("Was expecting list type", e, st)) in
@@ -223,7 +235,11 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let ty, _ = ty_of_expr ~strict st'' body_e in
     let _ =
       if strict then
-        assert (acc_opt_ty = None || acc_opt_ty = Some ty) in
+        if not (acc_opt_ty = None || acc_opt_ty = Some ty) then
+          begin
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Accumulator type not matched with body type", e, st))
+          end in
     (*NOTE we should return st, not st'', since we don't want the bindings made
            for body_e to spill over to the rest of the scope.*)
     (ty, st)
@@ -257,13 +273,17 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let expected_idx_ty, value_ty =
       match md.source_type with
       | Some (Dictionary (lbl_opt, idx_ty, val_ty)) ->
-        assert (lbl_opt = Some map_name);
+        if not (lbl_opt = Some map_name) then
+          begin
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
+          end;
         idx_ty, val_ty
       | _ -> raise (Type_Inference_Exc ("Expected to find dictionary type", e, st)) in
     let _ =
       if strict then
-        assert (value_ty = ty);
-        assert (expected_idx_ty = idx_ty) in
+        assert_eq_types value_ty ty e st;
+        assert_eq_types expected_idx_ty idx_ty e st in
     (ty, st)
   (*value_name[idx]*)
   | IndexableProjection (map_name, idx_e) ->
@@ -276,20 +296,24 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let expected_idx_ty, value_ty =
       match md.source_type with
       | Some (Dictionary (lbl_opt, idx_ty, val_ty)) ->
-        assert (lbl_opt = Some map_name);
+        if not (lbl_opt = Some map_name) then
+          begin
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
+          end;
         idx_ty, val_ty
       | _ ->
         raise (Type_Inference_Exc ("Expected to find dictionary type", e, st)) in
     let _ =
       if strict then
-        assert (expected_idx_ty = idx_ty) in
+        assert_eq_types expected_idx_ty idx_ty e st in
     (value_ty, st)
 
   | Record fields ->
     let (field_tys, (record_tys, labels)) =
       List.fold_right (fun (label, e) acc ->
         let ty, _ = ty_of_expr ~strict st e in
-        assert (ty <> Undefined);
+        assert_not_undefined_type ty e st;
         let md =
           match State.lookup_term_data (Term Undetermined) st.term_symbols label with
           | None ->
@@ -302,7 +326,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
             | None ->
               raise (Type_Inference_Exc ("Missing type for " ^ label, e, st))
             | Some ty' ->
-              assert (ty' <> Undefined);
+              assert_not_undefined_type ty' e st;
               if ty <> ty' then
                 (*FIXME give more info*)
                 raise (Type_Inference_Exc ("Unexpected type", e, st)) in
@@ -419,7 +443,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
             ty
           | _ ->
             raise (Type_Inference_Exc ("Functor's return type is invalid, returns more than one value: " ^ functor_name, e, st)) in
-        assert (ret_ty <> Undefined);
+        assert_not_undefined_type ret_ty e st;
         let _ =
           if strict then
             (*Canonicalise the function's arguments -- eliminating any named-parameter
@@ -533,14 +557,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   | EmptyList -> (Undefined, st)
   | ConsList (h_e, t_e) ->
     let h_ty, _ = ty_of_expr ~strict st h_e in
-    assert (h_ty <> Undefined);
+    assert_not_undefined_type h_ty e st;
     let t_ty, _ = ty_of_expr ~strict st t_e in
     let ty =
       match t_ty with
       | List (_, ty, _, _) as list_ty ->
         if ty <> Undefined then
           begin
-          assert (ty = h_ty);
+          assert_eq_types ty h_ty e st;
           list_ty
           end
         else List (None, h_ty, None, [])
@@ -550,12 +574,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   | AppendList (l1, l2) ->
     let l1_ty, _ = ty_of_expr ~strict st l1 in
     let l2_ty, _ = ty_of_expr ~strict st l2 in
-    assert (l1_ty = l2_ty || l1_ty = Undefined || l2_ty = Undefined);
+    if not (l1_ty = l2_ty || l1_ty = Undefined || l2_ty = Undefined) then
+      (*FIXME give more info*)
+      raise (Type_Inference_Exc ("Mismatch between types of list components", e, st));
     (l1_ty, st)
 
   | Send (chan_e, data_e) ->
     let data_ty, _ = ty_of_expr ~strict st data_e in
-    assert (data_ty <> Undefined);
+    assert_not_undefined_type data_ty e st;
     let chan_ty, _ = ty_of_expr ~strict st chan_e in
     let ty =
       match chan_ty with
@@ -571,7 +597,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     (ty, st)
   | Receive (chan_e, data_e) ->
     let data_ty, _ = ty_of_expr ~strict st data_e in
-    assert (data_ty <> Undefined);
+    assert_not_undefined_type data_ty e st;
     let chan_ty, _ = ty_of_expr ~strict st chan_e in
     let ty =
       match chan_ty with
@@ -603,7 +629,11 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     (ty, st)
 
   | TypeAnnotation (e, ty) ->
-    assert (is_fully_defined_type ty);
+    if not (is_fully_defined_type ty) then
+      begin
+        let ty_s = type_value_to_string true false min_indentation ty in
+        raise (Type_Inference_Exc ("Type not fully defined: " ^ ty_s, e, st))
+      end;
     let e_ty, _ = ty_of_expr ~strict st e in
     let _ =
       if strict then

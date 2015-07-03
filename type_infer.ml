@@ -562,6 +562,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     assert_not_undefined_type h_ty h_e st;
     let t_ty, _ = ty_of_expr ~strict st t_e in
     let ty =
+      (*FIXME i think ty computation is too ad hoc -- might be better to use
+        matcher*)
       match t_ty with
       | List (_, ty, _, _) as list_ty ->
         if ty <> Undefined then
@@ -570,6 +572,9 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           list_ty
           end
         else List (None, h_ty, None, [])
+      | Undefined ->
+        (*We create a list type that carries h_ty*)
+        List (None, h_ty, None, [])
       | _ ->
         raise (Type_Inference_Exc ("Tail must be of list type", e, st)) in
     (ty, st)

@@ -10,7 +10,7 @@ open Naasty_aux
 
 let state_to_str ?summary_types:(summary_types : bool = false) (resolve : bool)
       ({pragma_inclusions; type_declarations; next_symbol;
-        type_symbols; term_symbols} as st: state) =
+        type_symbols; term_symbols; crisp_funs} as st: state) =
   let st_opt = if resolve then Some st else None in
   let str_of_ty_opt ty_opt =
     match ty_opt with
@@ -42,4 +42,8 @@ let state_to_str ?summary_types:(summary_types : bool = false) (resolve : bool)
                      (List.map (fun (s, i, md) -> "(" ^ s ^ ", " ^
                               string_of_int i ^ ", " ^
                               str_of_term_symbol_metadata md ^ ")")
-                     term_symbols) ^ "]" ^ "\n"
+                        term_symbols) ^ "]" ^ "\n" ^
+  "crisp_funs : [" ^ String.concat "; "
+                     (List.map (fun (s, ft) -> "(" ^ s ^ ", " ^
+                              Crisp_syntax.function_type_to_string ft ^ ")")
+                        crisp_funs) ^ "]" ^ "\n"

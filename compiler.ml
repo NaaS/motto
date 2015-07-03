@@ -56,36 +56,37 @@ let type_check_blob (st : State.state) (chans : channel list)
 
 (*Gather declaration information from a program, and encode in the state.*)
 let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.state =
-  let fun_decls, ty_decls, proc_decls, st' =
-  List.fold_right (fun decl (acc_fun_decls, acc_ty_decls, acc_proc_decls, st) ->
+  List.fold_right (fun decl st ->
     match decl with
     | Function {fn_name; fn_params; fn_body} ->
-      let st' =
-        match lookup_term_data (Term Function_Name) st.term_symbols fn_name with
-        | None ->
-          let (fn_idx, st') =
-            if Naasty_aux.is_fresh fn_name st then
-              Naasty_aux.extend_scope_unsafe (Term Function_Name) st ~ty_opt:None(*FIXME put function's type here?*)
-                                fn_name
-            else
-              failwith ("Function name " ^ fn_name ^ " isn't fresh.") in
+      begin
+      let st =
+        { st with crisp_funs = (fn_name, fn_params) :: st.crisp_funs} in
+      match lookup_term_data (Term Function_Name) st.term_symbols fn_name with
+      | None ->
+        let (fn_idx, st') =
+          if Naasty_aux.is_fresh fn_name st then
+            Naasty_aux.extend_scope_unsafe (Term Function_Name) st ~ty_opt:None(*FIXME put function's type here?*)
+                              fn_name
+          else
+            failwith ("Function name " ^ fn_name ^ " isn't fresh.") in
 
-          let _ =
-            let ((chans, arg_tys), ret_tys) =
-              Crisp_syntax_aux.extract_function_types fn_params in
-            let ret_ty =
-              match ret_tys with
-              | [] -> flick_unit_type
-              | [ty] -> ty
-              | _ -> failwith "Multifunctions not supported"(*FIXME give more info*) in
-            if !Config.cfg.Config.skip_type_check then ()
-            else
-              if type_check_blob st chans arg_tys ret_ty fn_body then ()
-              else failwith ("Types don't check in " ^ fn_name) in
-          (*NOTE order of declarations isn't preserved within term_symbols*)
-          st'
-        | Some (_, _) -> failwith ("Function " ^ fn_name ^ " declared more than once") in
-      ((fn_name, fn_params) :: acc_fun_decls, acc_ty_decls, acc_proc_decls, st')
+        let _ =
+          let ((chans, arg_tys), ret_tys) =
+            Crisp_syntax_aux.extract_function_types fn_params in
+          let ret_ty =
+            match ret_tys with
+            | [] -> flick_unit_type
+            | [ty] -> ty
+            | _ -> failwith "Multifunctions not supported"(*FIXME give more info*) in
+          if !Config.cfg.Config.skip_type_check then ()
+          else
+            if type_check_blob st chans arg_tys ret_ty fn_body then ()
+            else failwith ("Types don't check in " ^ fn_name) in
+        (*NOTE order of declarations isn't preserved within term_symbols*)
+        st'
+      | Some (_, _) -> failwith ("Function " ^ fn_name ^ " declared more than once")
+      end
     | Type {type_name; type_value} ->
       let st' =
         match Crisp_syntax_aux.consts_in_type type_value with
@@ -106,16 +107,14 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
              st' type_value in
           (Some nst_ty, st'')
         else (None, st') in
-      (acc_fun_decls, (type_name, type_value, nst_ty) :: acc_ty_decls, acc_proc_decls, st'')
+      { st'' with type_declarations =
+                    (type_name, type_value, nst_ty) :: st''.type_declarations}
     | Process _ ->
       (*FIXME currently we ignore process declarations*)
-      (acc_fun_decls, acc_ty_decls, acc_proc_decls, st)
+      st
     | Include _ ->
       failwith "Inclusions should have been expanded before reaching this point.")
-    p ([], [], [], st) in
-  (*NOTE order of declarations is preserved*)
-  { st' with crisp_funs = st'.crisp_funs @ List.rev fun_decls;
-             type_declarations = st'.type_declarations @ List.rev ty_decls}
+    p st
 
 (*Given a program whose Includes have been expanded out, separate out the
   declarations of types, processes, and functions -- but keep their relative

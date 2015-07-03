@@ -577,8 +577,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let l1_ty, _ = ty_of_expr ~strict st l1 in
     let l2_ty, _ = ty_of_expr ~strict st l2 in
     if not (l1_ty = l2_ty || l1_ty = Undefined || l2_ty = Undefined) then
-      (*FIXME give more info*)
-      raise (Type_Inference_Exc ("Mismatch between types of list components", e, st));
+      begin
+      let l1_ty_s = type_value_to_string true false min_indentation l1_ty in
+      let l2_ty_s = type_value_to_string true false min_indentation l2_ty in
+      raise (Type_Inference_Exc ("Mismatch between types of list components:" ^
+                                 l1_ty_s ^ " and " ^ l2_ty_s, e, st))
+      end;
     (l1_ty, st)
 
   | Send (chan_e, data_e) ->

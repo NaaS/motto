@@ -443,6 +443,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
                   (*FIXME give more info*)
                   raise (Type_Inference_Exc ("Incorrect identifier kind for functor", e, st)) in
             ty
+          | [] -> flick_unit_type
           | _ ->
             raise (Type_Inference_Exc ("Functor's return type is invalid, returns more than one value: " ^ functor_name, e, st)) in
         assert_not_undefined_type ret_ty e st;

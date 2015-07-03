@@ -175,13 +175,13 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           annotation, or from e itself. If e's type is Undefined, and no
           annotation is given, then complain.*)
         if e_ty = Undefined then
-          raise (Type_Inference_Exc ("Expression cannot be given ground type", e, st))
+          raise (Type_Inference_Exc ("A ground type cannot be inferred for this expression.", e, st))
         else e_ty
       | Some ty_value ->
         if e_ty = Undefined then
           ty_value
         else if e_ty <> ty_value then
-          raise (Type_Inference_Exc ("Expression cannot be given ground type", e, st))
+          raise (Type_Inference_Exc ("Superficial (flex-rigid) matching failed. A ground type cannot be inferred for this expression.", e, st))
         else e_ty in
     let _, st' =
       Naasty_aux.extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) value_name in

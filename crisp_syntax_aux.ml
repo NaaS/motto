@@ -276,3 +276,29 @@ let rec forget_label (ty : type_value) =
   | Undefined
   | ChanType _
   | IPv4Address _ -> ty
+
+let resolve_usertype (st : State.state) (ty : type_value) : type_value option =
+  match ty with
+  | UserDefinedType (_, type_name) ->
+    begin
+    let candidates =
+      List.fold_right (fun (ty_n, ty, _) acc ->
+        if ty_n = type_name then ty :: acc else acc) st.State.type_declarations [] in
+    match candidates with
+    | [ty] -> Some ty
+    | [] -> None
+    | _ -> failwith "More than one candidate for resolving a usertype"(*FIXME give more info*)
+    end
+  | _ -> failwith "Could not resolve usertype"(*FIXME give more info*)
+
+(*If a type is a usertype, then expect to resolve it.
+  Otherwise, do nothing.*)
+let resolve_if_usertype (st : State.state) (ty : type_value) : type_value =
+  match ty with
+  | UserDefinedType _ ->
+    begin
+    match resolve_usertype st ty with
+    | None -> failwith "Could not resolve usertype"(*FIXME give more info*)
+    | Some ty -> ty
+    end
+  | _ -> ty

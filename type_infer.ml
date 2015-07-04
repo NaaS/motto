@@ -395,7 +395,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   | RecordProjection (e, label) ->
     let e_ty, _ = ty_of_expr ~strict st e in
     let l_ty =
-      match e_ty with
+      match Crisp_syntax_aux.resolve_if_usertype st e_ty with
       | RecordType (_, tys', _) ->
         let filtered_tys =
           List.filter (fun ty' -> label_of_type ty' = Some label) tys' in

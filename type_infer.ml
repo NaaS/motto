@@ -408,7 +408,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       | Tuple (_, tys') ->
         List.nth tys' (int_of_string label - 1)
         |> forget_label
-      | _ -> raise (Type_Inference_Exc ("Was expecting record or tuple type", e, st)) in
+      | _ -> raise (Type_Inference_Exc ("Was expecting record or tuple type in order to project label " ^ label, e, st)) in
     (l_ty, st)
 
     (*also used to form Coproducts, as well as make function calls*)

@@ -277,7 +277,12 @@ let rec forget_label (ty : type_value) =
   | ChanType _
   | IPv4Address _ -> ty
 
-let resolve_usertype (st : State.state) (ty : type_value) : type_value option =
+(*Resolves a user-defined type into Flick types.
+  if deep_resolution it ensures that the result of the resolution is never
+  a user-defined type.
+  NOTE that even if using deep_resolution you could have a user-defined type
+       but not at the surface level (e.g., as a field of a record).*)
+let rec resolve_usertype ?deep_resolution:(deep_resolution : bool = true) (st : State.state) (ty : type_value) : type_value option =
   match ty with
   | UserDefinedType (_, type_name) ->
     begin
@@ -285,7 +290,9 @@ let resolve_usertype (st : State.state) (ty : type_value) : type_value option =
       List.fold_right (fun (ty_n, ty, _) acc ->
         if ty_n = type_name then ty :: acc else acc) st.State.type_declarations [] in
     match candidates with
-    | [ty] -> Some ty
+    | [ty] ->
+      if deep_resolution then resolve_usertype ~deep_resolution st ty
+      else Some ty
     | [] -> None
     | _ -> failwith "More than one candidate for resolving a usertype"(*FIXME give more info*)
     end

@@ -567,7 +567,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         else acc) (List.tl body_tys) (List.hd body_tys) in
     (ty, st)
 
-  | EmptyList -> (Undefined, st)
+  | EmptyList -> (List(None, Undefined, None, []), st)
   | ConsList (h_e, t_e) ->
     let h_ty, _ = ty_of_expr ~strict st h_e in
     assert_not_undefined_type h_ty h_e st;

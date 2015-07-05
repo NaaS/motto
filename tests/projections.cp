@@ -19,7 +19,9 @@ fun F : (a : <integer>, b : type bla, c : type abl) -> ()
   c.abc
   c.a.3
   (c.a).3
-  [] typed integer # this should result in a type error
+#  [] typed integer # this should result in a type error
+  [] typed [integer]
+  [] typed [[integer]]
 #  <> typed integer # this should result in a type error
   <>
 

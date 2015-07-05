@@ -250,7 +250,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   | Map (label, src_e, body_e, unordered) ->
     let st' =
       let cursor_ty =
-        match fst (ty_of_expr ~strict st src_e) with
+        let src_e_ty, _ = ty_of_expr ~strict st src_e in
+        match Crisp_syntax_aux.resolve_if_usertype st src_e_ty with
         | List (_, ty', _, _) -> ty'
         | _ -> raise (Type_Inference_Exc ("Was expecting list type", e, st)) in
       let _, st' = Naasty_aux.extend_scope_unsafe (Term Value) st
@@ -259,7 +260,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let ty, _ = ty_of_expr ~strict st' body_e in
     let _ =
       if strict then
-        match ty with
+        match Crisp_syntax_aux.resolve_if_usertype st ty with
         | List (_, _, _, _) -> ()
         | _ -> raise (Type_Inference_Exc ("Was expecting list type", e, st)) in
     (ty, st)
@@ -353,7 +354,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
               raise (Type_Inference_Exc ("Labels relate to different types", e, st))
             else acc) (List.tl record_tys) (List.hd record_tys) in
         (*check if all labels have been given*)
-        match record_ty with
+        match Crisp_syntax_aux.resolve_if_usertype st record_ty with
         | RecordType (_, field_tys, _) ->
           List.iter (fun ty ->
             match label_of_type ty with
@@ -376,7 +377,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       if strict then
         let field_ty, _ =
           ty_of_expr ~strict st body_e in
-        match record_ty with
+        match Crisp_syntax_aux.resolve_if_usertype st record_ty with
         | RecordType (_, field_tys, _) ->
           let field_exists_in_record =
             List.exists (fun ty ->
@@ -481,7 +482,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let ty, _ = ty_of_expr ~strict st e in
     (*ty must be a Disjoint_Union*)
     let expected_disjuncts =
-      match ty with
+      match Crisp_syntax_aux.resolve_if_usertype st ty with
       | Disjoint_Union (_, tys) -> tys
       | _ ->
         (*FIXME give more info*)
@@ -574,7 +575,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let ty =
       (*FIXME i think ty computation is too ad hoc -- might be better to use
         matcher*)
-      match t_ty with
+      match Crisp_syntax_aux.resolve_if_usertype st t_ty with
       | List (_, ty, _, _) as list_ty ->
         if ty <> Undefined then
           begin

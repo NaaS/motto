@@ -656,15 +656,15 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         raise (Type_Inference_Exc ("Expected both types to be channels", e, st)) in
     (ty, st)
 
-  | TypeAnnotation (e, ty) ->
+  | TypeAnnotation (e', ty) ->
     if not (is_fully_defined_type ty) then
       begin
         let ty_s = type_value_to_string true false min_indentation ty in
         raise (Type_Inference_Exc ("Type not fully defined: " ^ ty_s, e, st))
       end;
-    let e_ty, _ = ty_of_expr ~strict st e in
+    let e'_ty, _ = ty_of_expr ~strict st e' in
     let _ =
       if strict then
-        if not (type_match ty e_ty) then
-          raise (Type_Inference_Exc ("Type annotation cannot match expression", e, st)) in
+        if not (type_match ty e'_ty) then
+          raise (Type_Inference_Exc ("Unable to match type annotation with expression", e, st)) in
     (ty, st)

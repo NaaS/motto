@@ -107,7 +107,7 @@ match !cfg.source_file with
       "in file " ^ source_file ^ "\n" ^
       "at expression:" ^ Crisp_syntax.expression_to_string
                            Crisp_syntax.min_indentation e ^ "\n" ^
-      "state : " ^
+      "state :\n" ^
        State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
          true st)
   end

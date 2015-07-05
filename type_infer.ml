@@ -225,7 +225,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         (st', Some ty) in
     let st'' =
       let cursor_ty =
-        match fst (ty_of_expr ~strict st' range_e) with
+        let range_e_ty, _ = ty_of_expr ~strict st' range_e in
+        match Crisp_syntax_aux.resolve_if_usertype st range_e_ty with
         | List (_, ty', _, _) ->
           assert_not_undefined_type ty' e st;
           ty'

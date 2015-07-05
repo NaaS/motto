@@ -10,7 +10,7 @@ type abl : record
   a : <integer * string * boolean>
 
 fun F : (a : <integer>, b : type bla, c : type abl) -> ()
-  let x = "test"
+  let x = "test" # this is shadowed below!
   let x = 4  # This doesn't interfere with constant x -- different namespace
   a.1 # This doesn't interfere with fieldname (constant) a -- different namespace
   b.x = "is this an int?"

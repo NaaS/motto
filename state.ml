@@ -121,10 +121,8 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
                 false
               end
             else
-              (*failwith ("Identifier kind in symbol table for '" ^ x ^ " cannot be undetermined")*)
-              (*FIXME give more info -- but ideally wouldn't cause type of x to be
-                      specialised!*)
-              failwith ("Identifier kind in symbol table cannot be undetermined")
+              failwith ("Identifier kind in symbol table for '" ^ stringify x ^
+                        " cannot be undetermined")
           else if filter_scope then
             query_kind = Undetermined || query_kind = md.identifier_kind
           else if query_kind <> Undetermined && query_kind <> md.identifier_kind then
@@ -147,8 +145,6 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
       | _ ->
         if unexceptional then None
         else
-          (*FIXME give more info -- but ideally wouldn't cause type of x to be
-                  specialised!*)
           failwith ("Found multiple resolvants for symbol " ^ stringify id)
 
 (*For simplicity (and to defend against the possibility that identifiers and

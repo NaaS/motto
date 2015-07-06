@@ -433,8 +433,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           raise (Type_Inference_Exc ("Zero or several fields had the label sought", e, st))
         end
       | Tuple (_, tys') ->
-        List.nth tys' (int_of_string label - 1)
-        |> forget_label
+        let idx1 =
+          (*1-based index*)
+          int_of_string label in
+        if List.length tys' < idx1 then
+          raise (Type_Inference_Exc ("Tried to project from non-existing position " ^ label ^ " (type has " ^ string_of_int (List.length tys') ^ " positions)", e, st))
+        else
+          List.nth tys' (idx1 - 1)
+          |> forget_label
       | _ -> raise (Type_Inference_Exc ("Was expecting record or tuple type in order to project label " ^ label, e, st)) in
     (l_ty, st)
 

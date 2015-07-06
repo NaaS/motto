@@ -76,27 +76,56 @@ let check_identifier_kind scope result_kind =
   let query_kind =
     match scope with
     | Term ik -> ik
-    | _ -> failwith "Expecting scope to be term." in
+    | _ -> failwith ("check_identifier_kind: Expecting scope to be term. Instead found " ^ scope_to_str scope) in
   if result_kind = Undetermined then
-    failwith "Identifier kind for value record in symbol table cannot be undetermined" (*FIXME give more info*)
+    failwith "check_identifier_kind: Identifier kind for value record in symbol table cannot be undetermined" (*FIXME give more info*)
   else if query_kind <> Undetermined && query_kind <> result_kind then
-    failwith ("Mismatching identifier kinds! Was expecting " ^
+    failwith ("check_identifier_kind: Mismatching identifier kinds! Was expecting " ^
               string_of_identifier_kind query_kind ^ " but found " ^
               string_of_identifier_kind result_kind)
   else true
 
-let lookup_term_data (scope : scope) (symbols : ('a * 'b * term_symbol_metadata) list) (id : 'a) : ('b * term_symbol_metadata) option =
-  (*NOTE would be more efficient if we used better data structures, rather
-         than indexing ad hoc.*)
-  let l' = List.map (fun (x, y, md) -> (x, (y, md))) symbols in
-  if not (List.mem_assoc id l') then
-    None
+(*if filter_scope then we use the scope parameter as a filter, not as a check.
+  that is, if we look for name "x" with scope "Value", then if
+  filter_scope=false then if we find an "x" with a non-Value scope an exception
+  is thrown; otherwise we use the scope as a filter, and look for an "x" that is
+  a Value.*)
+let lookup_term_data ?filter_scope:(filter_scope : bool = false)
+      ?only_checking:(only_checking : bool = false)
+      (scope : scope) (symbols : ('a * 'b * term_symbol_metadata) list)
+      (id : 'a) : ('b * term_symbol_metadata) option =
+  if only_checking && scope = Type then None
   else
-    let (_, md) as result = List.assoc id l' in
-    (*sanity check*)
-    if check_identifier_kind scope md.identifier_kind then
-      Some result
-    else failwith "Failed kind-check"
+    let query_kind =
+      match scope with
+      | Term ik -> ik
+      | _ -> failwith ("Expecting scope to be term. Instead found " ^ scope_to_str scope) in
+    (*NOTE would be more efficient if we used better data structures, rather
+           than indexing ad hoc.*)
+    let l' =
+      List.filter (fun (x, y, md) ->
+        let scope_check : bool =
+          if x <> id then false
+          else if md.identifier_kind = Undetermined then
+            (*failwith ("Identifier kind in symbol table for '" ^ x ^ " cannot be undetermined")*)
+            (*FIXME give more info -- but ideally wouldn't cause type of x to be
+                    specialised!*)
+            failwith ("Identifier kind in symbol table cannot be undetermined")
+          else if filter_scope then
+            query_kind = Undetermined || query_kind = md.identifier_kind
+          else if query_kind <> Undetermined && query_kind <> md.identifier_kind then
+            failwith ("id '" ^ stringify id ^ "' : Mismatching identifier kinds! Was expecting " ^
+                      string_of_identifier_kind query_kind ^ " but found " ^
+                      string_of_identifier_kind md.identifier_kind)
+          else true in
+        x = id && scope_check) symbols in
+    match l' with
+    | [] -> None
+    | [(_, y, md)] -> Some (y, md)
+    | _ ->
+      (*FIXME give more info -- but ideally wouldn't cause type of x to be
+              specialised!*)
+      failwith ("Found multiple resolvants for symbol " ^ stringify id)
 
 (*For simplicity (and to defend against the possibility that identifiers and
   type identifiers occupy the same namespace) the lookup is made on both
@@ -114,7 +143,7 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b * term_symbol_me
       None
     else Some (List.assoc id l') in
   let term_lookup l =
-    match lookup_term_data scope symbols id with
+    match lookup_term_data ~only_checking:true scope symbols id with
     | None -> None
     | Some (idx, _) -> Some idx in
   let type_lookup = type_lookup type_symbols in

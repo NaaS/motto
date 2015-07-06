@@ -186,7 +186,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           raise (Type_Inference_Exc ("Superficial (flex-rigid) matching failed. A ground type cannot be inferred for this expression.", e, st))
         else e_ty in
     let _ =
-      (*Allow shadowing, as long as type of the shadowed binding isn't changed.
+      (*Shadowing is allowed here (but might be forbidden in the structures on
+        which we depend, as long as type of the shadowed binding isn't changed.
         NOTE we check specifically in the Value namespace -- we allow the name
              to be used for a field name, function name, etc.*)
       let scope = Term Value (*replacing Value with Undetermined would allow us

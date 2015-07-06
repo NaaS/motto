@@ -30,7 +30,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   | Variable label ->
     let scope = Term Value in
     begin
-    match lookup_term_data scope st.term_symbols label with
+    match lookup_term_data ~unexceptional:true scope st.term_symbols label with
     | None ->
       raise (Type_Inference_Exc ("Variable: Missing declaration for '" ^ label ^ "'", e, st))
     | Some (_, {source_type; _}) ->
@@ -190,16 +190,25 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         which we depend, as long as type of the shadowed binding isn't changed.
         NOTE we check specifically in the Value namespace -- we allow the name
              to be used for a field name, function name, etc.*)
-      let scope = Term Value (*replacing Value with Undetermined would allow us
-                               to pick out any sort of binding for value_name*) in
+      let scope = Term Undetermined (*we actually only want a Value identifier kind,
+                                      and this is checked below to provide a more
+                                      meaningful error message (since lookup_term_data
+                                      lacks access to the state, its messages are
+                                      less meaningful).*) in
       if strict then
       begin
       match lookup_term_data scope st.term_symbols value_name with
       | None ->
         () (*This means that there's not shadowing*)
-      | Some (_, {source_type; _}) ->
-        (*This means that shadowing is taking place. Now we check to ensure that
-          the type of the new binding is the same as the old.*)
+      | Some (_, {source_type; identifier_kind; _}) ->
+        (*This means that shadowing is taking place. First we check that the
+          identifier kind is correct.*)
+        let _ =
+          match identifier_kind with
+          | Value -> ()
+          | _ ->
+            raise (Type_Inference_Exc ("Name " ^ value_name ^ " is already used for a non-value identifier, of kind " ^ string_of_identifier_kind identifier_kind, e, st)) in
+        (*Now we check to ensure that the type of the new binding is the same as the old.*)
         match source_type with
         | None -> raise (Type_Inference_Exc ("Missing source type for '" ^ value_name ^ "'", e, st))
         | Some value_name_ty ->

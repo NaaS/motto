@@ -18,7 +18,10 @@ fun F : (a : <integer>, b : type bla, c : type abl) -> ()
   a.1 # This doesn't interfere with fieldname (constant) a -- different namespace
   b.x = "is this an int?"
 #  a.3 # this results in a type error
-#  x + 3 # unless we have namespace separation, "x" is taken to be bla's field.
+#  x + 3 # Since "x" is taken to be bla's field, and isn't be a bound variable
+         # (since it cannot be both!) then compiler complains that "x" binding
+         # is missing. Then when you add a binding for "x", it tells you that
+         # "x" already has meaning in the symbol table.
   c.abc
   c.a'.3
   (c.a').3

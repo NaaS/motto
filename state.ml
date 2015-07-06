@@ -85,17 +85,25 @@ let check_identifier_kind scope result_kind =
               string_of_identifier_kind result_kind)
   else true
 
-(*if filter_scope then we use the scope parameter as a filter, not as a check.
-  that is, if we look for name "x" with scope "Value", then if
-  filter_scope=false then if we find an "x" with a non-Value scope an exception
-  is thrown; otherwise we use the scope as a filter, and look for an "x" that is
-  a Value.*)
+(*Flags are used to use this function to carry out the same query but with different
+  nuances:
+  - if filter_scope then we use the scope parameter as a filter, not as a check.
+    that is, if we look for name "x" with scope "Value", then if
+    filter_scope=false then if we find an "x" with a non-Value scope an exception
+    is thrown; otherwise we use the scope as a filter, and look for an "x" that is
+    a Value.
+  - if only_checking then an exception isn't thrown if the scope is of the wrong kind.
+  - if unexceptional then exceptions aren't thrown (unless scope is of the wrong kind),
+      instead None is return.
+*)
 let lookup_term_data ?filter_scope:(filter_scope : bool = false)
+      ?unexceptional:(unexceptional : bool = false)
       ?only_checking:(only_checking : bool = false)
       (scope : scope) (symbols : ('a * 'b * term_symbol_metadata) list)
       (id : 'a) : ('b * term_symbol_metadata) option =
   if only_checking && scope = Type then None
   else
+    let failed : bool ref = ref false in
     let query_kind =
       match scope with
       | Term ik -> ik
@@ -107,25 +115,41 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
         let scope_check : bool =
           if x <> id then false
           else if md.identifier_kind = Undetermined then
-            (*failwith ("Identifier kind in symbol table for '" ^ x ^ " cannot be undetermined")*)
-            (*FIXME give more info -- but ideally wouldn't cause type of x to be
-                    specialised!*)
-            failwith ("Identifier kind in symbol table cannot be undetermined")
+            if unexceptional then
+              begin
+                failed := true;
+                false
+              end
+            else
+              (*failwith ("Identifier kind in symbol table for '" ^ x ^ " cannot be undetermined")*)
+              (*FIXME give more info -- but ideally wouldn't cause type of x to be
+                      specialised!*)
+              failwith ("Identifier kind in symbol table cannot be undetermined")
           else if filter_scope then
             query_kind = Undetermined || query_kind = md.identifier_kind
           else if query_kind <> Undetermined && query_kind <> md.identifier_kind then
-            failwith ("id '" ^ stringify id ^ "' : Mismatching identifier kinds! Was expecting " ^
-                      string_of_identifier_kind query_kind ^ " but found " ^
-                      string_of_identifier_kind md.identifier_kind)
+            if unexceptional then
+              begin
+                failed := true;
+                false
+              end
+            else
+              failwith ("id '" ^ stringify id ^ "' : Mismatching identifier kinds! Was expecting " ^
+                        string_of_identifier_kind query_kind ^ " but found " ^
+                        string_of_identifier_kind md.identifier_kind)
           else true in
         x = id && scope_check) symbols in
-    match l' with
-    | [] -> None
-    | [(_, y, md)] -> Some (y, md)
-    | _ ->
-      (*FIXME give more info -- but ideally wouldn't cause type of x to be
-              specialised!*)
-      failwith ("Found multiple resolvants for symbol " ^ stringify id)
+    if !failed then None
+    else
+      match l' with
+      | [] -> None
+      | [(_, y, md)] -> Some (y, md)
+      | _ ->
+        if unexceptional then None
+        else
+          (*FIXME give more info -- but ideally wouldn't cause type of x to be
+                  specialised!*)
+          failwith ("Found multiple resolvants for symbol " ^ stringify id)
 
 (*For simplicity (and to defend against the possibility that identifiers and
   type identifiers occupy the same namespace) the lookup is made on both

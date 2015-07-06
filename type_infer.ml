@@ -28,7 +28,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   : type_value * state =
   match e with
   | Variable label ->
-    let scope = Term Undetermined in
+    let scope = Term Value in
     begin
     match lookup_term_data scope st.term_symbols label with
     | None ->

@@ -189,6 +189,11 @@ let function_type_to_string (FunType (fd, fr)) =
 
 type integer = int (*FIXME precision*)
 
+type meta_instruction =
+  Show_symbol_table
+let meta_instruction_to_string = function
+  Show_symbol_table -> "show_symbol_table"
+
 type fun_arg =
   | Exp of expression
   | Named of label * expression
@@ -284,6 +289,7 @@ and expression =
   | Exchange of expression * expression
 
   | Str of string
+  | Meta_functor of meta_instruction
 
 let rec expression_to_string indent = function
   | Variable value_name -> indn indent ^ value_name
@@ -455,6 +461,7 @@ let rec expression_to_string indent = function
      expression_to_string 0 e2
 
   | Str s -> "\"" ^ s ^ "\""
+  | Meta_functor mi -> "@:" ^ meta_instruction_to_string mi
 
 type process_name = string
 

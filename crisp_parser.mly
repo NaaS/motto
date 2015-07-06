@@ -109,6 +109,7 @@
 %token FAT_BRACKET_CLOSE
 
 %token TYPED
+%token META_FUNCTOR
 
 (*Names*)
 (*
@@ -487,6 +488,9 @@ remainder_of_cases:
     {[]}
 
 expression:
+  | META_FUNCTOR; mi = IDENTIFIER
+    (*FIXME this is super simple at present*)
+    {if mi = "show_symbol_table" then Crisp_syntax.Meta_functor Show_symbol_table else failwith "Invalid meta instruction"}
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
   | b1 = expression; AND; b2 = expression

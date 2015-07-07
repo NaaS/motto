@@ -713,10 +713,16 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   | Meta_quoted mis ->
     List.iter (fun mi ->
       match mi with
-      | Print s -> print_endline s
-      | Show_symbol_table ->
-        print_endline
-         ("state :\n" ^
-           State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
-             true st)) mis;
+      | PrintStr s -> print_endline s
+      | Show_symbol_table cp_opt ->
+        let display_here =
+          match cp_opt with
+          | None
+          | Some Type_checking_phase -> true
+          | Some _ -> false in
+        if display_here then
+          print_endline
+           ("state :\n" ^
+             State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
+               true st)) mis;
     Undefined, st

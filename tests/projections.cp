@@ -32,15 +32,16 @@ fun F : (a : <integer>, b : type bla, c : type abl) -> ()
 #  [] typed [integer] typed [integer] typed [[integer]] # this cannot be accepted
   [] typed [integer] typed [integer] typed [integer]
 #  <> typed integer # this should result in a type error
-  @: show_symbol_table :@ typed <>
+  @: print (symbol_table) :@ typed <>
   @:
     print ("Here")
-    show_symbol_table
+    print (symbol_table)
+    print (symbol_table).at(type_checking)
   :@ typed <>
 
 #  This doesn't work -- the indentation in this block fails the parser:
-#  @:show_symbol_table
-#  show_symbol_table:@ typed <>
+#  @:print (symbol_table)
+#  print (symbol_table):@ typed <>
   <>
 
 #  The example below is illegal: labels need to be literals.

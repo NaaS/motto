@@ -189,12 +189,26 @@ let function_type_to_string (FunType (fd, fr)) =
 
 type integer = int (*FIXME precision*)
 
+(*FIXME move into separate module?*)
+type compiler_phase = Type_checking_phase
+let string_of_compiler_phase cp =
+  match cp with
+  | Type_checking_phase -> "type_checking"
+
+(*FIXME move into separate module?*)
 type meta_instruction =
-  | Show_symbol_table
-  | Print of string
+  | Show_symbol_table of compiler_phase option
+  | PrintStr of string (*FIXME have it accept "compiler_phase option"?*)
 let meta_instruction_to_string = function
-  | Show_symbol_table -> "show_symbol_table"
-  | Print s -> "print \"" ^ s ^ "\""
+  | Show_symbol_table cp_opt ->
+    let what = "symbol_table" in
+    let at =
+      match cp_opt with
+      | None -> ""
+      | Some cp ->
+        ".at(" ^ string_of_compiler_phase cp ^ ")" in
+    "print (\"" ^ what ^ "\")" ^ at
+  | PrintStr s -> "print (\"" ^ s ^ "\")"
 
 type fun_arg =
   | Exp of expression
@@ -479,10 +493,16 @@ let rec expression_to_string indent = function
     "@:" ^ body ^ ":@"
 
 (*Translate an expression into a meta_instruction where possible*)
-let interpret_e_as_mi (e : expression) =
+let rec interpret_e_as_mi (e : expression) =
   match e with
-  | Variable "show_symbol_table" -> Show_symbol_table
-  | Functor_App ("print", [Exp (Str s)]) -> Print s
+  | Functor_App ("print", [Exp (Variable "symbol_table")]) ->
+    Show_symbol_table None
+  | Functor_App ("print", [Exp (Str s)]) -> PrintStr s
+  | Functor_App ("at", [Exp (Variable "type_checking"); Exp e_mi]) ->
+    begin
+    match interpret_e_as_mi e_mi with
+    | Show_symbol_table None -> Show_symbol_table (Some Type_checking_phase)
+    end
   | _ ->
     failwith ("Unrecognised meta_instruction: " ^
               expression_to_string min_indentation e)

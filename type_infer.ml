@@ -196,30 +196,30 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
                                       lacks access to the state, its messages are
                                       less meaningful).*) in
       if strict then
-      begin
-      match lookup_term_data scope st.term_symbols value_name with
-      | None ->
-        () (*This means that there's not shadowing*)
-      | Some (_, {source_type; identifier_kind; _}) ->
-        (*This means that shadowing is taking place. First we check that the
-          identifier kind is correct.*)
-        let _ =
-          match identifier_kind with
-          | Value -> ()
-          | _ ->
-            raise (Type_Inference_Exc ("Name " ^ value_name ^ " is already used for a non-value identifier, of kind " ^ string_of_identifier_kind identifier_kind, e, st)) in
-        (*Now we check to ensure that the type of the new binding is the same as the old.*)
-        match source_type with
-        | None -> raise (Type_Inference_Exc ("Missing source type for '" ^ value_name ^ "'", e, st))
-        | Some value_name_ty ->
-          let value_name_ty = forget_label value_name_ty in
-          let ty = forget_label ty in
-          if forget_label value_name_ty = forget_label ty then ()
-          else
-            let ty1_s = type_value_to_string true false min_indentation value_name_ty in
-            let ty2_s = type_value_to_string true false min_indentation ty in
-            raise (Type_Inference_Exc ("Shadowing of bindings is allowed, but types must not be changed. Expected " ^ ty1_s ^ " but got " ^ ty2_s, e, st))
-      end in
+        begin
+        match lookup_term_data scope st.term_symbols value_name with
+        | None ->
+          () (*This means that there's not shadowing*)
+        | Some (_, {source_type; identifier_kind; _}) ->
+          (*This means that shadowing is taking place. First we check that the
+            identifier kind is correct.*)
+          let _ =
+            match identifier_kind with
+            | Value -> ()
+            | _ ->
+              raise (Type_Inference_Exc ("Name " ^ value_name ^ " is already used for a non-value identifier, of kind " ^ string_of_identifier_kind identifier_kind, e, st)) in
+          (*Now we check to ensure that the type of the new binding is the same as the old.*)
+          match source_type with
+          | None -> raise (Type_Inference_Exc ("Missing source type for '" ^ value_name ^ "'", e, st))
+          | Some value_name_ty ->
+            let value_name_ty = forget_label value_name_ty in
+            let ty = forget_label ty in
+            if forget_label value_name_ty = forget_label ty then ()
+            else
+              let ty1_s = type_value_to_string true false min_indentation value_name_ty in
+              let ty2_s = type_value_to_string true false min_indentation ty in
+              raise (Type_Inference_Exc ("Shadowing of bindings is allowed, but types must not be changed. Expected " ^ ty1_s ^ " but got " ^ ty2_s, e, st))
+        end in
     let _, st' =
       Naasty_aux.extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) value_name in
     (ty, st')

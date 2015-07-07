@@ -468,8 +468,12 @@ let rec expression_to_string indent = function
       else if List.length mis = 1 then
         meta_instruction_to_string (List.nth mis 0)
       else
-        List.map meta_instruction_to_string mis
-        |> String.concat ("\n" ^ indn indent) in
+        let indent_prefix = "\n" ^ indn (indent + indentation) in
+        let indent_again_prefix = indent_prefix ^ indn indentation in
+        indent_again_prefix ^
+        (List.map meta_instruction_to_string mis
+         |> String.concat indent_again_prefix) ^
+        indent_prefix in
     "@:" ^ body ^ ":@"
 
 type process_name = string

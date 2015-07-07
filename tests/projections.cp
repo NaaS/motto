@@ -33,10 +33,18 @@ fun F : (a : <integer>, b : type bla, c : type abl) -> ()
   [] typed [integer] typed [integer] typed [integer]
 #  <> typed integer # this should result in a type error
   @: show_symbol_table :@ typed <>
+  @:
+    show_symbol_table
+    show_symbol_table
+  :@ typed <>
 #  @:
 #    print "Here"
 #    show symbol_table
 #  :@ typed <>
+
+#  This doesn't work -- the indentation in this block fails the parser:
+#  @:show_symbol_table
+#  show_symbol_table:@ typed <>
   <>
 
 #  The example below is illegal: labels need to be literals.

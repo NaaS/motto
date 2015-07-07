@@ -496,12 +496,14 @@ meta_line:
 meta_block:
   | ml = meta_line; NL; mb = meta_block
     {ml :: mb}
-  | ml = meta_line; UNDENT
+  | ml = meta_line; UNDENT; NL
     {[ml]}
 
 expression:
   | META_OPEN; ml = meta_line; META_CLOSE
     {Crisp_syntax.Meta_quoted [ml]}
+  | META_OPEN; INDENT; mb = meta_block; META_CLOSE
+    {Crisp_syntax.Meta_quoted mb}
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
   | b1 = expression; AND; b2 = expression

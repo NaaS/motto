@@ -180,11 +180,10 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           raise (Type_Inference_Exc ("A ground type cannot be inferred for this expression.", e, st))
         else e_ty
       | Some ty_value ->
-        if e_ty = Undefined then
+        if type_match ty_value e_ty then
           ty_value
-        else if e_ty <> ty_value then
-          raise (Type_Inference_Exc ("Superficial (flex-rigid) matching failed. A ground type cannot be inferred for this expression.", e, st))
-        else e_ty in
+        else
+          raise (Type_Inference_Exc ("Matching failed. A ground type cannot be inferred for this expression.", e, st)) in
     let _ =
       let scope = Term Undetermined (*we actually only want a Value identifier kind,
                                       and this is checked below to provide a more

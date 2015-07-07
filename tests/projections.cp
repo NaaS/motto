@@ -37,6 +37,7 @@ fun F : (a : <integer>, b : type bla, c : type abl) -> ()
     print ("Here")
     print (symbol_table)
     print (symbol_table).at(type_checking)
+    print ("Again").at(type_checking)
   :@ typed <>
 
 #  This doesn't work -- the indentation in this block fails the parser:

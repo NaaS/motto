@@ -198,17 +198,19 @@ let string_of_compiler_phase cp =
 (*FIXME move into separate module?*)
 type meta_instruction =
   | Show_symbol_table of compiler_phase option
-  | PrintStr of string (*FIXME have it accept "compiler_phase option"?*)
-let meta_instruction_to_string = function
+  | PrintStr of compiler_phase option * string
+let meta_instruction_to_string (mi : meta_instruction) =
+  let at_contents cp_opt =
+    match cp_opt with
+    | None -> ""
+    | Some cp ->
+      ".at(" ^ string_of_compiler_phase cp ^ ")" in
+  match mi with
   | Show_symbol_table cp_opt ->
     let what = "symbol_table" in
-    let at =
-      match cp_opt with
-      | None -> ""
-      | Some cp ->
-        ".at(" ^ string_of_compiler_phase cp ^ ")" in
-    "print (\"" ^ what ^ "\")" ^ at
-  | PrintStr s -> "print (\"" ^ s ^ "\")"
+    "print (\"" ^ what ^ "\")" ^ at_contents cp_opt
+  | PrintStr (cp_opt, s) ->
+    "print (\"" ^ s ^ "\")" ^ at_contents cp_opt
 
 type fun_arg =
   | Exp of expression
@@ -497,11 +499,12 @@ let rec interpret_e_as_mi (e : expression) =
   match e with
   | Functor_App ("print", [Exp (Variable "symbol_table")]) ->
     Show_symbol_table None
-  | Functor_App ("print", [Exp (Str s)]) -> PrintStr s
+  | Functor_App ("print", [Exp (Str s)]) -> PrintStr (None, s)
   | Functor_App ("at", [Exp (Variable "type_checking"); Exp e_mi]) ->
     begin
     match interpret_e_as_mi e_mi with
     | Show_symbol_table None -> Show_symbol_table (Some Type_checking_phase)
+    | PrintStr (None, s) -> PrintStr (Some Type_checking_phase, s)
     end
   | _ ->
     failwith ("Unrecognised meta_instruction: " ^

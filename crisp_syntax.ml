@@ -293,13 +293,6 @@ and expression =
   | Str of string
   | Meta_quoted of meta_instruction list
 
-(*Translate an expression into a meta_instruction where possible*)
-let interpret_e_as_mi (e : expression) =
-  match e with
-  | Variable "show_symbol_table" -> Show_symbol_table
-  | Functor_App ("print", [Exp (Str s)]) -> Print s
-  | _ -> failwith "Unrecognised meta_instruction"(*FIXME give more info*)
-
 let rec expression_to_string indent = function
   | Variable value_name -> indn indent ^ value_name
   | TypeAnnotation (e, ty) ->
@@ -484,6 +477,15 @@ let rec expression_to_string indent = function
          |> String.concat indent_again_prefix) ^
         indent_prefix in
     "@:" ^ body ^ ":@"
+
+(*Translate an expression into a meta_instruction where possible*)
+let interpret_e_as_mi (e : expression) =
+  match e with
+  | Variable "show_symbol_table" -> Show_symbol_table
+  | Functor_App ("print", [Exp (Str s)]) -> Print s
+  | _ ->
+    failwith ("Unrecognised meta_instruction: " ^
+              expression_to_string min_indentation e)
 
 type process_name = string
 

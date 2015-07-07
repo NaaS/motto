@@ -488,20 +488,15 @@ remainder_of_cases:
   | UNDENT
     {[]}
 
-meta_line:
-  | mi = IDENTIFIER
-    {if mi = "show_symbol_table" then Crisp_syntax.Show_symbol_table
-     else failwith "Invalid meta instruction"}
-
 meta_block:
-  | ml = meta_line; NL; mb = meta_block
-    {ml :: mb}
-  | ml = meta_line; UNDENT; NL
-    {[ml]}
+  | meta_line = expression; NL; mb = meta_block
+    {Crisp_syntax.interpret_e_as_mi meta_line :: mb}
+  | meta_line = expression; UNDENT; NL
+    {[Crisp_syntax.interpret_e_as_mi meta_line]}
 
 expression:
-  | META_OPEN; ml = meta_line; META_CLOSE
-    {Crisp_syntax.Meta_quoted [ml]}
+  | META_OPEN; meta_line = expression; META_CLOSE
+    {Crisp_syntax.Meta_quoted [Crisp_syntax.interpret_e_as_mi meta_line]}
   | META_OPEN; INDENT; mb = meta_block; META_CLOSE
     {Crisp_syntax.Meta_quoted mb}
   | TRUE {Crisp_syntax.True}

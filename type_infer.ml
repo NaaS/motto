@@ -713,6 +713,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   | Meta_quoted mis ->
     List.iter (fun mi ->
       match mi with
+      | Print s -> print_endline s
       | Show_symbol_table ->
         print_endline
          ("state :\n" ^

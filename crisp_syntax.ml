@@ -190,9 +190,11 @@ let function_type_to_string (FunType (fd, fr)) =
 type integer = int (*FIXME precision*)
 
 type meta_instruction =
-  Show_symbol_table
+  | Show_symbol_table
+  | Print of string
 let meta_instruction_to_string = function
-  Show_symbol_table -> "show_symbol_table"
+  | Show_symbol_table -> "show_symbol_table"
+  | Print s -> "print \"" ^ s ^ "\""
 
 type fun_arg =
   | Exp of expression
@@ -290,6 +292,13 @@ and expression =
 
   | Str of string
   | Meta_quoted of meta_instruction list
+
+(*Translate an expression into a meta_instruction where possible*)
+let interpret_e_as_mi (e : expression) =
+  match e with
+  | Variable "show_symbol_table" -> Show_symbol_table
+  | Functor_App ("print", [Exp (Str s)]) -> Print s
+  | _ -> failwith "Unrecognised meta_instruction"(*FIXME give more info*)
 
 let rec expression_to_string indent = function
   | Variable value_name -> indn indent ^ value_name

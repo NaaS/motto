@@ -163,7 +163,8 @@ let string_of_token = function
   | FAT_BRACKET_CLOSE -> "FAT_BRACKET_CLOSE"
 
   | TYPED -> "TYPED"
-  | META_FUNCTOR -> "META_FUNCTOR"
+  | META_OPEN -> "META_OPEN"
+  | META_CLOSE -> "META_CLOSE"
 ;;
 
 let test filepath =

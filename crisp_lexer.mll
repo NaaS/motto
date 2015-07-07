@@ -159,7 +159,8 @@ rule main = parse
   | "(|" {FAT_BRACKET_OPEN}
   | "|)" {FAT_BRACKET_CLOSE}
 
-  | "@:" {META_FUNCTOR}
+  | "@:" {META_OPEN}
+  | ":@" {META_CLOSE}
 
   (*FIXME need to check for escapes, particularly that of doublequotes*)
   | '"' ([^'"']* as str) '"' {STRING str}

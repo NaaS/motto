@@ -710,9 +710,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           raise (Type_Inference_Exc ("Unable to match type annotation with expression", e, st)) in
     (ty, st)
 
-  | Meta_functor _ ->
-    print_endline
-     ("state :\n" ^
-       State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
-         true st);
+  | Meta_quoted mis ->
+    List.iter (fun mi ->
+      match mi with
+      | Show_symbol_table ->
+        print_endline
+         ("state :\n" ^
+           State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
+             true st)) mis;
     Undefined, st

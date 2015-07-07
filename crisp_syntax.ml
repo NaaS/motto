@@ -289,7 +289,7 @@ and expression =
   | Exchange of expression * expression
 
   | Str of string
-  | Meta_functor of meta_instruction
+  | Meta_quoted of meta_instruction list
 
 let rec expression_to_string indent = function
   | Variable value_name -> indn indent ^ value_name
@@ -461,7 +461,16 @@ let rec expression_to_string indent = function
      expression_to_string 0 e2
 
   | Str s -> "\"" ^ s ^ "\""
-  | Meta_functor mi -> "@:" ^ meta_instruction_to_string mi
+  | Meta_quoted mis ->
+    let body =
+      if List.length mis = 0 then
+        failwith "Empty quotation?"
+      else if List.length mis = 1 then
+        meta_instruction_to_string (List.nth mis 0)
+      else
+        List.map meta_instruction_to_string mis
+        |> String.concat ("\n" ^ indn indent) in
+    "@:" ^ body ^ ":@"
 
 type process_name = string
 

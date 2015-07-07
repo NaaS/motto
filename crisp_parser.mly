@@ -109,7 +109,8 @@
 %token FAT_BRACKET_CLOSE
 
 %token TYPED
-%token META_FUNCTOR
+%token META_OPEN
+%token META_CLOSE
 
 (*Names*)
 (*
@@ -487,10 +488,20 @@ remainder_of_cases:
   | UNDENT
     {[]}
 
+meta_line:
+  | mi = IDENTIFIER
+    {if mi = "show_symbol_table" then Crisp_syntax.Show_symbol_table
+     else failwith "Invalid meta instruction"}
+
+meta_block:
+  | ml = meta_line; NL; mb = meta_block
+    {ml :: mb}
+  | ml = meta_line; UNDENT
+    {[ml]}
+
 expression:
-  | META_FUNCTOR; mi = IDENTIFIER
-    (*FIXME this is super simple at present*)
-    {if mi = "show_symbol_table" then Crisp_syntax.Meta_functor Show_symbol_table else failwith "Invalid meta instruction"}
+  | META_OPEN; ml = meta_line; META_CLOSE
+    {Crisp_syntax.Meta_quoted [ml]}
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
   | b1 = expression; AND; b2 = expression

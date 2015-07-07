@@ -52,6 +52,10 @@ while !arg_idx < Array.length Sys.argv do
       else next_arg := Some TestParseDir
     | "--no_type_check" ->
       cfg := { !cfg with skip_type_check = true }
+    | "--version" ->
+      print_endline ("Otto Flick compiler version " ^ Config.version ^
+                     "\nvisit naas-project.org to find out more.");
+      exit 0
     | s ->
       match !next_arg with
       | None ->

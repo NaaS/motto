@@ -3,6 +3,8 @@
    Nik Sultana, Cambridge University Computer Lab, May 2015
 *)
 
+let version = "0.1"
+
 type output_location = Stdout | Directory of string | No_output;;
 
 type configuration =

@@ -288,16 +288,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         let src_e_ty, _ = ty_of_expr ~strict st src_e in
         match Crisp_syntax_aux.resolve_if_usertype st src_e_ty with
         | List (_, ty', _, _) -> ty'
-        | _ -> raise (Type_Inference_Exc ("Was expecting list type", e, st)) in
+        | ty ->
+          let ty_s = type_value_to_string true false min_indentation ty in
+          raise (Type_Inference_Exc ("Was expecting list type but instead found " ^ ty_s, e, st)) in
       let _, st' = Naasty_aux.extend_scope_unsafe (Term Value) st
                      ~src_ty_opt:(Some cursor_ty) label in
       st' in
-    let ty, _ = ty_of_expr ~strict st' body_e in
-    let _ =
-      if strict then
-        match Crisp_syntax_aux.resolve_if_usertype st ty with
-        | List (_, _, _, _) -> ()
-        | _ -> raise (Type_Inference_Exc ("Was expecting list type", e, st)) in
+    let body_ty, _ = ty_of_expr ~strict st' body_e in
+    let ty = List (None, body_ty, None, []) in
     (ty, st)
 
   (*value_name[idx] := expression*)

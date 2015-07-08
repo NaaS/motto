@@ -17,12 +17,16 @@ fun F : () -> ()
     <>
     x + acc
 
-  for x in l[4]
-  initially y = 0:
-    if x > y:
-      x
-    else:
-      y
+# FIXME should we index lists?
+#  let l = [1, 2, 3]
+#
+#  for x in l[4]
+#  initially y = 0:
+#    if x > y:
+#      x
+#    else:
+#      y
+  <>
 
 # Test cases involving unordered collections
 fun G : () -> ()
@@ -42,9 +46,11 @@ fun G : () -> ()
     <>
     x + acc
 
-  for x in unordered l[4]
-  initially y = 0:
-    if x > y:
-      x
-    else:
-      y
+# FIXME should we index lists?
+#  for x in unordered l[4]
+#  initially y = 0:
+#    if x > y:
+#      x
+#    else:
+#      y
+  <>

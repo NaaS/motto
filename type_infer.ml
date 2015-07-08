@@ -532,8 +532,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         raise (Type_Inference_Exc ("Function types currently carried in a different field in the symbol table", e, st))
     end
 
-  | CaseOf (e, cases) ->
-    let ty, _ = ty_of_expr ~strict st e in
+  | CaseOf (e', cases) ->
+    let ty, _ = ty_of_expr ~strict st e' in
     (*ty must be a Disjoint_Union*)
     let expected_disjuncts =
       match Crisp_syntax_aux.resolve_if_usertype st ty with
@@ -557,8 +557,21 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
            | None ->
              raise (Type_Inference_Exc ("CaseOf: Missing declaration for '" ^ label ^ "'", e, st))
            | Some (_, {identifier_kind; _}) ->
-             if identifier_kind <> Disjunct ty then
-               raise (Type_Inference_Exc ("Disjunct " ^ label ^ " has incorrect identifier kind", e, st))
+             let e_ty_anonymous =
+               resolve_if_usertype st ty
+               |> forget_label in
+             let disj_ty_anonymous =
+               match identifier_kind with
+               | Disjunct ty' ->
+                 resolve_if_usertype st ty'
+                 |> forget_label
+               | _ ->
+                 (*FIXME give more info -- how do kinds differ*)
+                 raise (Type_Inference_Exc ("Disjunct " ^ label ^ " has incorrect identifier kind", e, st))
+             in if e_ty_anonymous <> disj_ty_anonymous then
+               let e_ty_anonymous_s = type_value_to_string true false min_indentation e_ty_anonymous in
+               let disj_ty_anonymous_s = type_value_to_string true false min_indentation disj_ty_anonymous in
+               raise (Type_Inference_Exc ("Disjunct " ^ label ^ " has doesn't match expected type: expected " ^ disj_ty_anonymous_s ^ " but found " ^ e_ty_anonymous_s, e, st))
         ) expected_disjunct_heads (*FIXME give more info*) in
     (*within cases, the head must be a Functor_App, a disjunct of ty.*)
     let actual_disjuncts, body_tys =
@@ -584,24 +597,22 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           | _ ->
             (*FIXME give more info*)
             raise (Type_Inference_Exc ("Disjunct heads must be functors", e, st)) in
-        let expected_arg_tys =
-          match lookup_function_type st head_label with
+        let expected_arg_ty =
+          (*all constructors take a single argument -- which may be a tuple.*)
+          match lookup_term_data (Term Undetermined) st.term_symbols head_label with
           | None ->
             raise (Type_Inference_Exc ("Missing declaration for functor " ^ head_label, e, st))
-          | Some f_ty ->
-            let ((chans, arg_tys), ret_tys) = extract_function_types f_ty in
-            (*disjuncts cannot be passed channels!*)
-            assert (chans = []);
-            arg_tys in
-        let _ =
-          if List.length expected_arg_tys <> List.length arg_vars then
-            (*FIXME give more info*)
-            raise (Type_Inference_Exc ("Disjunct has wrong number of parameters", e, st)) in
+          | Some (_, {source_type; identifier_kind}) ->
+            (*FIXME check that identifier_kind is "Disjunct ty"*)
+            match source_type with
+            | None ->
+              raise (Type_Inference_Exc ("Missing type for functor " ^ head_label, e, st))
+            | Some ty -> ty in
         let st' =
           List.fold_right (fun (name, ty) st ->
             let _, st' =
               Naasty_aux.extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) name
-            in st') (List.combine arg_vars expected_arg_tys) st in
+            in st') (List.combine arg_vars [expected_arg_ty](*FIXME would be better to have pattern matching, rather than this hack*)) st in
         let body_ty, _ = ty_of_expr ~strict st' body_e in
         (head_label, body_ty)) cases
       |> List.split in
@@ -616,9 +627,11 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     assert (List.length body_tys > 0);
     let ty =
       List.fold_right (fun ty acc ->
-        if ty <> acc then
-          raise (Type_Inference_Exc ("Bodies don't all have the same type", e, st))
-        else acc) (List.tl body_tys) (List.hd body_tys) in
+        if forget_label ty <> acc then
+          let ty_s = type_value_to_string true false min_indentation ty in
+          let acc_s = type_value_to_string true false min_indentation acc in
+          raise (Type_Inference_Exc ("Bodies don't all have the same type: " ^ ty_s ^ " vs " ^ acc_s, e, st))
+        else acc) (List.tl body_tys) (List.hd body_tys |> forget_label) in
     (ty, st)
 
   | EmptyList -> (List(None, Undefined, None, []), st)

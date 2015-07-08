@@ -110,12 +110,12 @@ let label_of_type : type_value -> label option = function
 let order_fun_args (fname : function_name) (st : State.state) (args : fun_arg list) : expression list =
   match args with
   | [] -> []
-  | (Exp e) :: rest ->
-    List.fold_right (fun arg acc ->
-      match arg with
-      | Exp e -> e :: acc
-      | Named _ -> failwith "fun_arg values should be either all Exp, or all Named. Expected all Exp.") rest [e]
-    |> List.rev
+  | Exp _ :: _ ->
+    List.map (function
+      | Exp e -> e
+      | Named _ ->
+        failwith "fun_arg values should be either all Exp, or all Named. Expected all Exp.")
+         args
   | (Named _) :: _ ->
     let ((chans, arg_tys), ret_tys) =
       List.assoc fname st.State.crisp_funs

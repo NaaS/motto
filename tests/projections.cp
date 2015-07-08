@@ -33,12 +33,16 @@ fun F : (a : <integer>, b : type bla, c : type abl) -> ()
   [] typed [integer] typed [integer] typed [integer]
 #  <> typed integer # this should result in a type error
   @: print (symbol_table) :@ typed <>
-  @:
-    print ("Here")
-    print (symbol_table)
-    print (symbol_table).at(type_checking)
-    print ("Again").at(type_checking)
-  :@ typed <>
+#  @:
+#    print ("Here")
+#    print (symbol_table)
+#    print (symbol_table).at(type_checking)
+#    print ("Again").at(type_checking)
+#  :@ typed <>
+#
+  @: print ("Here") :@ typed <>
+  @: print (symbol_table).at(type_checking) :@ typed <>
+  @: print ("Again").at(type_checking) :@ typed <>
 
 #  This doesn't work -- the indentation in this block fails the parser:
 #  @:print (symbol_table)

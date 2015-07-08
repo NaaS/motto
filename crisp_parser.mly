@@ -497,8 +497,10 @@ meta_block:
 expression:
   | META_OPEN; meta_line = expression; META_CLOSE
     {Crisp_syntax.Meta_quoted [Crisp_syntax.interpret_e_as_mi meta_line]}
+(* FIXME currently disabled since causes shift/reduce conflicts
   | META_OPEN; INDENT; mb = meta_block; META_CLOSE
     {Crisp_syntax.Meta_quoted mb}
+*)
   | TRUE {Crisp_syntax.True}
   | FALSE {Crisp_syntax.False}
   | b1 = expression; AND; b2 = expression

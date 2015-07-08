@@ -3,6 +3,9 @@
 #
 # Nik Sultana, Cambridge University Computer Lab, July 2015
 #
+# Example usage:
+#   ./scripts/test_type_checker.sh | grep fail
+#
 # NOTE expects to find the compiler in the working directory.
 
 DIR=tests/

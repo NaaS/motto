@@ -34,6 +34,9 @@ type configuration =
     (*If true, then we don't type (process and function) declarations after
       the program is parsed.*)
     skip_type_check : bool;
+    (*Don't let exceptions float to the top, and don't report errors. instead
+      simply output non-zero status code if there's an error, and zero otherwise.*)
+    unexceptional : bool;
   }
 
 let cfg : configuration ref = ref {
@@ -50,4 +53,5 @@ let cfg : configuration ref = ref {
   translate = false;
   summary_types = true;
   skip_type_check = false;
+  unexceptional = false;
 }

@@ -30,6 +30,8 @@ while !arg_idx < Array.length Sys.argv do
       cfg := { !cfg with debug = true }
     | "-q" ->
       cfg := { !cfg with output_location = No_output }
+    | "--unexceptional" ->
+      cfg := { !cfg with unexceptional = true }
     | "-o" ->
       if !next_arg <> None then
         failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
@@ -105,15 +107,19 @@ match !cfg.source_file with
     |> Compiler.compile cfg
     |> Output.write_files !cfg.output_location
   with Type_infer.Type_Inference_Exc (msg, e, st) ->
-    (*FIXME carve this kind of handling code out into a separate module?*)
-    print_endline
-     ("Type error: " ^ msg ^ "\n" ^
-      "in file " ^ source_file ^ "\n" ^
-      "at expression:" ^ Crisp_syntax.expression_to_string
-                           Crisp_syntax.min_indentation e ^ "\n" ^
-      "state :\n" ^
-       State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
-         true st)
+    if !cfg.unexceptional then exit 1
+    else
+      print_endline
+       ("Type error: " ^ msg ^ "\n" ^
+        "in file " ^ source_file ^ "\n" ^
+        "at expression:" ^ Crisp_syntax.expression_to_string
+                             Crisp_syntax.min_indentation e ^ "\n" ^
+        "state :\n" ^
+         State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
+           true st)
+  | e ->
+    if !cfg.unexceptional then exit 1
+    else raise e
   end
 | _ ->
   if !cfg.parser_test_files <> [] || !cfg.parser_test_dirs <> [] then

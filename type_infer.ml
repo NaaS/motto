@@ -271,11 +271,13 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let ty, _ = ty_of_expr ~strict st'' body_e in
     let _ =
       if strict then
-        if not (acc_opt_ty = None || acc_opt_ty = Some ty) then
-          begin
-          (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Accumulator type not matched with body type", e, st))
-          end in
+        match acc_opt_ty with
+        | None -> () (*We don't have an accumulator*)
+        | Some acc_ty ->
+          if type_match ty acc_ty then ()
+          else
+            (*FIXME give more info*)
+            raise (Type_Inference_Exc ("Accumulator type not matched with body type", e, st)) in
     (*NOTE we should return st, not st'', since we don't want the bindings made
            for body_e to spill over to the rest of the scope.*)
     (ty, st)

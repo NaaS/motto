@@ -598,8 +598,14 @@ expression:
     the operator, and the two are separated by a period.*)
   | e = expression; PERIOD; f_name = IDENTIFIER; LEFT_R_BRACKET; args = function_arguments
     {Crisp_syntax.Functor_App (f_name,
-      (*NOTE sticking this argument at the end.*)
-      List.rev (Crisp_syntax.Exp e :: List.rev args))}
+      (*If there's no hole, then stick the argument in the end, otherwise
+        fill holes.
+        NOTE you cannot _both_ fill holes and stick the argument at the end. If
+             you want this behaviour, then put a hole as the last argument.*)
+      if List.exists Crisp_syntax_aux.funarg_contains_hole args then
+        List.map (Crisp_syntax_aux.funarg_fill_hole e) args
+      else
+        List.rev (Crisp_syntax.Exp e :: List.rev args))}
 
   (*NOTE could try to get INDENT-UNDENT combo usable from here,
          to have records encoded as:
@@ -664,6 +670,8 @@ expression:
   (*FIXME we're missing operations on strings: substring, concat, etc*)
   | str = STRING
     {Crisp_syntax.Str str}
+  | UNDERSCORE
+    {Crisp_syntax.Hole}
 (*TODO
   Not enabling the following line for the time being -- it's an invititation to
    pack code weirdly.

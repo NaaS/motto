@@ -308,6 +308,7 @@ and expression =
 
   | Str of string
   | Meta_quoted of meta_instruction list
+  | Hole
 
 let rec expression_to_string indent = function
   | Variable value_name -> indn indent ^ value_name
@@ -493,6 +494,7 @@ let rec expression_to_string indent = function
          |> String.concat indent_again_prefix) ^
         indent_prefix in
     "@:" ^ body ^ ":@"
+  | Hole -> "_"
 
 (*Translate an expression into a meta_instruction where possible*)
 let rec interpret_e_as_mi (e : expression) =

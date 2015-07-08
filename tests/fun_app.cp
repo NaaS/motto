@@ -35,4 +35,18 @@ fun F5 : () -> ()
 
   [] . F4 (3.F1(), 3.F2(), F5'(F6(False)), <1, False>, [1, 8], True)
 
+  <1, False> . F4 (3.F1(), 3.F2(), F5'(F6(False)), _, [1, 8], True, [])
+
+#  <1, False> . F4 (3.F1(), 3.F2(), F5'(F6(False)), _, [1, 8], True, _) # type error
+#  <1, False> . F4 (3.F1(), 3.F2(), F5'(F6(False)), <1, False>, [1, 8], True, []) # type error -- too many parameters
+
+  [True, False, False] . F4 (3.F1(), 3.F2(), F5'(F6(False)), <1, False>, [], True, _)
+  [1, 7] . F4 (3.F1(), 3.F2(), F5'(F6(False)), <1, False>, _, True, [])
+  # filling multiple holes -- polymorphically!
+  [] . F4 (3.F1(), 3.F2(), F5'(F6(False)), <1, False>, _, True, _)
+  # filling nested holes
+  7 . F4 (_.F1(), F2(_), F5'(F6(False)), <_, False>, [_, 4], True, [True])
+
+#  _ . F4 (_.F1(), F2(_), F5'(F6(False)), <_, False>, [_, 4], True, [True]) #this should fail
+
   <>

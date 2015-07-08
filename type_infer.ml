@@ -732,3 +732,4 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
              State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
                true st)) mis;
     Undefined, st
+  | Hole -> Undefined, st

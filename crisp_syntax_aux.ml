@@ -316,3 +316,194 @@ let resolve_if_usertype (st : State.state) (ty : type_value) : type_value =
     | Some ty -> ty
     end
   | _ -> ty
+
+let rec contains_hole : expression -> bool = function
+  | Not e
+  | Abs e
+  | Int_to_address e
+  | Address_to_int e
+  | LocalDef (_, e)
+  | Update (_, e)
+  | RecordProjection (e, _)
+  | IndexableProjection (_, e)
+  | TypeAnnotation (e, _) -> contains_hole e
+
+  | Variable _
+  | Int _
+  | Str _
+  | Meta_quoted _
+  | IPv4_address _
+  | EmptyList
+  | True
+  | False -> false
+
+  | And (e1, e2)
+  | Or (e1, e2)
+  | Equals (e1, e2)
+  | GreaterThan (e1, e2)
+  | LessThan (e1, e2)
+  | Plus (e1, e2)
+  | Minus (e1, e2)
+  | Times (e1, e2)
+  | Mod (e1, e2)
+  | Quotient (e1, e2)
+  | ConsList (e1, e2)
+  | AppendList (e1, e2)
+  | Seq (e1, e2)
+  | IntegerRange (e1, e2)
+  | Send (e1, e2)
+  | Receive (e1, e2)
+  | Exchange (e1, e2)
+  | UpdateIndexable (_, e1, e2)
+  | RecordUpdate (e1, (_, e2))
+  | Map (_, e1, e2, _) ->
+    contains_hole e1 || contains_hole e2
+
+  | TupleValue es ->
+    List.exists contains_hole es
+
+  | ITE (e1, e2, e3_opt) ->
+    let b3 =
+      match e3_opt with
+      | None -> false
+      | Some e -> contains_hole e in
+    contains_hole e1 || contains_hole e2 || b3
+
+  | Record (l_es) ->
+    List.map snd l_es
+    |> List.exists contains_hole
+
+  | CaseOf (e, e2s) ->
+    contains_hole e ||
+      List.exists (fun (e1, e2) ->
+        contains_hole e1 || contains_hole e2) e2s
+
+  | Iterate (_, e1, l_e_opt, e2, _) ->
+    let b3 =
+      match l_e_opt with
+      | None -> false
+      | Some (_, e) -> contains_hole e in
+    contains_hole e1 || contains_hole e2 || b3
+
+  | Functor_App (_, funargs) ->
+    List.exists (fun funarg ->
+      match funarg with
+      | Exp e
+      | Named (_, e) -> contains_hole e) funargs
+
+  | Hole -> true
+
+let rec fill_hole (contents : expression) (e : expression) : expression =
+  let f = fill_hole contents in
+  match e with
+  | Hole -> contents
+  | Variable _
+  | True
+  | False
+  | Int _
+  | IPv4_address _
+  | EmptyList
+  | Str _
+  | Meta_quoted _ -> e
+
+  | TypeAnnotation (e, ty) ->
+    TypeAnnotation (f e, ty)
+
+  | Seq (e1, e2) ->
+    Seq (f e1, f e2)
+
+  | And (b1, b2) ->
+    And (f b1, f b2)
+  | Or (b1, b2) ->
+    Or (f b1, f b2)
+  | Not b' ->
+    Not (f b')
+
+  | ITE (be, e1, e2_opt) ->
+    let e2_opt' =
+      match e2_opt with
+      | None -> None
+      | Some e -> Some (f e) in
+    ITE (f be, f e1, e2_opt')
+
+  | Update (value_name, expression) ->
+    Update (value_name, f expression)
+  | UpdateIndexable (value_name, idx, expression) ->
+    UpdateIndexable (value_name, f idx, f expression)
+
+  | LocalDef ((v, ty_opt), e) ->
+    LocalDef ((v, ty_opt), f e)
+
+  | Equals (e1, e2) ->
+    Equals (f e1, f e2)
+
+  | GreaterThan (a1, a2) ->
+    GreaterThan (f a1, f a2)
+  | LessThan (a1, a2) ->
+    LessThan (f a1, f a2)
+
+  | Plus (a1, a2) ->
+    Plus (f a1, f a2)
+  | Minus (a1, a2) ->
+    Minus (f a1, f a2)
+  | Times (a1, a2) ->
+    Times (f a1, f a2)
+  | Mod (a1, a2) ->
+    Mod (f a1, f a2)
+  | Quotient (a1, a2) ->
+    Quotient (f a1, f a2)
+  | Abs a ->
+    Abs (f a)
+
+  | Address_to_int e ->
+    Address_to_int (f e)
+  | Int_to_address e ->
+    Int_to_address (f e)
+
+  | ConsList (x, xs) ->
+    ConsList (f x, f xs)
+  | AppendList (xs, ys) ->
+    AppendList (f xs, f ys)
+  | TupleValue xs ->
+    TupleValue (List.map f xs)
+  | RecordProjection (e, l) ->
+    RecordProjection (f e, l)
+  | Functor_App (f_name, es) ->
+    let es' =
+      List.map (function
+        | Exp e -> Exp (f e)
+        | Named (l, e) -> Named (l, f e)) es in
+    Functor_App (f_name, es')
+  | Record entries ->
+    Record (List.map (fun (l, e) -> (l, f e)) entries)
+  | RecordUpdate (r, (l, e)) ->
+    RecordUpdate (f r, (l, f e))
+  | CaseOf (e, matches) ->
+    let matches' =
+      List.map (fun (e1, e2) -> (f e1, f e2)) matches in
+    CaseOf (f e, matches')
+  | IndexableProjection (v, idx) ->
+    IndexableProjection (v, f idx)
+  | IntegerRange (e1, e2) ->
+    IntegerRange (f e1, f e2)
+  | Map (v, l, body, unordered) ->
+    Map (v, f l, f body, unordered)
+  | Iterate (v, l, acc, body, unordered) ->
+    let acc' =
+      match acc with
+      | None -> None
+      | Some (l, e) -> Some (l, f e) in
+    Iterate (v, f l, acc', f body, unordered)
+  | Send (e1, e2) ->
+    Send (f e1, f e2)
+  | Receive (e1, e2) ->
+    Receive (f e1, f e2)
+  | Exchange (e1, e2) ->
+    Exchange (f e1, f e2)
+
+let funarg_contains_hole : fun_arg -> bool = function
+  | Exp e
+  | Named (_, e) -> contains_hole e
+let funarg_fill_hole (contents : expression) : fun_arg -> fun_arg = function
+  | Exp e -> Exp (fill_hole contents e)
+  | Named (l, e) -> Named (l, fill_hole contents e)

@@ -9,7 +9,8 @@ open State
 
 exception Type_Inference_Exc of string * expression * state
 
-let assert_eq_types e1_ty e2_ty e st =
+(*NOTE we don't use matching here*)
+let assert_identical_types e1_ty e2_ty e st =
   let e1_ty = forget_label e1_ty in
   let e2_ty = forget_label e2_ty in
   if e1_ty <> e2_ty then
@@ -51,15 +52,15 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         let (e1_ty, e2_ty) =
           (*FIXME code style*)
           forget_label (f e1), forget_label (f e2) in
-        assert_eq_types e1_ty e2_ty e st;
-        assert_eq_types e1_ty (fst ans) e st in
+        assert_identical_types e1_ty e2_ty e st;
+        assert_identical_types e1_ty (fst ans) e st in
     ans
   | Not e ->
     let ans = (Boolean (None, []), st) in
     let _ =
       if strict then
         let e_ty, _ = ty_of_expr ~strict st e in
-        assert_eq_types e_ty (fst ans) e st in
+        assert_identical_types e_ty (fst ans) e st in
     ans
 
   (*Definable over arbitrary types of expressions*)
@@ -69,7 +70,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       if strict then
         let f = ty_of_expr ~strict st in
         let ((e1_ty, _), (e2_ty, _)) = f e1, f e2 in
-        assert_eq_types e1_ty e2_ty e st in
+        assert_identical_types e1_ty e2_ty e st in
     ans
 
   (*Definable over arithmetic expressions*)
@@ -81,8 +82,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       if strict then
         let f = ty_of_expr ~strict st in
         let ((e1_ty, _), (e2_ty, _)) = f e1, f e2 in
-        assert_eq_types e1_ty e2_ty e st;
-        assert_eq_types e1_ty (fst expected) e st in
+        assert_identical_types e1_ty e2_ty e st;
+        assert_identical_types e1_ty (fst expected) e st in
     ans
 
   (*Arithmetic expressions*)
@@ -100,15 +101,15 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       if strict then
         let f = ty_of_expr ~strict st in
         let ((e1_ty, _), (e2_ty, _)) = f e1, f e2 in
-        assert_eq_types e1_ty e2_ty e st;
-        assert_eq_types e1_ty (fst ans) e st in
+        assert_identical_types e1_ty e2_ty e st;
+        assert_identical_types e1_ty (fst ans) e st in
     ans
   | Abs e ->
     let ans = (Integer (None, []), st) in
     let _ =
       if strict then
         let e_ty, _ = ty_of_expr ~strict st e in
-        assert_eq_types e_ty (fst ans) e st in
+        assert_identical_types e_ty (fst ans) e st in
     ans
 
   (*Native representation of an IPv4 address*)
@@ -120,7 +121,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let _ =
       if strict then
         let e_ty, _ = ty_of_expr ~strict st e in
-        assert_eq_types e_ty (fst expected) e st in
+        assert_identical_types e_ty (fst expected) e st in
      ans
   (*IP address to integer*)
   | Address_to_int e ->
@@ -129,7 +130,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let _ =
       if strict then
         let e_ty, _ = ty_of_expr ~strict st e in
-        assert_eq_types e_ty (fst expected) e st in
+        assert_identical_types e_ty (fst expected) e st in
     ans
 
   | TupleValue es ->
@@ -155,11 +156,11 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       if strict then
         begin
           let expected_ty = Boolean (None, []) in
-          assert_eq_types (fst (f b_exp)) expected_ty e st;
+          assert_identical_types (fst (f b_exp)) expected_ty e st;
           match e2_opt with
           | None -> ()
           | Some e2 ->
-            assert_eq_types (fst ans) (fst (f e2)) e st;
+            assert_identical_types (fst ans) (fst (f e2)) e st;
         end in
     let _ = if strict then
       if undefined_ty (fst ans) then
@@ -318,13 +319,13 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       | _ -> raise (Type_Inference_Exc ("Expected to find dictionary type", e, st)) in
     let _ =
       if strict then
-        assert_eq_types value_ty ty e st;
-        assert_eq_types expected_idx_ty idx_ty e st in
+        assert_identical_types value_ty ty e st;
+        assert_identical_types expected_idx_ty idx_ty e st in
     (ty, st)
   (*value_name[idx]*)
   | IndexableProjection (map_name, idx_e) ->
     let md =
-      match lookup_term_data (Term Map_Name) st.term_symbols map_name with
+      match lookup_term_data (Term Undetermined) st.term_symbols map_name with
       | None ->
         raise (Type_Inference_Exc ("IndexableProjection: Missing declaration for map name " ^ map_name, e, st))
       | Some (_, md) -> md in
@@ -338,11 +339,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
           end;
         idx_ty, val_ty
+      | Some (ChanType (ChannelArray (rx_ty, tx_ty, di_opt))) ->
+        (Undefined(*FIXME unsure how to index channel arrays*),
+         ChanType (ChannelSingle (rx_ty, tx_ty)))
       | _ ->
-        raise (Type_Inference_Exc ("Expected to find dictionary type", e, st)) in
+        raise (Type_Inference_Exc ("Expected to find indexable type", e, st)) in
     let _ =
       if strict then
-        assert_eq_types expected_idx_ty idx_ty e st in
+        assert_identical_types expected_idx_ty idx_ty e st in
     (value_ty, st)
 
   | Record fields ->
@@ -624,7 +628,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       | List (_, ty, _, _) as list_ty ->
         if ty <> Undefined then
           begin
-          assert_eq_types ty h_ty e st;
+          assert_identical_types ty h_ty e st;
           list_ty
           end
         else List (None, h_ty, None, [])

@@ -369,9 +369,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
               raise (Type_Inference_Exc ("Missing type for " ^ label, e, st))
             | Some ty' ->
               assert_not_undefined_type ty' e st;
-              if ty <> ty' then
-                (*FIXME give more info*)
-                raise (Type_Inference_Exc ("Unexpected type", e, st)) in
+              let ty_anonymous = forget_label ty in
+              let ty'_anonymous = forget_label ty' in
+              if ty_anonymous <> ty'_anonymous then
+                let ty_s = type_value_to_string true false min_indentation ty in
+                let ty'_s = type_value_to_string true false min_indentation ty' in
+                raise (Type_Inference_Exc ("Expected field type of " ^ label ^ " to be " ^ ty'_s ^ " but was " ^ ty_s, e, st)) in
         let record_ty =
           match md.identifier_kind with
           | Field record_ty -> record_ty

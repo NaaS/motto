@@ -1,5 +1,4 @@
 # Test function from Matteo
 
-# Note that the return type should be boolean, not integer
-fun f : (x : integer, y : integer, z: integer) -> (integer)
+fun f : (x : integer, y : integer, z: integer) -> (boolean)
    x = 1 + 2 + 3

@@ -497,20 +497,27 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
             let arg_expressions =
               Crisp_syntax_aux.order_fun_args functor_name st fun_args in
             let fun_args_tys =
-              List.map (ty_of_expr ~strict st) arg_expressions
-              |> List.map fst in
-            List.iter (fun (ty1, ty2) ->
-              let ty1 = forget_label ty1 in
-              let ty2 = forget_label ty2 in
-              if ty1 <> ty2 &&
-                 ty1 <> Undefined &&
-                 ty2 <> Undefined then
+              List.map (fun arg_e ->
+                General.selfpair arg_e
+                |> General.apsnd (ty_of_expr ~strict st)
+                |> General.apsnd fst) arg_expressions in
+            let formal_and_actual_parameters =
+              (*check that two lists are of same list.
+                we'll check whether the types agree later*)
+              if List.length fun_args_tys <> List.length arg_tys then
+                raise (Type_Inference_Exc ("Inconsistency between the number of formal and actual parameters.", e, st))
+              else List.combine fun_args_tys arg_tys in
+            List.iter (fun ((arg_e, ty1), ty2) ->
+              let ty1_anonymous = forget_label ty1 in
+              let ty2_anonymous = forget_label ty2 in
+              if not (type_match ty2_anonymous ty1_anonymous) then
+                let arg_e_s = expression_to_string min_indentation arg_e in
                 let ty1_s = type_value_to_string true false min_indentation ty1 in
                 let ty2_s = type_value_to_string true false min_indentation ty2 in
-                (*FIXME give more info*)
-                raise (Type_Inference_Exc ("Wrong-typed parameter typed " ^ ty2_s ^
-                                           " to functor expecting type " ^ ty1_s, e, st)))
-            (List.combine fun_args_tys arg_tys) in
+                raise (Type_Inference_Exc ("Wrong-typed parameter '" ^ arg_e_s ^
+                                           "' (typed " ^ ty1_s ^ ") " ^
+                                           "to functor expecting type '" ^ ty2_s ^ "'", e, st)))
+            formal_and_actual_parameters in
         (ret_ty, st)
       | Some _ ->
         raise (Type_Inference_Exc ("Function types currently carried in a different field in the symbol table", e, st))

@@ -144,7 +144,9 @@ let order_fun_args (fname : function_name) (st : State.state) (args : fun_arg li
 
 (*Lists the constants (and their types) that should be added to the signature.
   Constants are disjunct or field names, in coproducts and labelled products
-  respectively.*)
+  respectively.
+  NOTE ignores "_", since it's a metasymbol meaning "make this field invisible
+       to the program logic, but not to the de/serialiser".*)
 let consts_in_type (ty : type_value) : (string * State.identifier_kind * type_value) list option =
   let rec consts_in_type' (ik : State.identifier_kind) = function
     | RecordType (_, tys, _) as ty ->
@@ -155,7 +157,8 @@ let consts_in_type (ty : type_value) : (string * State.identifier_kind * type_va
       |> List.concat
     | ty ->
       match label_of_type ty with
-      | None -> failwith "Anonymous field -- this may be fine, but check."
+      | None -> failwith "All elements of a type must be named"
+      | Some "_" -> []
       | Some label -> [(label, ik, ty)]
   in match ty with
   | RecordType (_, tys, _) ->

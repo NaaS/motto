@@ -171,10 +171,10 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
     | anomalous, True
     | anomalous, False ->
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some e2, None))
+      raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some e1, None))
     | True, _
     | False, _ ->
-      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e1, None))
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e2, None))
     | _, _ ->
       raise (Eval_Exc ("Cannot normalise to Boolean value", Some e, None))
     end
@@ -187,10 +187,10 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
     | False, False -> False
     | _, True
     | _, False ->
-      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e2, None))
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e1, None))
     | True, _
     | False, _ ->
-      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e1, None))
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e2, None))
     | _, _ ->
       raise (Eval_Exc ("Cannot normalise to Boolean value", Some e, None))
     end

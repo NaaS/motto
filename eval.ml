@@ -376,6 +376,27 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       raise (Eval_Exc ("Cannot project from this normal expression: " ^ e'norm_s, Some e, None))
     end
 
+  | RecordUpdate (record_e, (field_name, field_body_e)) ->
+    begin
+    let e'norm = normalise ctxt record_e in
+    let e'norm_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e'norm in
+    match e'norm with
+    | Record fields ->
+      let updated, fields' =
+        List.fold_right (fun ((field_l, field_e) as field) (updated, field_acc) ->
+          if field_l = field_name then
+            if updated then
+              raise (Eval_Exc ("Cannot record-update this normal expression: " ^ e'norm_s, Some e, None))
+            else (true, (field_name, normalise ctxt field_body_e) :: field_acc)
+          else (updated, field :: field_acc)) (List.rev fields) (false, []) in
+      if updated then
+        Record fields'
+      else
+        raise (Eval_Exc ("Could not find field name " ^ field_name ^ " to update in this normal expression: " ^ e'norm_s, Some e, None))
+    | _ ->
+      raise (Eval_Exc ("Cannot record-update this normal expression: " ^ e'norm_s, Some e, None))
+    end
+
   | Seq (Meta_quoted mis, e') ->
     (*FIXME currently ignoring meta-quoted instructions*)
     normalise ctxt e'

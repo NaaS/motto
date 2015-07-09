@@ -342,6 +342,10 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       | Some (ChanType (ChannelArray (rx_ty, tx_ty, di_opt))) ->
         (Undefined(*FIXME unsure how to index channel arrays*),
          ChanType (ChannelSingle (rx_ty, tx_ty)))
+      | Some (List (lbl_opt, val_ty, _, _)) ->
+        (*NOTE currently ignoring list's dependency_index*)
+        (Integer (None, []), (*NOTE currently lists can only be indexed numerically*)
+         val_ty)
       | _ ->
         raise (Type_Inference_Exc ("Expected to find indexable type", e, st)) in
     let _ =

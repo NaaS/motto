@@ -243,6 +243,32 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       raise (Eval_Exc ("Cannot normalise to integer value", Some e, None))
     end
 
+  | Abs e' ->
+    begin
+    match normalise ctxt e' with
+    | Int i -> Int (abs i)
+    | anomalous ->
+      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))
+    end
+
+  | Int_to_address e' ->
+    begin
+    match normalise ctxt e' with
+    | Int i -> failwith "TODO"
+    | anomalous ->
+      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))
+    end
+  | Address_to_int e' ->
+    begin
+    match normalise ctxt e' with
+    | IPv4_address (i1, i2, i3, i4) -> failwith "TODO"
+    | anomalous ->
+      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))
+    end
+
 (*Translate an arbitrary expression into a value*)
 let evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =
   normalise ctxt e

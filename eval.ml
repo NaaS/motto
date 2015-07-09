@@ -319,6 +319,9 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some b, None))
     end
 
+  | Record fields ->
+    Record (List.map (fun (l, e) -> (l, normalise ctxt e)) fields)
+
   | Seq (Meta_quoted mis, e') ->
     (*FIXME currently ignoring meta-quoted instructions*)
     normalise ctxt e'

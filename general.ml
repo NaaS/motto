@@ -75,3 +75,12 @@ let find_idx (l : 'a list) (x : 'a) : int option =
       if x = y then (i, Some i)
       else (i + 1, None)) l (0, None)
   |> snd
+
+(*Produce the list of all integers between from and until, including "from"
+  and excluding "until". (If "from"="until" then an empty list is returned.)*)
+let enlist (from : int) (until : int) : int list =
+  assert (from <= until);
+  let rec enlist' (acc : int list ) (cursor : int) =
+    if cursor = until then List.rev acc
+    else enlist' (cursor :: acc) (cursor + 1) in
+  enlist' [] from

@@ -161,31 +161,20 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
            that should have been checked at an earlier pass.*)
     normalise ctxt e'
 
-  | And (e1, e2) ->
-    begin
-    match normalise ctxt e1, normalise ctxt e2 with
-    | True, True -> True
-    | False, True
-    | True, False
-    | False, False -> False
-    | anomalous, True
-    | anomalous, False ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some e1, None))
-    | True, anomalous
-    | False, anomalous ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some e2, None))
-    | _, _ ->
-      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e, None))
-    end
+  | And (e1, e2)
   | Or (e1, e2) ->
     begin
-    match normalise ctxt e1, normalise ctxt e2 with
+    let f =
+      match e with
+      | And (_, _) -> (fun b1 b2 -> if b1 = True && b2 = True then True else False)
+      | Or (_, _) -> (fun b1 b2 -> if b1 = True || b2 = True then True else False)
+      | _ -> failwith "Impossible" in
+    let b1, b2 = normalise ctxt e1, normalise ctxt e2 in
+    match b1, b2 with
     | True, True
     | False, True
-    | True, False -> True
-    | False, False -> False
+    | True, False
+    | False, False -> f b1 b2
     | anomalous, True
     | anomalous, False ->
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in

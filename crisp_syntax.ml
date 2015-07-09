@@ -279,6 +279,8 @@ and expression =
   | Functor_App of function_name * fun_arg list
 
   | Record of (label * expression) list
+  (*FIXME just as RecordProjection is shared between Records and Tuples,
+          RecordUpdate could be shared too.*)
   | RecordUpdate of (expression * (label * expression))
 
   (*Case elimination on variants; formation of variant

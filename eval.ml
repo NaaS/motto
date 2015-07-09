@@ -135,6 +135,19 @@ let rec devaluate (v : typed_value) : expression =
   | ChanType _ ->
     raise (Eval_Exc ("Cannot represent as Flick expression", None, Some v))
 
+(*NOTE b and l should be in normal form*)
+let rec fold_list ?acc:(acc : expression option = None)
+  (f : expression -> expression -> expression) (b : expression) (l : expression) : expression =
+  let acc =
+    match acc with
+    | None -> b
+    | Some acc -> acc in
+  match l with
+  | EmptyList -> acc
+  | ConsList (h, t) -> fold_list ~acc:(Some (f h acc)) f b t
+  | _ ->
+    raise (Eval_Exc ("fold_list : not given a list", Some l, None))
+
 (*Reduce an expression into a value expression*)
 let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
   match e with

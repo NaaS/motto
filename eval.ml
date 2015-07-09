@@ -244,7 +244,8 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
   | Minus (e1, e2)
   | Times (e1, e2)
   | Mod (e1, e2)
-  | Quotient (e1, e2) ->
+  | Quotient (e1, e2)
+  | IntegerRange (e1, e2) ->
     begin
     let f =
       match e with
@@ -253,6 +254,9 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       | Times _ -> (fun i1 i2 -> Int (i1 * i2))
       | Mod _
       | Quotient _ -> failwith "TODO"
+      | IntegerRange _ -> (fun i1 i2 ->
+          General.enlist i1 i2
+          |> Crisp_syntax_aux.flick_integer_list)
       | _ -> failwith "Impossible" in
     match normalise ctxt e1, normalise ctxt e2 with
     | Int i1, Int i2 -> f i1 i2

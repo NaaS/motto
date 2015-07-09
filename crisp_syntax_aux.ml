@@ -510,3 +510,9 @@ let funarg_contains_hole : fun_arg -> bool = function
 let funarg_fill_hole (contents : expression) : fun_arg -> fun_arg = function
   | Exp e -> Exp (fill_hole contents e)
   | Named (l, e) -> Named (l, fill_hole contents e)
+
+(*Convert OCaml integer list into a Flick integer list*)
+let flick_integer_list (l : int list) : expression =
+  List.rev l
+  |> List.map (fun i -> Int i)
+  |> (fun l -> List.fold_right (fun x l -> ConsList (x, l)) l EmptyList)

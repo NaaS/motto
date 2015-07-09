@@ -419,6 +419,34 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       |> normalise ctxt) l'
     |> Crisp_syntax_aux.flick_list
 
+  | Iterate (v, l, acc_opt, body, unordered) ->
+    (*FIXME "unordered" not taken into account*)
+    begin
+    let l' =
+      normalise ctxt l
+      |> interpret_flick_list in
+    let acc_opt' =
+      match acc_opt with
+      | None -> None
+      | Some (l, e) -> Some (l, normalise ctxt e) in
+    let result =
+      List.fold_right (fun e acc_opt ->
+        match acc_opt with
+        | None ->
+          ignore (Crisp_syntax_aux.subst_var v e body
+                  |> normalise ctxt);
+          None
+        | Some (acc_l, acc_e) ->
+          let acc' =
+            Crisp_syntax_aux.subst_var v e body
+            |> Crisp_syntax_aux.subst_var acc_l acc_e
+            |> normalise ctxt in
+          Some (acc_l, acc')) l' acc_opt' in
+    match result with
+    | None -> flick_unit_value
+    | Some (_, e) -> e
+    end
+
   | Seq (Meta_quoted mis, e') ->
     (*FIXME currently ignoring meta-quoted instructions*)
     normalise ctxt e'

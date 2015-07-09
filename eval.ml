@@ -322,6 +322,36 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
   | Record fields ->
     Record (List.map (fun (l, e) -> (l, normalise ctxt e)) fields)
 
+  | CaseOf (e', cases) ->
+    begin
+    let e'norm = normalise ctxt e' in
+    let disj, arg =
+      match normalise ctxt e' with
+      | Functor_App (f_name, [Exp e]) ->
+        (*NOTE would be prudent to check if the functor is indeed a disjunct*)
+        (f_name, normalise ctxt e)
+      | anomalous ->
+        let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+        raise (Eval_Exc ("Cannot normalise to disjunct. Got " ^ anomalous_s, Some e', None)) in
+    match List.filter (fun (h, _) ->
+      (*NOTE should not have to normalise h -- it's used as a pattern*)
+      match h with
+      | Functor_App (f_name, [Exp _]) -> f_name = disj
+      | anomalous ->
+        let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+        raise (Eval_Exc ("This should be a disjunct. Got " ^ anomalous_s, Some h, None))) cases with
+    | [] ->
+      let e'_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e' in
+      raise (Eval_Exc ("Could not find case for this normal disjunct: " ^ e'_s, Some e'norm, None))
+    | [(Functor_App (_, [Exp (Variable v)]), body_e)] ->
+      (*Replace "Variable v" with "arg" in body_e*)
+      Crisp_syntax_aux.subst_var v arg body_e
+      |> normalise ctxt
+    | _ ->
+      let e'_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e' in
+      raise (Eval_Exc ("Found multiple cases for this normal disjunct: " ^ e'_s, Some e'norm, None))
+    end
+
   | Seq (Meta_quoted mis, e') ->
     (*FIXME currently ignoring meta-quoted instructions*)
     normalise ctxt e'

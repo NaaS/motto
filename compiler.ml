@@ -51,7 +51,11 @@ let type_check_blob (st : State.state) (chans : channel list)
   (*FIXME currently ignoring state and exceptions*)
   let (st_decls, e, ex_decls) = Crisp_syntax_aux.extract_process_body_bits pb in
 
-  let actual_ret, _ = ty_of_expr ~strict:true st' e in
+  let actual_ret =
+    ty_of_expr ~strict:true st' e
+    |> fst
+    |> Crisp_syntax_aux.forget_label in
+  let ret = Crisp_syntax_aux.forget_label ret in
   (Crisp_syntax_aux.type_match ret actual_ret, (ret, actual_ret))
 
 (*Gather declaration information from a program, and encode in the state.*)

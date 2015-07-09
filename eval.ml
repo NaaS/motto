@@ -315,6 +315,18 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some b, None))
     end
 
+  | Seq (Meta_quoted mis, e') ->
+    (*FIXME currently ignoring meta-quoted instructions*)
+    normalise ctxt e'
+  | Meta_quoted _ ->
+    raise (Eval_Exc ("Cannot normalise meta_quoted expressions alone -- add some other expression after them, and normalisation should succeed.", Some e, None))
+
+  | Seq (e1, e2) ->
+    ignore(normalise ctxt e1);
+    normalise ctxt e2
+
+  | Hole -> raise (Eval_Exc ("Cannot normalise", Some e, None))
+
 (*Translate an arbitrary expression into a value*)
 let evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =
   normalise ctxt e

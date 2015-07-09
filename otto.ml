@@ -105,6 +105,9 @@ match !cfg.source_file with
          | Crisp_syntax.Program p -> p
          | _ -> failwith "Source file does not contain a program")
     |> Compiler.compile cfg
+    |>  (*FIXME this does nothing -- it only serves to force the inclusion of
+                the evaluated into the depedency tree by the OCaml toolchain*)
+        (fun x -> (ignore(Eval.string_of_list_vs []); x))
     |> Output.write_files !cfg.output_location
   with Type_infer.Type_Inference_Exc (msg, e, st) ->
     if !cfg.unexceptional then exit 1

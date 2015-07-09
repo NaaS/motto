@@ -8,6 +8,10 @@ open Crisp_syntax
 
 let runtime_ctxt_print_indentation = "  "
 
+(*FIXME name clash with Crisp_syntax.type_value*)
+(*Representation of values during evaluation. Evaluation might take place interactively
+  with the user (or with the network), so this datatype is used to ensure that only
+  values (and not arbitrary expressions) are stored in variables.*)
 type typed_value =
   | UserDefinedType of type_name * typed_value
   | String of string
@@ -21,6 +25,7 @@ type typed_value =
   | Dictionary of (typed_value * typed_value) list
   | Reference of typed_value
   | ChanType of channel_type
+(*Channels are abstracted to behave as queues*)
 and channel_type =
   | ChannelSingle of typed_value list * typed_value list
   | ChannelArray of ((*typed_value * -- FIXME currently no channel indexing*) (typed_value list * typed_value list)) list
@@ -59,6 +64,7 @@ and string_of_channel_type : channel_type -> string = function
             of array elements.*)
     "[" ^ String.concat ", " (List.map string_of_chan_vs chans) ^ "]"
 
+(*Symbols are identifiers of values (aka variables), functions, channels, and processes.*)
 type symbol_name = string
 
 (*We could avoid defining the typed_value type, and working with normalised values

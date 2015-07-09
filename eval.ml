@@ -104,6 +104,8 @@ let rec evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =
     let vs' = List.map (fun (l, v) -> (l, evaluate ctxt v)) vs in
     RecordType vs'
   | Crisp_syntax.Functor_App (l, [Crisp_syntax.Exp e]) ->
+    (*FIXME if state is passed to this function then could quickly check that l's
+            identifier_kind is Disjunct*)
     Disjoint_Union (l, evaluate ctxt e)
   | _ ->
     raise (Eval_Exc ("Cannot represent as Flick expression. Perhaps it's not in normal form?", Some e, None))

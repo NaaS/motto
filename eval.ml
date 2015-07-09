@@ -82,8 +82,28 @@ let evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =
   failwith "TODO"
 
 (*Translate a value into an expression*)
-let devaluate (v : typed_value) : expression =
-  failwith "TODO"
+let rec devaluate (v : typed_value) : expression =
+  match v with
+  | UserDefinedType (_, v) -> devaluate v
+  | String s -> Crisp_syntax.Str s
+  | Integer i -> Crisp_syntax.Int i
+  | Boolean b -> if b then Crisp_syntax.True else Crisp_syntax.False
+  | IPv4Address (i1, i2, i3, i4) ->
+    Crisp_syntax.IPv4_address (i1, i2, i3, i4)
+  | List vs ->
+    List.map devaluate vs
+    |> List.rev
+    |> (fun vs' -> List.fold_right (fun e l ->
+      ConsList (e, l)) vs' EmptyList)
+  | Tuple vs ->
+    Crisp_syntax.TupleValue (List.map devaluate vs)
+  | RecordType vs ->
+    let vs' = List.map (fun (l, v) -> (l, devaluate v)) vs in
+    Crisp_syntax.Record vs'
+  | Disjoint_Union (l, v) -> Crisp_syntax.Functor_App (l, [Crisp_syntax.Exp (devaluate v)])
+  | Reference _ -> failwith "devaluate: TODO"
+  | Dictionary _
+  | ChanType _ -> failwith "Cannot represent as Flick expression"
 
 (*Reduce an expression into a value expression*)
 let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =

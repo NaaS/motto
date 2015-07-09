@@ -310,6 +310,8 @@ and expression =
   | Meta_quoted of meta_instruction list
   | Hole
 
+let flick_unit_value = TupleValue []
+
 let rec expression_to_string indent = function
   | Variable value_name -> indn indent ^ value_name
   | TypeAnnotation (e, ty) ->

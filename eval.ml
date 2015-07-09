@@ -208,11 +208,16 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
   | Equals (e1, e2) ->
     if normalise ctxt e1 = normalise ctxt e2 then True else False
 
-  | GreaterThan (e1, e2) ->
+  | GreaterThan (e1, e2)
+  | LessThan (e1, e2) ->
     begin
+    let f =
+      match e with
+      | GreaterThan _ -> (fun i1 i2 -> if i1 > i2 then True else False)
+      | LessThan _ -> (fun i1 i2 -> if i1 < i2 then True else False)
+      | _ -> failwith "Impossible" in
     match normalise ctxt e1, normalise ctxt e2 with
-    | Int i1, Int i2 ->
-      if i1 > i2 then True else False
+    | Int i1, Int i2 -> f i1 i2
     | anomalous, Int _ ->
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
       raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e1, None))

@@ -137,7 +137,85 @@ let rec devaluate (v : typed_value) : expression =
 
 (*Reduce an expression into a value expression*)
 let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
-  failwith "TODO"
+  match e with
+  (*These expressions are already normal*)
+  | True
+  | False
+  | Int _
+  | IPv4_address _
+  | Str _
+  | EmptyList -> e
+
+  | Variable l ->
+    begin
+    match List.filter (fun (name, _) -> name = l) ctxt with
+    | [] ->
+      raise (Eval_Exc ("Cannot resolve variable's value", Some e, None))
+    | [(_, v)] -> devaluate v
+    | results ->
+      let results_s = string_of_runtime_ctxt results in
+      raise (Eval_Exc ("Multiple resolusions for variable's value: " ^ results_s, Some e, None))
+    end
+  | TypeAnnotation (e', _) ->
+    (*NOTE there's no runtime type-checking -- we ignore the type annotation.
+           that should have been checked at an earlier pass.*)
+    normalise ctxt e'
+
+  | And (e1, e2) ->
+    begin
+    match normalise ctxt e1, normalise ctxt e2 with
+    | True, True -> True
+    | False, True
+    | True, False
+    | False, False -> False
+    | _, True
+    | _, False ->
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e2, None))
+    | True, _
+    | False, _ ->
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e1, None))
+    | _, _ ->
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e, None))
+    end
+  | Or (e1, e2) ->
+    begin
+    match normalise ctxt e1, normalise ctxt e2 with
+    | True, True
+    | False, True
+    | True, False -> True
+    | False, False -> False
+    | _, True
+    | _, False ->
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e2, None))
+    | True, _
+    | False, _ ->
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e1, None))
+    | _, _ ->
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e, None))
+    end
+  | Not e' ->
+    begin
+    match normalise ctxt e' with
+    | True -> False
+    | False -> True
+    | _ ->
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e', None))
+    end
+  | Equals (e1, e2) ->
+    if normalise ctxt e1 = normalise ctxt e2 then True else False
+
+  | GreaterThan (e1, e2) ->
+    begin
+    match normalise ctxt e1, normalise ctxt e2 with
+    | Int i1, Int i2 ->
+      if i1 > i2 then True else False
+    | Int _, _ ->
+      raise (Eval_Exc ("Cannot normalise to integer value", Some e2, None))
+    | _, Int _ ->
+      raise (Eval_Exc ("Cannot normalise to integer value", Some e1, None))
+    | _, _->
+      raise (Eval_Exc ("Cannot normalise to integer value", Some e, None))
+    end
 
 (*Translate an arbitrary expression into a value*)
 let evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =

@@ -105,9 +105,6 @@ match !cfg.source_file with
          | Crisp_syntax.Program p -> p
          | _ -> failwith "Source file does not contain a program")
     |> Compiler.compile cfg
-    |>  (*FIXME this does nothing -- it only serves to force the inclusion of
-                the evaluated into the depedency tree by the OCaml toolchain*)
-        (fun x -> (ignore(Eval.string_of_list_vs []); x))
     |> Output.write_files !cfg.output_location
   with Type_infer.Type_Inference_Exc (msg, e, st) ->
     if !cfg.unexceptional then exit 1
@@ -120,6 +117,23 @@ match !cfg.source_file with
         "state :\n" ^
          State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
            true st)
+  | Eval.Eval_Exc (msg, e_opt, rtv_opt) ->
+      let e_s =
+        match e_opt with
+        | None -> ""
+        | Some e ->
+          "at expression:" ^ Crisp_syntax.expression_to_string
+                               Crisp_syntax.min_indentation e ^ "\n" in
+      let rtv_s =
+        match rtv_opt with
+        | None -> ""
+        | Some v ->
+          "involving runtime value:" ^ Eval.string_of_typed_value v ^ "\n" in
+      print_endline
+       ("Evaluation error: " ^ msg ^ "\n" ^
+        "in file " ^ source_file ^ "\n" ^
+        e_s ^
+        rtv_s)
   | e ->
     if !cfg.unexceptional then exit 1
     else raise e

@@ -13,7 +13,7 @@ let runtime_ctxt_print_indentation = "  "
   with the user (or with the network), so this datatype is used to ensure that only
   values (and not arbitrary expressions) are stored in variables.*)
 type typed_value =
-  | UserDefinedType of type_name * typed_value
+  | UserDefinedType of type_name * typed_value (*FIXME is this redundant?*)
   | String of string
   | Integer of int
   | Boolean of bool
@@ -29,6 +29,9 @@ type typed_value =
 and channel_type =
   | ChannelSingle of typed_value list * typed_value list
   | ChannelArray of ((*typed_value * -- FIXME currently no channel indexing*) (typed_value list * typed_value list)) list
+
+(*FIXME include runtime_ctxt in state?*)
+exception Eval_Exc of string * expression option * typed_value option (** state -- FIXME include runtime_ctxt*)
 
 let rec string_of_list_vs vs =
   "[" ^ String.concat ", " (List.map string_of_typed_value vs) ^ "]"
@@ -103,7 +106,8 @@ let rec devaluate (v : typed_value) : expression =
   | Disjoint_Union (l, v) -> Crisp_syntax.Functor_App (l, [Crisp_syntax.Exp (devaluate v)])
   | Reference _ -> failwith "devaluate: TODO"
   | Dictionary _
-  | ChanType _ -> failwith "Cannot represent as Flick expression"
+  | ChanType _ ->
+    raise (Eval_Exc ("Cannot represent as Flick expression", None, Some v))
 
 (*Reduce an expression into a value expression*)
 let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =

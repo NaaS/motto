@@ -158,6 +158,18 @@ let rec append_list (acc : expression list) (l1 : expression) (l2 : expression) 
   | _ ->
     raise (Eval_Exc ("append_list : not given a list", Some l1, None))
 
+(*Convert Flick list into an OCaml list of expressions.
+  NOTE it's assumed that the Flick list is normal (at least up to the surface
+       list level).*)
+let interpret_flick_list (e : expression) : expression list =
+  let rec interpret_flick_list' (acc : expression list) (e : expression) : expression list =
+  match e with
+  | EmptyList -> List.rev acc
+  | ConsList (x, l) -> interpret_flick_list' (x :: acc) l
+  | _ ->
+    raise (Eval_Exc ("interpret_flick_list : not given a list", Some e, None)) in
+  interpret_flick_list' [] e
+
 (*Reduce an expression into a value expression*)
 let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
   match e with
@@ -396,6 +408,16 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
     | _ ->
       raise (Eval_Exc ("Cannot record-update this normal expression: " ^ e'norm_s, Some e, None))
     end
+
+  | Map (v, l, body, unordered) ->
+    (*FIXME "unordered" not taken into account*)
+    let l' =
+      normalise ctxt l
+      |> interpret_flick_list in
+    List.map (fun e ->
+      Crisp_syntax_aux.subst_var v e body
+      |> normalise ctxt) l'
+    |> Crisp_syntax_aux.flick_list
 
   | Seq (Meta_quoted mis, e') ->
     (*FIXME currently ignoring meta-quoted instructions*)

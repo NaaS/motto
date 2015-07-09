@@ -301,6 +301,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
   | TupleValue es -> TupleValue (List.map (normalise ctxt) es)
 
   | ITE (b, e1, e2_opt) ->
+    begin
     match normalise ctxt b with
     | True -> normalise ctxt e1
     | False ->
@@ -312,6 +313,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
     | anomalous ->
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
       raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some b, None))
+    end
 
 (*Translate an arbitrary expression into a value*)
 let evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =

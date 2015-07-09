@@ -81,8 +81,32 @@ let string_of_runtime_ctxt (ctxt : runtime_ctxt) : string =
   |> print_list runtime_ctxt_print_indentation
 
 (*Translate an expression into a value*)
-let evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =
-  failwith "TODO"
+let rec evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =
+  match e with
+  | Crisp_syntax.Str s -> String s
+  | Crisp_syntax.Int i -> Integer i
+  | Crisp_syntax.True -> Boolean true
+  | Crisp_syntax.False -> Boolean false
+  | Crisp_syntax.IPv4_address (i1, i2, i3, i4) -> IPv4Address (i1, i2, i3, i4)
+  | EmptyList -> List []
+  | ConsList (h, t) ->
+    let h' = evaluate ctxt h in
+    let t' =
+      match evaluate ctxt t with
+      | List xs -> xs
+      | _ ->
+        let t_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation t in
+        raise (Eval_Exc ("Tail expression " ^ t_s ^ " did not evaluate to a list", Some e, None)) in
+    List (h' :: t')
+  | Crisp_syntax.TupleValue es ->
+    Tuple (List.map (evaluate ctxt) es)
+  | Crisp_syntax.Record vs ->
+    let vs' = List.map (fun (l, v) -> (l, evaluate ctxt v)) vs in
+    RecordType vs'
+  | Crisp_syntax.Functor_App (l, [Crisp_syntax.Exp e]) ->
+    Disjoint_Union (l, evaluate ctxt e)
+  | _ ->
+    raise (Eval_Exc ("Cannot represent as Flick expression. Perhaps it's not in normal form?", Some e, None))
 
 (*Translate a value into an expression*)
 let rec devaluate (v : typed_value) : expression =

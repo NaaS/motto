@@ -352,6 +352,30 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       raise (Eval_Exc ("Found multiple cases for this normal disjunct: " ^ e'_s, Some e'norm, None))
     end
 
+  (*This work for both tuples and records.*)
+  | RecordProjection (e', l) ->
+    begin
+    let e'norm = normalise ctxt e' in
+    let e'norm_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e'norm in
+    let project_from fields =
+      match List.filter (fun (field_name, _) -> field_name = l) fields with
+      | [] ->
+        raise (Eval_Exc ("Cannot find label called " ^ l ^ " in expression: " ^ e'norm_s, Some e, None))
+      | [(_, field_e)] -> normalise ctxt field_e
+      | _ ->
+        raise (Eval_Exc ("Found multiple labels called " ^ l ^ " in expression: " ^ e'norm_s, Some e, None)) in
+    match e'norm with
+    | Record fields -> project_from fields
+    | TupleValue es ->
+      let labels =
+        General.enlist 1 (List.length es)
+        |> List.map string_of_int in
+      List.combine labels es
+      |> project_from
+    | _ ->
+      raise (Eval_Exc ("Cannot project from this normal expression: " ^ e'norm_s, Some e, None))
+    end
+
   | Seq (Meta_quoted mis, e') ->
     (*FIXME currently ignoring meta-quoted instructions*)
     normalise ctxt e'

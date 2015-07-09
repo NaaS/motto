@@ -121,7 +121,7 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
                 false
               end
             else
-              failwith ("Identifier kind in symbol table for '" ^ stringify x ^
+              failwith ("Identifier kind in symbol table for '" ^ Debug.stringify x ^
                         " cannot be undetermined")
           else if filter_scope then
             query_kind = Undetermined || query_kind = md.identifier_kind
@@ -132,7 +132,7 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
                 false
               end
             else
-              failwith ("id '" ^ stringify id ^ "' : Mismatching identifier kinds! Was expecting " ^
+              failwith ("id '" ^ Debug.stringify id ^ "' : Mismatching identifier kinds! Was expecting " ^
                         string_of_identifier_kind query_kind ^ " but found " ^
                         string_of_identifier_kind md.identifier_kind)
           else true in
@@ -145,7 +145,7 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
       | _ ->
         if unexceptional then None
         else
-          failwith ("Found multiple resolvants for symbol " ^ stringify id)
+          failwith ("Found multiple resolvants for symbol " ^ Debug.stringify id)
 
 (*For simplicity (and to defend against the possibility that identifiers and
   type identifiers occupy the same namespace) the lookup is made on both

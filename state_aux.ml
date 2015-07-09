@@ -4,6 +4,7 @@
    Nik Sultana, Cambridge University Computer Lab, February 2015
 *)
 
+open Debug
 open State
 open Naasty_aux
 
@@ -31,23 +32,19 @@ let state_to_str ?indentation:(indentation : string = "  ")
       let nst_type_s = str_of_ty_opt nst_type in
       let src_type_s = str_of_src_ty_opt (Some src_type) in
       type_name ^ "(" ^ src_type_s ^ ", " ^ nst_type_s ^ ")") type_declarations in
-  let print_list l =
-    let sep = "\n" ^ indentation ^ "\t" in
-    if l = [] then "(empty)"
-    else sep ^ String.concat sep l in
-  indentation ^ "pragma_inclusions : " ^ print_list pragma_inclusions ^ "\n" ^
-  indentation ^ "type_declarations : " ^ print_list type_decls_l ^ "\n" ^
+  indentation ^ "pragma_inclusions : " ^ print_list indentation pragma_inclusions ^ "\n" ^
+  indentation ^ "type_declarations : " ^ print_list indentation type_decls_l ^ "\n" ^
   indentation ^ "next_symbol : " ^ string_of_int next_symbol ^ "\n" ^
-  indentation ^ "type_symbols : " ^ print_list
+  indentation ^ "type_symbols : " ^ print_list indentation
                          (List.map (fun (s, i, ty_opt) -> "(" ^ s ^ ", " ^
                                    string_of_int i ^ ", " ^ str_of_ty_opt ty_opt ^ ")")
                          type_symbols) ^ "\n" ^
-  indentation ^ "term_symbols : " ^ print_list
+  indentation ^ "term_symbols : " ^ print_list indentation
                      (List.map (fun (s, i, md) -> "(" ^ s ^ ", " ^
                               string_of_int i ^ ", " ^
                               str_of_term_symbol_metadata md ^ ")")
                         term_symbols) ^ "\n" ^
-  indentation ^ "crisp_funs : " ^ print_list
+  indentation ^ "crisp_funs : " ^ print_list indentation
                      (List.map (fun (s, ft) -> "(" ^ s ^ ", " ^
                               Crisp_syntax.function_type_to_string ft ^ ")")
                         crisp_funs) ^ "\n"

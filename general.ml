@@ -75,10 +75,3 @@ let find_idx (l : 'a list) (x : 'a) : int option =
       if x = y then (i, Some i)
       else (i + 1, None)) l (0, None)
   |> snd
-
-(*This is used to avoid committing to a specific (i.e., string in this case)
-  type. I use it in instances when x is already a string, so the runtime system
-  shouldn't have to do anything.*)
-let stringify (x : 'a) : string =
-  assert (Obj.tag (Obj.repr x) = Obj.string_tag);
-  Obj.magic x

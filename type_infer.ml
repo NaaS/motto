@@ -379,6 +379,10 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           | _ ->
             (*FIXME give more info*)
             raise (Type_Inference_Exc ("Unexpected identifier kind", e, st)) in
+        (*Ensure that the field type is labelled*)
+        let ty =
+          forget_label ty
+          |> update_empty_label label in
         (ty, (record_ty, label)) :: acc) fields []
       |> List.split
       |> General.apsnd List.split in

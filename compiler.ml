@@ -31,7 +31,7 @@ let expand_includes (include_directories : string list) (p : Crisp_syntax.progra
 (*blob here is either function or process, as long as they both return a single
   thing. in the case of process it doesn't matter, since nothing is ever returned*)
 let type_check_blob (st : State.state) (chans : channel list)
-      (args : type_value list) (ret : type_value) (pb : process_body) : bool =
+      (args : type_value list) (ret : type_value) (pb : process_body) : (bool * (type_value * type_value)) =
   let st' =
     List.fold_right (fun ((Channel (ct, name)) : channel) (st : state) ->
         let scope = Term Channel_Name in
@@ -52,7 +52,7 @@ let type_check_blob (st : State.state) (chans : channel list)
   let (st_decls, e, ex_decls) = Crisp_syntax_aux.extract_process_body_bits pb in
 
   let actual_ret, _ = ty_of_expr ~strict:true st' e in
-  Crisp_syntax_aux.type_match ret actual_ret
+  (Crisp_syntax_aux.type_match ret actual_ret, (ret, actual_ret))
 
 (*Gather declaration information from a program, and encode in the state.*)
 let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.state =
@@ -81,8 +81,12 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
             | _ -> failwith "Multifunctions not supported"(*FIXME give more info*) in
           if !Config.cfg.Config.skip_type_check then ()
           else
-            if type_check_blob st chans arg_tys ret_ty fn_body then ()
-            else failwith ("Types don't check in " ^ fn_name) in
+            match type_check_blob st chans arg_tys ret_ty fn_body with
+            | (true, _) -> ()
+            | (false, (expected_ty, actual_ty)) ->
+              let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
+              let actual_ty_s = type_value_to_string true false min_indentation actual_ty in
+              failwith ("Types don't check in " ^ fn_name ^ " expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
         (*NOTE order of declarations isn't preserved within term_symbols*)
         st'
       | Some (_, _) -> failwith ("Function " ^ fn_name ^ " declared more than once")

@@ -217,6 +217,32 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       raise (Eval_Exc ("Cannot normalise to integer value", Some e, None))
     end
 
+  | Plus (e1, e2)
+  | Minus (e1, e2)
+  | Times (e1, e2)
+  | Mod (e1, e2)
+  | Quotient (e1, e2) ->
+    begin
+    let f =
+      match e with
+      | Plus _ -> (fun i1 i2 -> Int (i1 + i2))
+      | Minus _ -> (fun i1 i2 -> Int (i1 - i2))
+      | Times _ -> (fun i1 i2 -> Int (i1 * i2))
+      | Mod _
+      | Quotient _ -> failwith "TODO"
+      | _ -> failwith "Impossible" in
+    match normalise ctxt e1, normalise ctxt e2 with
+    | Int i1, Int i2 -> f i1 i2
+    | anomalous, Int _ ->
+      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e1, None))
+    | Int _, anomalous ->
+      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e2, None))
+    | _, _->
+      raise (Eval_Exc ("Cannot normalise to integer value", Some e, None))
+    end
+
 (*Translate an arbitrary expression into a value*)
 let evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =
   normalise ctxt e

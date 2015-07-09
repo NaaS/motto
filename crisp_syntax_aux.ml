@@ -516,3 +516,81 @@ let flick_integer_list (l : int list) : expression =
   List.rev l
   |> List.map (fun i -> Int i)
   |> (fun l -> List.fold_right (fun x l -> ConsList (x, l)) l EmptyList)
+
+let rec subst_var (v : string) (u : expression) (e : expression) : expression =
+  match e with
+  | Variable l -> if l = v then u else e
+  | TypeAnnotation (e, ty) -> TypeAnnotation (subst_var v u e, ty)
+
+  | True
+  | False
+  | Int _
+  | IPv4_address _
+  | EmptyList
+  | Str _
+  | Meta_quoted _
+  | Hole -> e
+
+  | And (e1, e2) -> And (subst_var v u e1, subst_var v u e2)
+  | Or (e1, e2) -> Or (subst_var v u e1, subst_var v u e2)
+  | Equals (e1, e2) -> Equals (subst_var v u e1, subst_var v u e2)
+  | GreaterThan (e1, e2) -> GreaterThan (subst_var v u e1, subst_var v u e2)
+  | LessThan (e1, e2) -> LessThan (subst_var v u e1, subst_var v u e2)
+  | Plus (e1, e2) -> Plus (subst_var v u e1, subst_var v u e2)
+  | Minus (e1, e2) -> Minus (subst_var v u e1, subst_var v u e2)
+  | Times (e1, e2) -> Times (subst_var v u e1, subst_var v u e2)
+  | Mod (e1, e2) -> Mod (subst_var v u e1, subst_var v u e2)
+  | Quotient (e1, e2) -> Quotient (subst_var v u e1, subst_var v u e2)
+  | ConsList (e1, e2) -> ConsList (subst_var v u e1, subst_var v u e2)
+  | AppendList (e1, e2) -> AppendList (subst_var v u e1, subst_var v u e2)
+  | Seq (e1, e2) -> Seq (subst_var v u e1, subst_var v u e2)
+  | Send (e1, e2) -> Send (subst_var v u e1, subst_var v u e2)
+  | Receive (e1, e2) -> Receive (subst_var v u e1, subst_var v u e2)
+  | Exchange (e1, e2) -> Exchange (subst_var v u e1, subst_var v u e2)
+
+  | Not e' -> Not (subst_var v u e')
+  | Abs e' -> Abs (subst_var v u e')
+  | Int_to_address e' -> Int_to_address (subst_var v u e')
+  | Address_to_int e' -> Address_to_int (subst_var v u e')
+
+  | TupleValue es -> TupleValue (List.map (subst_var v u) es)
+
+  | ITE (e1, e2, e3_opt) ->
+    let e3_opt' =
+      match e3_opt with
+      | None -> None
+      | Some e3 -> Some (subst_var v u e3) in
+    ITE (subst_var v u e1, subst_var v u e2, e3_opt')
+  | LocalDef (ty, e) -> LocalDef (ty, subst_var v u e)
+  | Update (value_name, e) -> Update (value_name, subst_var v u e)
+  | UpdateIndexable (value_name, e1, e2) ->
+    UpdateIndexable (value_name, subst_var v u e1, subst_var v u e2)
+
+  | RecordProjection (e, l) -> RecordProjection (subst_var v u e, l)
+
+  | Functor_App (f_name, args) ->
+    let args' =  List.map (function
+      | Exp e -> Exp (subst_var v u e)
+      | Named (l, e) -> Named (l, subst_var v u e)) args in
+    Functor_App (f_name, args')
+
+  | Record fields ->
+    let fields' = List.map (fun (l, e) -> (l, subst_var v u e)) fields in
+    Record fields'
+  | RecordUpdate (e1, (l, e2)) ->
+    RecordUpdate (subst_var v u e1, (l, subst_var v u e2))
+
+  | CaseOf (e, cases) ->
+    let cases' = List.map (fun (e1, e2) -> (subst_var v u e1, subst_var v u e2)) cases in
+    CaseOf (subst_var v u e, cases')
+
+  | IndexableProjection (l, e) -> IndexableProjection (l, subst_var v u e)
+
+  | IntegerRange (e1, e2) -> IntegerRange (subst_var v u e1, subst_var v u e2)
+  | Map (l, e1, e2, b) -> Map (l, subst_var v u e1, subst_var v u e2, b)
+  | Iterate (l, e, acc_opt, body_e, b) ->
+    let acc_opt' =
+      match acc_opt with
+      | None -> None
+      | Some (l, acc_e) -> Some (l, subst_var v u acc_e) in
+    Iterate (l, subst_var v u e, acc_opt', subst_var v u body_e, b)

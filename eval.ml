@@ -148,6 +148,16 @@ let rec fold_list ?acc:(acc : expression option = None)
   | _ ->
     raise (Eval_Exc ("fold_list : not given a list", Some l, None))
 
+(*NOTE l1 should be in normal form*)
+let rec append_list (acc : expression list) (l1 : expression) (l2 : expression) : expression =
+  match l1 with
+  | EmptyList -> l2
+  | ConsList (h, EmptyList) ->
+    List.fold_right (fun x l -> ConsList (x, l)) acc (ConsList (h, l2))
+  | ConsList (h, t) -> append_list (h :: acc) t l2
+  | _ ->
+    raise (Eval_Exc ("append_list : not given a list", Some l1, None))
+
 (*Reduce an expression into a value expression*)
 let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
   match e with
@@ -281,6 +291,14 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
       raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))
     end
+
+  | ConsList (h, t) -> ConsList (normalise ctxt h, normalise ctxt t)
+  | AppendList (l1, l2) ->
+    let l1' = normalise ctxt l1 in
+    let l2' = normalise ctxt l2 in
+    append_list [] l1' l2'
+
+  | TupleValue es -> TupleValue (List.map (normalise ctxt) es)
 
 (*Translate an arbitrary expression into a value*)
 let evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =

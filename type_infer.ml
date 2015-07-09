@@ -410,8 +410,9 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
            raise (Type_Inference_Exc ("Expected record type", e, st))
         end in
     (RecordType (None, field_tys, []), st)
-  | RecordUpdate (e, (label, body_e)) ->
-    let record_ty, _ = ty_of_expr ~strict st e in
+  | RecordUpdate (e', (label, body_e)) ->
+    let record_ty, _ = ty_of_expr ~strict st e' in
+    let record_ty_s = type_value_to_string true false min_indentation record_ty in
     let _ =
       if strict then
         let field_ty, _ =
@@ -423,18 +424,19 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
               match label_of_type ty with
               | None ->
                 (*FIXME give more info*)
-                raise (Type_Inference_Exc ("Expected type to be labelled", e, st))
+                let ty_s = type_value_to_string true false min_indentation ty in
+                raise (Type_Inference_Exc ("Expected type to be labelled: " ^ ty_s ^ " within " ^ record_ty_s, e, st))
               | Some lbl ->
                 lbl = label &&
-                (field_ty = ty || field_ty = Undefined)) field_tys in
+                (forget_label field_ty = forget_label ty || field_ty = Undefined)) field_tys in
           if not field_exists_in_record then
             raise (Type_Inference_Exc ("Label " ^ label ^ " doesn't belong to a field in record", e, st))
         | _ ->
           (*FIXME give more info*)
           raise (Type_Inference_Exc ("Expected record type", e, st)) in
     (record_ty, st)
-  | RecordProjection (e, label) ->
-    let e_ty, _ = ty_of_expr ~strict st e in
+  | RecordProjection (e', label) ->
+    let e_ty, _ = ty_of_expr ~strict st e' in
     let l_ty =
       match Crisp_syntax_aux.resolve_if_usertype st e_ty with
       | RecordType (_, tys', _) ->

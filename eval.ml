@@ -7,7 +7,7 @@ open General
 open Debug
 open Crisp_syntax
 open State
-open Runtime
+open Runtime_data
 
 (*FIXME include runtime_ctxt in state?*)
 exception Eval_Exc of string * expression option * typed_value option (** state -- FIXME include runtime_ctxt*)

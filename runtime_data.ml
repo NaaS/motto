@@ -82,8 +82,17 @@ type runtime_ctxt =
     (*Stack of active exceptions*)
     except_table : excepts_decl list list;
     (*Table of function/process-state, both local and shared*)
-    state: (symbol_name * value_table) list;
+    state : (symbol_name * value_table) list;
   }
+
+let initial_runtime_ctxt =
+  {
+    value_table = [];
+    exec_table = [];
+    except_table = [];
+    state = [];
+  }
+
 let strlist_of_value_table =
   List.map (fun (name, v) ->
     name ^ " = " ^ string_of_typed_value v)

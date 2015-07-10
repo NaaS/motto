@@ -29,10 +29,10 @@ type inspect_instruction =
   | MI of meta_instruction
 
 (*Evaluate a single inspect-instruction*)
-let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instruction) : Runtime_data.runtime_ctxt =
+let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instruction) : (state * Runtime_data.runtime_ctxt) =
   failwith "TODO"
 
 (*Evaluate a list of inspect-instructions*)
-let evals (st : state) (ctxt : Runtime_data.runtime_ctxt) (is : inspect_instruction list) : Runtime_data.runtime_ctxt =
-  List.fold_right (fun instr ctxt ->
-    eval st ctxt instr) is ctxt
+let evals (st : state) (ctxt : Runtime_data.runtime_ctxt) (is : inspect_instruction list) : (state * Runtime_data.runtime_ctxt) =
+  List.fold_right (fun instr (st, ctxt) ->
+    eval st ctxt instr) is (st, ctxt)

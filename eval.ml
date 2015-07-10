@@ -5,6 +5,7 @@
 
 open Debug
 open Crisp_syntax
+open State
 
 let runtime_ctxt_print_indentation = "  "
 
@@ -210,7 +211,7 @@ let interpret_flick_list (e : expression) : expression list =
   interpret_flick_list' [] e
 
 (*Reduce an expression into a value expression*)
-let rec normalise (st : State.state) (ctxt : runtime_ctxt) (e : expression) : expression =
+let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expression =
   match e with
   (*These expressions are already normal*)
   | True
@@ -501,6 +502,6 @@ let rec normalise (st : State.state) (ctxt : runtime_ctxt) (e : expression) : ex
   | Hole -> raise (Eval_Exc ("Cannot normalise", Some e, None))
 
 (*Translate an arbitrary expression into a value*)
-let evaluate (st : State.state) (ctxt : runtime_ctxt) (e : expression) : typed_value =
+let evaluate (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value =
   normalise st ctxt e
   |> evaluate_value ctxt

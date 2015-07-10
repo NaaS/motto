@@ -11,7 +11,10 @@ let runtime_ctxt_print_indentation = "  "
 (*FIXME name clash with Crisp_syntax.type_value*)
 (*Representation of values during evaluation. Evaluation might take place interactively
   with the user (or with the network), so this datatype is used to ensure that only
-  values (and not arbitrary expressions) are stored in variables.*)
+  values (and not arbitrary expressions) are stored in variables.
+  We could avoid defining the typed_value type, and working with normalised values
+  (that it represents), but this way forces us to make sure we're only working
+  with the intended kind of values, and not with arbitrary expressions!*)
 type typed_value =
   | UserDefinedType of type_name * typed_value (*FIXME is this redundant?*)
   | String of string
@@ -70,15 +73,63 @@ and string_of_channel_type : channel_type -> string = function
 (*Symbols are identifiers of values (aka variables), functions, channels, and processes.*)
 type symbol_name = string
 
-(*We could avoid defining the typed_value type, and working with normalised values
-  (that it represents), but this way forces us to make sure we're only working
-  with the intended kind of values, and not with arbitrary expressions!*)
-(*FIXME runtime_ctxt should include a stack of exception handlers*)
-type runtime_ctxt = (symbol_name * typed_value) list
-let string_of_runtime_ctxt (ctxt : runtime_ctxt) : string =
+type value_table = (symbol_name * typed_value) list
+type runtime_ctxt =
+  {
+    (*Current value held by each variable.
+      NOTE we fix a single, global, scope. Might replace this with nested scopes, but this will do fine for now.*)
+    value_table : value_table;
+    (*Table of function and process declarations*)
+    exec_table : (symbol_name * toplevel_decl) list;
+    (*Stack of active exceptions*)
+    except_table : excepts_decl list list;
+    (*Table of function/process-state, both local and shared*)
+    state: (symbol_name * value_table) list;
+  }
+let strlist_of_value_table =
   List.map (fun (name, v) ->
-    name ^ " = " ^ string_of_typed_value v) ctxt
-  |> print_list runtime_ctxt_print_indentation
+    name ^ " = " ^ string_of_typed_value v)
+let string_of_runtime_ctxt ?indentation:(indentation : int = 0)
+   ?indentation_step:(indentation_step : int = 2) (ctxt : runtime_ctxt) : string =
+  let exec_table =
+    List.map (fun (name, v) ->
+      name ^ " = ..."(*FIXME currently don't show function/process code*)) ctxt.exec_table in
+  let except_table =
+    let scope_counts =
+      General.enlist 0 (List.length ctxt.except_table)
+      |> List.map string_of_int in
+    let except_print excepts =
+      List.map (fun (l, e) ->
+        l ^ " = " ^ Crisp_syntax.expression_to_string 0 e) excepts in
+(*
+    List.fold_right (fun (scope_label, excs) acc ->
+      General.indn indentation ^ "scope" ^ scope_label ^ " : " ^
+       acc ^ print_list (General.indn (indentation + indentation_step)) (except_print excs) ^ "\n")
+        (List.combine scope_counts ctxt.except_table) "" in
+*)
+    List.map (fun (scope_label, excs) ->
+      General.indn indentation ^ "scope" ^ scope_label ^ " : " ^
+       print_list (General.indn (indentation + indentation_step)) (except_print excs))
+        (List.combine scope_counts ctxt.except_table) in
+  let state =
+(*
+    List.fold_right (fun (scope_label, vt) acc ->
+      General.indn indentation ^ "scope" ^ scope_label ^ " : " ^
+       acc ^ print_list (General.indn (indentation + indentation_step)) (value_table vt) ^ "\n")
+        ctxt.state "" in
+*)
+    List.map (fun (scope_label, vt) ->
+      General.indn indentation ^ "scope" ^ scope_label ^ " : " ^
+       print_list (General.indn (indentation + indentation_step)) (strlist_of_value_table vt))
+       ctxt.state in
+  General.indn indentation ^ "value_table : " ^
+    print_list (General.indn indentation) (strlist_of_value_table ctxt.value_table) ^ "\n" ^
+  General.indn indentation ^ "exec_table : " ^
+    print_list (General.indn indentation) exec_table ^ "\n" ^
+  General.indn indentation ^ "except_table : " ^
+    print_list (General.indn indentation) except_table ^ "\n" ^
+  General.indn indentation ^ "state : " ^
+    print_list (General.indn indentation) state ^ "\n"
 
 (*Translate a normal expression into a value*)
 let rec evaluate_value (ctxt : runtime_ctxt) (e : expression) : typed_value =
@@ -183,12 +234,14 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
 
   | Variable l ->
     begin
-    match List.filter (fun (name, _) -> name = l) ctxt with
+    match List.filter (fun (name, _) -> name = l) ctxt.value_table with
     | [] ->
       raise (Eval_Exc ("Cannot resolve variable's value", Some e, None))
     | [(_, v)] -> devaluate v
     | results ->
-      let results_s = string_of_runtime_ctxt results in
+      let results_s =
+        strlist_of_value_table results
+        |> print_list runtime_ctxt_print_indentation in
       raise (Eval_Exc ("Multiple resolusions for variable's value: " ^ results_s, Some e, None))
     end
   | TypeAnnotation (e', _) ->

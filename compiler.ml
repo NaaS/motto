@@ -181,10 +181,10 @@ let parse_program source_file =
        | Crisp_syntax.Program p -> p
        | _ -> failwith "Source file does not contain a program")
 
-let front_end (cfg : Config.configuration ref) (program : Crisp_syntax.program) =
+let front_end ?st:(st : state = initial_state) (cfg : Config.configuration ref) (program : Crisp_syntax.program) =
   expand_includes !cfg.Config.include_directories program
   |> selfpair
-  |> apfst (collect_decl_info initial_state)
+  |> apfst (collect_decl_info st)
   |> apfst check_distinct_parameter_names
   |> apsnd split_declaration_kinds
   |> (fun ((st, p) as data) ->

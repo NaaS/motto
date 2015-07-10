@@ -210,7 +210,7 @@ let interpret_flick_list (e : expression) : expression list =
   interpret_flick_list' [] e
 
 (*Reduce an expression into a value expression*)
-let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
+let rec normalise (st : State.state) (ctxt : runtime_ctxt) (e : expression) : expression =
   match e with
   (*These expressions are already normal*)
   | True
@@ -235,7 +235,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
   | TypeAnnotation (e', _) ->
     (*NOTE there's no runtime type-checking -- we ignore the type annotation.
            that should have been checked at an earlier pass.*)
-    normalise ctxt e'
+    normalise st ctxt e'
 
   | And (e1, e2)
   | Or (e1, e2) ->
@@ -245,7 +245,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       | And (_, _) -> (fun b1 b2 -> if b1 = True && b2 = True then True else False)
       | Or (_, _) -> (fun b1 b2 -> if b1 = True || b2 = True then True else False)
       | _ -> failwith "Impossible" in
-    let b1, b2 = normalise ctxt e1, normalise ctxt e2 in
+    let b1, b2 = normalise st ctxt e1, normalise st ctxt e2 in
     match b1, b2 with
     | True, True
     | False, True
@@ -264,14 +264,14 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
     end
   | Not e' ->
     begin
-    match normalise ctxt e' with
+    match normalise st ctxt e' with
     | True -> False
     | False -> True
     | _ ->
       raise (Eval_Exc ("Cannot normalise to Boolean value", Some e', None))
     end
   | Equals (e1, e2) ->
-    if normalise ctxt e1 = normalise ctxt e2 then True else False
+    if normalise st ctxt e1 = normalise st ctxt e2 then True else False
 
   | GreaterThan (e1, e2)
   | LessThan (e1, e2) ->
@@ -281,7 +281,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
       | GreaterThan _ -> (fun i1 i2 -> if i1 > i2 then True else False)
       | LessThan _ -> (fun i1 i2 -> if i1 < i2 then True else False)
       | _ -> failwith "Impossible" in
-    match normalise ctxt e1, normalise ctxt e2 with
+    match normalise st ctxt e1, normalise st ctxt e2 with
     | Int i1, Int i2 -> f i1 i2
     | anomalous, Int _ ->
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
@@ -311,7 +311,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
           General.enlist i1 i2
           |> Crisp_syntax_aux.flick_integer_list)
       | _ -> failwith "Impossible" in
-    match normalise ctxt e1, normalise ctxt e2 with
+    match normalise st ctxt e1, normalise st ctxt e2 with
     | Int i1, Int i2 -> f i1 i2
     | anomalous, Int _ ->
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
@@ -325,7 +325,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
 
   | Abs e' ->
     begin
-    match normalise ctxt e' with
+    match normalise st ctxt e' with
     | Int i -> Int (abs i)
     | anomalous ->
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
@@ -334,7 +334,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
 
   | Int_to_address e' ->
     begin
-    match normalise ctxt e' with
+    match normalise st ctxt e' with
     | Int i -> failwith "TODO"
     | anomalous ->
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
@@ -342,30 +342,30 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
     end
   | Address_to_int e' ->
     begin
-    match normalise ctxt e' with
+    match normalise st ctxt e' with
     | IPv4_address (i1, i2, i3, i4) -> failwith "TODO"
     | anomalous ->
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
       raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))
     end
 
-  | ConsList (h, t) -> ConsList (normalise ctxt h, normalise ctxt t)
+  | ConsList (h, t) -> ConsList (normalise st ctxt h, normalise st ctxt t)
   | AppendList (l1, l2) ->
-    let l1' = normalise ctxt l1 in
-    let l2' = normalise ctxt l2 in
+    let l1' = normalise st ctxt l1 in
+    let l2' = normalise st ctxt l2 in
     append_list [] l1' l2'
 
-  | TupleValue es -> TupleValue (List.map (normalise ctxt) es)
+  | TupleValue es -> TupleValue (List.map (normalise st ctxt) es)
 
   | ITE (b, e1, e2_opt) ->
     begin
-    match normalise ctxt b with
-    | True -> normalise ctxt e1
+    match normalise st ctxt b with
+    | True -> normalise st ctxt e1
     | False ->
       begin
       match e2_opt with
       | None -> Crisp_syntax.flick_unit_value
-      | Some e2 -> normalise ctxt e2
+      | Some e2 -> normalise st ctxt e2
       end
     | anomalous ->
       let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
@@ -373,16 +373,16 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
     end
 
   | Record fields ->
-    Record (List.map (fun (l, e) -> (l, normalise ctxt e)) fields)
+    Record (List.map (fun (l, e) -> (l, normalise st ctxt e)) fields)
 
   | CaseOf (e', cases) ->
     begin
-    let e'norm = normalise ctxt e' in
+    let e'norm = normalise st ctxt e' in
     let disj, arg =
-      match normalise ctxt e' with
+      match normalise st ctxt e' with
       | Functor_App (f_name, [Exp e]) ->
         (*NOTE would be prudent to check if the functor is indeed a disjunct*)
-        (f_name, normalise ctxt e)
+        (f_name, normalise st ctxt e)
       | anomalous ->
         let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
         raise (Eval_Exc ("Cannot normalise to disjunct. Got " ^ anomalous_s, Some e', None)) in
@@ -399,7 +399,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
     | [(Functor_App (_, [Exp (Variable v)]), body_e)] ->
       (*Replace "Variable v" with "arg" in body_e*)
       Crisp_syntax_aux.subst_var v arg body_e
-      |> normalise ctxt
+      |> normalise st ctxt
     | _ ->
       let e'_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e' in
       raise (Eval_Exc ("Found multiple cases for this normal disjunct: " ^ e'_s, Some e'norm, None))
@@ -408,13 +408,13 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
   (*This work for both tuples and records.*)
   | RecordProjection (e', l) ->
     begin
-    let e'norm = normalise ctxt e' in
+    let e'norm = normalise st ctxt e' in
     let e'norm_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e'norm in
     let project_from fields =
       match List.filter (fun (field_name, _) -> field_name = l) fields with
       | [] ->
         raise (Eval_Exc ("Cannot find label called " ^ l ^ " in expression: " ^ e'norm_s, Some e, None))
-      | [(_, field_e)] -> normalise ctxt field_e
+      | [(_, field_e)] -> normalise st ctxt field_e
       | _ ->
         raise (Eval_Exc ("Found multiple labels called " ^ l ^ " in expression: " ^ e'norm_s, Some e, None)) in
     match e'norm with
@@ -431,7 +431,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
 
   | RecordUpdate (record_e, (field_name, field_body_e)) ->
     begin
-    let e'norm = normalise ctxt record_e in
+    let e'norm = normalise st ctxt record_e in
     let e'norm_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e'norm in
     match e'norm with
     | Record fields ->
@@ -440,7 +440,7 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
           if field_l = field_name then
             if updated then
               raise (Eval_Exc ("Cannot record-update this normal expression: " ^ e'norm_s, Some e, None))
-            else (true, (field_name, normalise ctxt field_body_e) :: field_acc)
+            else (true, (field_name, normalise st ctxt field_body_e) :: field_acc)
           else (updated, field :: field_acc)) (List.rev fields) (false, []) in
       if updated then
         Record fields'
@@ -453,35 +453,35 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
   | Map (v, l, body, unordered) ->
     (*FIXME "unordered" not taken into account*)
     let l' =
-      normalise ctxt l
+      normalise st ctxt l
       |> interpret_flick_list in
     List.map (fun e ->
       Crisp_syntax_aux.subst_var v e body
-      |> normalise ctxt) l'
+      |> normalise st ctxt) l'
     |> Crisp_syntax_aux.flick_list
 
   | Iterate (v, l, acc_opt, body, unordered) ->
     (*FIXME "unordered" not taken into account*)
     begin
     let l' =
-      normalise ctxt l
+      normalise st ctxt l
       |> interpret_flick_list in
     let acc_opt' =
       match acc_opt with
       | None -> None
-      | Some (l, e) -> Some (l, normalise ctxt e) in
+      | Some (l, e) -> Some (l, normalise st ctxt e) in
     let result =
       List.fold_right (fun e acc_opt ->
         match acc_opt with
         | None ->
           ignore (Crisp_syntax_aux.subst_var v e body
-                  |> normalise ctxt);
+                  |> normalise st ctxt);
           None
         | Some (acc_l, acc_e) ->
           let acc' =
             Crisp_syntax_aux.subst_var v e body
             |> Crisp_syntax_aux.subst_var acc_l acc_e
-            |> normalise ctxt in
+            |> normalise st ctxt in
           Some (acc_l, acc')) l' acc_opt' in
     match result with
     | None -> flick_unit_value
@@ -490,17 +490,17 @@ let rec normalise (ctxt : runtime_ctxt) (e : expression) : expression =
 
   | Seq (Meta_quoted mis, e') ->
     (*FIXME currently ignoring meta-quoted instructions*)
-    normalise ctxt e'
+    normalise st ctxt e'
   | Meta_quoted _ ->
     raise (Eval_Exc ("Cannot normalise meta_quoted expressions alone -- add some other expression after them, and normalisation should succeed.", Some e, None))
 
   | Seq (e1, e2) ->
-    ignore(normalise ctxt e1);
-    normalise ctxt e2
+    ignore(normalise st ctxt e1);
+    normalise st ctxt e2
 
   | Hole -> raise (Eval_Exc ("Cannot normalise", Some e, None))
 
 (*Translate an arbitrary expression into a value*)
-let evaluate (ctxt : runtime_ctxt) (e : expression) : typed_value =
-  normalise ctxt e
+let evaluate (st : State.state) (ctxt : runtime_ctxt) (e : expression) : typed_value =
+  normalise st ctxt e
   |> evaluate_value ctxt

@@ -128,7 +128,7 @@ match !cfg.source_file with
         match rtv_opt with
         | None -> ""
         | Some v ->
-          "involving runtime value:" ^ Eval.string_of_typed_value v ^ "\n" in
+          "involving runtime value:" ^ Runtime.string_of_typed_value v ^ "\n" in
       print_endline
        ("Evaluation error: " ^ msg ^ "\n" ^
         "in file " ^ source_file ^ "\n" ^

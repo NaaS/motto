@@ -507,14 +507,43 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
           List.map (function
             | Exp e -> normalise st ctxt e
             | Named _ -> failwith "TODO") fun_args in
-        failwith "TODO"
-(*
-    get function -- set up handlers for exceptions, and "connect" state
-    get function body, and substitute actual parameters into it
-    let result = normalise the body
-    detach state, and unwind exception handlers
-    return result
-*)
+        let (stata, body, excs) =
+          (*Get function implementation*)
+          match List.filter (fun (name, _) -> name = function_name) ctxt.exec_table with
+          | [] ->
+            raise (Eval_Exc ("Could not retrieve implementation from runtime context, for functor:" ^ function_name, Some e, None))
+          | [(_, Function {fn_body; _})] ->
+            begin
+            match fn_body with
+            | ProcessBody (stata, body, excs) -> (stata, body, excs)
+            end
+          | [(_, Process {process_body; _})] ->
+            raise (Eval_Exc ("Calling processes not supported, for functor:" ^ function_name, Some e, None)) in
+        let ((chans, arg_tys), ret_tys) =
+          match lookup_function_type st function_name with
+          | None ->
+            raise (Eval_Exc ("Could not retrieve type from symbol table, for functor:" ^ function_name, Some e, None))
+          | Some ft -> Crisp_syntax_aux.extract_function_types ft in
+        assert (chans = []);
+        let formal_arg_names =
+          List.map (fun ty ->
+            match Crisp_syntax_aux.label_of_type ty with
+            | None ->
+              let ty_s = type_value_to_string true false min_indentation ty in
+              raise (Eval_Exc ("Missing label for parameter typed " ^ ty_s ^ " for functor " ^ function_name, Some e, None))
+            | Some label -> label) arg_tys in
+
+        (*FIXME currently the function set-up and calling isn't implemented properly.
+            What remains to be done:
+            - set up handlers for exceptions, and "connect" function's state
+            - after the function body has been normalised, detach state, and unwind exception handlers.
+        *)
+        List.fold_right (fun (v, arg) body ->
+          (*Substitute formal for actual parameters in the function body*)
+          Crisp_syntax_aux.subst_var v arg body)
+         (List.combine formal_arg_names normal_arg_es) body
+        (*Normalise the function body*)
+        |> normalise st ctxt
         end
       | _ ->
         raise (Eval_Exc ("Functor " ^ function_name ^ " had inconsistent identifier kind " ^

@@ -174,7 +174,14 @@ let check_distinct_parameter_names (st : state) : state =
     end
   in st
 
-let compile (cfg : Config.configuration ref) (program : Crisp_syntax.program) : (string * string) list =
+(*Parse a file and expect to find a program in it*)
+let parse_program source_file =
+  Crisp_parse.parse_file source_file
+  |> (fun p -> match p with
+       | Crisp_syntax.Program p -> p
+       | _ -> failwith "Source file does not contain a program")
+
+let front_end (cfg : Config.configuration ref) (program : Crisp_syntax.program) =
   expand_includes !cfg.Config.include_directories program
   |> selfpair
   |> apfst (collect_decl_info initial_state)
@@ -185,8 +192,9 @@ let compile (cfg : Config.configuration ref) (program : Crisp_syntax.program) : 
        State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types) true st
        |> print_endline;
        data))
-  (*FIXME Functorise to take backend-specific code as parameter*)
-  |> (fun x ->
-        if !Config.cfg.Config.translate then
-          uncurry Icl_backend.translate x
-        else [])
+
+(*FIXME Functorise to take backend-specific code as parameter*)
+let back_end (cfg : Config.configuration ref) inputs : (string * string) list =
+  if !Config.cfg.Config.translate then
+    uncurry Icl_backend.translate inputs
+  else []

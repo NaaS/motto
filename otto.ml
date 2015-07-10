@@ -100,11 +100,9 @@ match !cfg.source_file with
 | Some source_file ->
   begin
   try
-    Crisp_parse.parse_file source_file
-    |> (fun p -> match p with
-         | Crisp_syntax.Program p -> p
-         | _ -> failwith "Source file does not contain a program")
-    |> Compiler.compile cfg
+    Compiler.parse_program source_file
+    |> Compiler.front_end cfg
+    |> Compiler.back_end cfg
     |> Output.write_files !cfg.output_location
   with Type_infer.Type_Inference_Exc (msg, e, st) ->
     if !cfg.unexceptional then exit 1

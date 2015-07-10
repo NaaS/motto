@@ -84,3 +84,10 @@ let enlist (from : int) (until : int) : int list =
     if cursor = until then List.rev acc
     else enlist' (cursor :: acc) (cursor + 1) in
   enlist' [] from
+
+(*Like fold_map, but generates a tuple containing the various outputs, rather than
+  a list. Its neater to use this function if we only have a few (e.g., 2)
+  applications of f.*)
+let (||>) ((x', st) : 'x * 'st) ((f, y) : ('st -> 'x -> ('x * 'st)) * 'x) : ('x * 'x * 'st) =
+  let (y', st') = f st y in
+  (x', y', st')

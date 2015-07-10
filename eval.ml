@@ -489,6 +489,52 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     | Some (_, e) -> e
     end
 
+  | Functor_App (function_name, fun_args) ->
+    begin
+    (*Determine whether this is a function call, or disjunct.
+      If the latter, then it's already a value -- cannot be reduced further.*)
+    match lookup_term_data (Term Undetermined) st.term_symbols function_name with
+    | None ->
+      raise (Eval_Exc ("Could not retrieve metadata from symbol table, for functor:" ^ function_name, Some e, None))
+    | Some (_, {identifier_kind; _}) ->
+      begin
+      match identifier_kind with
+      | Disjunct _ -> e
+      | Function_Name ->
+        begin
+        let normal_arg_es =
+          (*normalise each actual parameter*)
+          List.map (function
+            | Exp e -> normalise st ctxt e
+            | Named _ -> failwith "TODO") fun_args in
+        failwith "TODO"
+(*
+    get function -- set up handlers for exceptions, and "connect" state
+    get function body, and substitute actual parameters into it
+    let result = normalise the body
+    detach state, and unwind exception handlers
+    return result
+*)
+        end
+      | _ ->
+        raise (Eval_Exc ("Functor " ^ function_name ^ " had inconsistent identifier kind " ^
+               string_of_identifier_kind identifier_kind, Some e, None))
+      end
+    end
+
+(*
+  | LocalDef of typing * expression (*def value_name : type = expression*)
+  | Update of value_name * expression (*value_name := expression*)
+  (*value_name[idx] := expression*)
+  | UpdateIndexable of value_name * expression * expression
+
+  | IndexableProjection of label * expression
+
+  | Send of expression * expression
+  | Receive of expression * expression
+  | Exchange of expression * expression
+*)
+
   | Seq (Meta_quoted mis, e') ->
     (*FIXME currently ignoring meta-quoted instructions*)
     normalise st ctxt e'

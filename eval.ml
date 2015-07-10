@@ -586,7 +586,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     begin
     let e', ctxt' = normalise st ctxt e in
     let ctxt'' = { ctxt' with
-      (*NOTE we don't evict previous mappins of v*)
+      (*NOTE we don't evict previous mappings of v*)
       value_table = (v, evaluate_value ctxt' e') :: ctxt'.value_table } in
     e', ctxt''
     end

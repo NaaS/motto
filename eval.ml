@@ -101,23 +101,11 @@ let string_of_runtime_ctxt ?indentation:(indentation : int = 0)
     let except_print excepts =
       List.map (fun (l, e) ->
         l ^ " = " ^ Crisp_syntax.expression_to_string 0 e) excepts in
-(*
-    List.fold_right (fun (scope_label, excs) acc ->
-      General.indn indentation ^ "scope" ^ scope_label ^ " : " ^
-       acc ^ print_list (General.indn (indentation + indentation_step)) (except_print excs) ^ "\n")
-        (List.combine scope_counts ctxt.except_table) "" in
-*)
     List.map (fun (scope_label, excs) ->
       General.indn indentation ^ "scope" ^ scope_label ^ " : " ^
        print_list (General.indn (indentation + indentation_step)) (except_print excs))
         (List.combine scope_counts ctxt.except_table) in
   let state =
-(*
-    List.fold_right (fun (scope_label, vt) acc ->
-      General.indn indentation ^ "scope" ^ scope_label ^ " : " ^
-       acc ^ print_list (General.indn (indentation + indentation_step)) (value_table vt) ^ "\n")
-        ctxt.state "" in
-*)
     List.map (fun (scope_label, vt) ->
       General.indn indentation ^ "scope" ^ scope_label ^ " : " ^
        print_list (General.indn (indentation + indentation_step)) (strlist_of_value_table vt))

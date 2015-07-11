@@ -1,5 +1,5 @@
 (*
-   Interactive runtime for Flick programs.
+   Interactive/scriptable runtime for Flick programs.
    Nik Sultana, Cambridge University Computer Lab, July 2015
 *)
 

@@ -59,7 +59,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
               print_endline ("(Moreover type of symbol " ^ v ^ " is being changed from " ^ ty'_s ^ " to " ^ ty_s ^ ")") in
         { st' with term_symbols = List.filter (fun (v', _, _) -> v <> v') st'.term_symbols }
         end in
-    let _, st''' = Naasty_aux.extend_scope_unsafe (Term Value) st'' v in
+    let _, st''' = Naasty_aux.extend_scope_unsafe ~src_ty_opt:(Some ty) (Term Value) st'' v in
     let value = Eval.evaluate_value ctxt e in
     (*Just push new value of "v", without checking if it exists*)
     let ctxt' =

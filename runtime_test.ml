@@ -4,9 +4,6 @@
 *)
 
 open Runtime_inspect
-open State
-open State_aux
-open Runtime_data
 open Crisp_syntax
 
 let _ = run

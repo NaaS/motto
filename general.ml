@@ -130,3 +130,17 @@ let list_split_nth_exc (n : int) (l : 'a list) =
     |> List.combine l in
   let l1, (x, _), l2 = list_split_exc (fun (_, i) -> i = n) l' in
   (List.map fst l1), x, (List.map fst l2)
+
+(*Add an item to an association list.
+  If a v for k doesn't exist, then we simply add (k, v) to l;
+  if a single mapping exists, then it is replaced with (k, v);
+  if more than one mapping already exist, then an exception is raised.*)
+(*FIXME this could be implemented more efficiently*)
+let add_unique_assoc (((k,  _) as pair) : 'a * 'b) (l : ('a * 'b) list) : ('a * 'b) list =
+  match List.filter (fun (k', _) -> k = k') l with
+  | [] -> pair :: l
+  | [(_, _)] ->
+    List.fold_right (fun ((k', _) as pair') acc ->
+      if k = k' then pair :: acc
+      else pair' :: acc) (List.rev l) []
+  | _ -> failwith "add_unique_assoc: found multiple entries for key"

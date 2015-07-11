@@ -77,17 +77,14 @@ let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : de
       end in
   let _, st'' = Naasty_aux.extend_scope_unsafe ~src_ty_opt:(Some ty) (Term ik) st' v in
 
-  (*Update runtime context : Just push new value of "v", without checking if it exists*)
+  (*Update runtime context*)
   let ctxt' =
     if List.mem_assoc v ctxt.Runtime_data.value_table then
-      begin
       print_endline ("Warning: replacing earlier entry for " ^ v ^ " from runtime state");
-      { ctxt with Runtime_data.value_table = List.filter (fun (v', _) -> v <> v') ctxt.Runtime_data.value_table }
-      end
-    else ctxt in
-  let ctxt'' =
-    { ctxt' with Runtime_data.value_table = (v, value) :: ctxt'.Runtime_data.value_table } in
-  (st'', ctxt'')
+    { ctxt with Runtime_data.value_table =
+        let pair = (v, value) in
+        General.add_unique_assoc pair ctxt.Runtime_data.value_table } in
+  (st'', ctxt')
 
 (*Lift operation on a channel's contents to the level of channel_types.*)
 let channel_fun v dir idx_opt (operation_verb : string) (f : channel_direction -> (Runtime_data.typed_value list * Runtime_data.typed_value list) -> (Runtime_data.typed_value list * Runtime_data.typed_value list)) st ctxt =
@@ -168,15 +165,16 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
             raise (Runtime_inspect_exc ("Entry in symbol table for " ^ v ^ " is typed " ^ ty'_s ^ " but type of " ^ e_s ^ " is " ^ ty_s))
         end in
     let value = Eval.evaluate_value ctxt e in
-    (*Just push new value of "v", and removing earlier value*)
+
+    (*Update runtime context*)
     let ctxt' =
-      if List.mem_assoc v ctxt.Runtime_data.value_table then
-        { ctxt with Runtime_data.value_table = List.filter (fun (v', _) -> v <> v') ctxt.Runtime_data.value_table }
-      else
-        raise (Runtime_inspect_exc ("Symbol " ^ v ^ " has been declared previously, but not defined")) in
-    let ctxt'' =
-      { ctxt' with Runtime_data.value_table = (v, value) :: ctxt'.Runtime_data.value_table } in
-    (st, ctxt'')
+      if not (List.mem_assoc v ctxt.Runtime_data.value_table) then
+        raise (Runtime_inspect_exc ("Symbol " ^ v ^ " has been declared previously, but not defined"));
+      { ctxt with Runtime_data.value_table =
+          let pair = (v, value) in
+          General.add_unique_assoc pair ctxt.Runtime_data.value_table } in
+    (st, ctxt')
+
 
   | Load file_path ->
     let st', (_, fn_decls, proc_decls) =

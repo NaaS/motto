@@ -136,4 +136,4 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
 (*Evaluate a list of inspect-instructions*)
 let evals (st : state) (ctxt : Runtime_data.runtime_ctxt) (is : inspect_instruction list) : (state * Runtime_data.runtime_ctxt) =
   List.fold_right (fun instr (st, ctxt) ->
-    eval st ctxt instr) is (st, ctxt)
+    eval st ctxt instr) (List.rev is) (st, ctxt)

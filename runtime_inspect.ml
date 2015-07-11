@@ -116,8 +116,17 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
   | Close_channel v ->
   | Q_channel (v, e_s) ->
   | Deq_channel v ->
-  | Eval e_s ->
 *)
+  | Eval e_s ->
+    let e =
+      match Crisp_parse.parse_string ("(| " ^ e_s ^ "|)") with
+      | Expression e -> e
+      | _ ->
+        raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
+    let value, ctxt' = Eval.evaluate st ctxt e in
+    print_endline (e_s ^ " ~> " ^ Runtime_data.string_of_typed_value value);
+    (st, ctxt')
+
   | MI mi ->
     begin
     match mi with

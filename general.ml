@@ -91,3 +91,42 @@ let enlist (from : int) (until : int) : int list =
 let (||>) ((x', st) : 'x * 'st) ((f, y) : ('st -> 'x -> ('x * 'st)) * 'x) : ('x * 'x * 'st) =
   let (y', st') = f st y in
   (x', y', st')
+
+(*Split a list at the point where the given predicate is satisfied, if such a
+  point exists.*)
+let list_split (p : 'a -> bool) (l : 'a list) : 'a list * 'a option * 'a list =
+  let rec list_split' (p : 'a -> bool) (l : 'a list) ((l1, x_opt, l2) : ('a list * 'a option * 'a list)) : 'a list * 'a option * 'a list =
+    match l with
+    | [] -> (List.rev l1, x_opt, List.rev l2)
+    | y :: l' ->
+      if p y then
+        match x_opt with
+        | None ->
+          assert (l2 = []);
+          list_split' p l' (l1, Some y, l2)
+        | Some _ ->
+          list_split' p l' (l1, x_opt, y :: l2)
+      else
+        match x_opt with
+        | None ->
+          assert (l2 = []);
+          list_split' p l' (y :: l1, x_opt, l2)
+        | Some _ ->
+          list_split' p l' (l1, x_opt, y :: l2) in
+  list_split' p l ([], None, [])
+
+(*Split a list, or raise an exception if the list cannot be split*)
+let list_split_exc (p : 'a -> bool) (l : 'a list) : 'a list * 'a * 'a list =
+  match list_split p l with
+  | (l1, Some x, l2) -> (l1, x, l2)
+  | _ -> failwith "list_split_exc: predicate not matched"
+
+(*Split a list at the nth item.
+  (We start counting from 0)*)
+let list_split_nth_exc (n : int) (l : 'a list) =
+  assert (n < List.length l);
+  let l' : ('a * int) list =
+    enlist 0 (List.length l)
+    |> List.combine l in
+  let l1, (x, _), l2 = list_split_exc (fun (_, i) -> i = n) l' in
+  (List.map fst l1), x, (List.map fst l2)

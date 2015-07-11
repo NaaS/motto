@@ -157,6 +157,7 @@ rule main = parse
   | "ref" {TYPE_REF}
 
   | "(|" {FAT_BRACKET_OPEN}
+  | "(type|" {FAT_TYPE_BRACKET_OPEN}
   | "|)" {FAT_BRACKET_CLOSE}
 
   | "@:" {META_OPEN}

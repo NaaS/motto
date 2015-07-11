@@ -29,6 +29,9 @@ type inspect_instruction =
     (*execute some meta-instruction, e.g., to show the whole runtime context,
       or specific parts of it, or the symbol_table*)
   | MI of meta_instruction
+  (*FIXME need command to start and stop processes;
+          also, how to define how they are connected with channels?
+          and what resources they use?*)
 
 (*Evaluate a single inspect-instruction*)
 let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instruction) : (state * Runtime_data.runtime_ctxt) =

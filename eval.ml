@@ -507,7 +507,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
   | Hole -> raise (Eval_Exc ("Cannot normalise", Some e, None))
 
 (*Translate an arbitrary expression into a value*)
-let evaluate (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value =
+let evaluate (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value * runtime_ctxt =
   normalise st ctxt e
   |> swap
-  |> uncurry evaluate_value
+  |> selfpair
+  |> apsnd fst
+  |> apfst (uncurry evaluate_value)

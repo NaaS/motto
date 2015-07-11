@@ -33,6 +33,54 @@ type inspect_instruction =
           also, how to define how they are connected with channels?
           and what resources they use?*)
 
+type declaration =
+  | Binding of expression * type_value
+  | Channel of channel_type
+
+let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : declaration) : (state * Runtime_data.runtime_ctxt) =
+  let ty, ik, value =
+     match d with
+     | Binding (e, ty) -> ty, Value, Eval.evaluate_value ctxt e
+     | Channel cty ->
+         let value =
+           match cty with
+           | ChannelSingle _ -> Runtime_data.ChannelSingle ([], [])
+           | ChannelArray _ -> Runtime_data.ChannelArray [] (*FIXME what size array?*) in
+         ChanType cty, Channel_Name, Runtime_data.ChanType value in
+  (*Remove binding of "v" if it exists*)
+  let st' =
+    match lookup_term_data (Term ik) st.term_symbols v with
+    | None -> st
+    | Some (_, md) ->
+      begin
+      print_endline ("Warning: replacing earlier entry for " ^ v ^ " from symbol table");
+      let _ =
+        match md.source_type with
+        | None ->
+          raise (Runtime_inspect_exc ("Found entry in symbol table, but no specific type for " ^ v))
+        | Some ty' ->
+          if ty = ty' then ()
+          else
+            let ty_s = type_value_to_string true false min_indentation ty in
+            let ty'_s = type_value_to_string true false min_indentation ty' in
+            print_endline ("(Moreover type of symbol " ^ v ^ " is being changed from " ^ ty'_s ^ " to " ^ ty_s ^ ")") in
+      { st with term_symbols = List.filter (fun (v', _, _) -> v <> v') st.term_symbols }
+      end in
+  let _, st'' = Naasty_aux.extend_scope_unsafe ~src_ty_opt:(Some ty) (Term ik) st' v in
+
+  (*Update runtime context : Just push new value of "v", without checking if it exists*)
+  let ctxt' =
+    if List.mem_assoc v ctxt.Runtime_data.value_table then
+      begin
+      print_endline ("Warning: replacing earlier entry for " ^ v ^ " from runtime state");
+      { ctxt with Runtime_data.value_table = List.filter (fun (v', _) -> v <> v') ctxt.Runtime_data.value_table }
+      end
+    else ctxt in
+  let ctxt'' =
+    { ctxt' with Runtime_data.value_table = (v, value) :: ctxt'.Runtime_data.value_table } in
+  (st'', ctxt'')
+
+
 (*Evaluate a single inspect-instruction*)
 let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instruction) : (state * Runtime_data.runtime_ctxt) =
   match i with
@@ -43,38 +91,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
     let ty, st' = Type_infer.ty_of_expr st e in
-    (*Remove binding of "v" if it exists*)
-    let st'' =
-      match lookup_term_data (Term Value) st'.term_symbols v with
-      | None -> st'
-      | Some (_, md) ->
-        begin
-        print_endline ("Warning: replacing earlier entry for " ^ v ^ " from symbol table");
-        let _ =
-          match md.source_type with
-          | None ->
-            raise (Runtime_inspect_exc ("Found entry in symbol table, but no specific type for " ^ v))
-          | Some ty' ->
-            if ty = ty' then ()
-            else
-              let ty_s = type_value_to_string true false min_indentation ty in
-              let ty'_s = type_value_to_string true false min_indentation ty' in
-              print_endline ("(Moreover type of symbol " ^ v ^ " is being changed from " ^ ty'_s ^ " to " ^ ty_s ^ ")") in
-        { st' with term_symbols = List.filter (fun (v', _, _) -> v <> v') st'.term_symbols }
-        end in
-    let _, st''' = Naasty_aux.extend_scope_unsafe ~src_ty_opt:(Some ty) (Term Value) st'' v in
-    let value = Eval.evaluate_value ctxt e in
-    (*Just push new value of "v", without checking if it exists*)
-    let ctxt' =
-      if List.mem_assoc v ctxt.Runtime_data.value_table then
-        begin
-        print_endline ("Warning: replacing earlier entry for " ^ v ^ " from runtime state");
-        { ctxt with Runtime_data.value_table = List.filter (fun (v', _) -> v <> v') ctxt.Runtime_data.value_table }
-        end
-      else ctxt in
-    let ctxt'' =
-      { ctxt' with Runtime_data.value_table = (v, value) :: ctxt'.Runtime_data.value_table } in
-    (st''', ctxt'')
+    declare v st' ctxt (Binding (e, ty))
 
   | Set (v, e_s) ->
     let e =

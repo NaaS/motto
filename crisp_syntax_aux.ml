@@ -598,3 +598,9 @@ let rec subst_var (v : string) (u : expression) (e : expression) : expression =
       | None -> None
       | Some (l, acc_e) -> Some (l, subst_var v u acc_e) in
     Iterate (l, subst_var v u e, acc_opt', subst_var v u body_e, b)
+
+let name_of_decl = function
+  | Type {type_name; _} -> type_name
+  | Function {fn_name; _} -> fn_name
+  | Process {process_name; _} -> process_name
+  | d -> failwith ("name_of_decl : cannot extract name from declaration: " ^ toplevel_decl_to_string d)

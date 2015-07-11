@@ -9,7 +9,7 @@ open State_aux
 open Runtime_data
 open Crisp_syntax
 
-let (st, ctxt) = evals initial_state initial_runtime_ctxt
+let _ = run
   [Load "tests/simple_function.cp";
    Load "tests/maps_iterations2.cp";
    Declare_value ("zoo", "100");

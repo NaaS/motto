@@ -112,10 +112,17 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
     (st, ctxt'')
 
   | Load file_path ->
-    let st', _ =
+    let st', (_, fn_decls, proc_decls) =
       Compiler.parse_program file_path
       |> Compiler.front_end ~st:st Config.cfg in
-    (st', ctxt(*FIXME*))
+    let exec_table_extension =
+      List.map Crisp_project.content_of [fn_decls; proc_decls]
+      |> List.concat
+      |> List.map (fun d -> (Crisp_syntax_aux.name_of_decl d, d)) in
+    let ctxt' =
+      { ctxt with Runtime_data.exec_table =
+         exec_table_extension @ ctxt.Runtime_data.exec_table } in
+    (st', ctxt')
 
 (*FIXME currently unsupported
   | Declare_channel v ->

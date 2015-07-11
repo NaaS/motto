@@ -414,7 +414,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
       If the latter, then it's already a value -- cannot be reduced further.*)
     match lookup_term_data (Term Undetermined) st.term_symbols function_name with
     | None ->
-      raise (Eval_Exc ("Could not retrieve metadata from symbol table, for functor:" ^ function_name, Some e, None))
+      raise (Eval_Exc ("Could not retrieve metadata from symbol table, for functor: " ^ function_name, Some e, None))
     | Some (_, {identifier_kind; _}) ->
       begin
       match identifier_kind with
@@ -431,20 +431,20 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
           (*Get function implementation*)
           match List.filter (fun (name, _) -> name = function_name) ctxt.exec_table with
           | [] ->
-            raise (Eval_Exc ("Could not retrieve implementation from runtime context, for functor:" ^ function_name, Some e, None))
+            raise (Eval_Exc ("Could not retrieve implementation from runtime context, for functor: " ^ function_name, Some e, None))
           | [(_, Function {fn_body; _})] ->
             begin
             match fn_body with
             | ProcessBody (stata, body, excs) -> (stata, body, excs)
             end
           | [(_, Process {process_body; _})] ->
-            raise (Eval_Exc ("Calling processes not supported, for functor:" ^ function_name, Some e, None))
+            raise (Eval_Exc ("Calling processes not supported, for functor: " ^ function_name, Some e, None))
           | _ ->
             raise (Eval_Exc ("Invalid declaration found when calling functor:" ^ function_name, Some e, None)) in
         let ((chans, arg_tys), ret_tys) =
           match lookup_function_type st function_name with
           | None ->
-            raise (Eval_Exc ("Could not retrieve type from symbol table, for functor:" ^ function_name, Some e, None))
+            raise (Eval_Exc ("Could not retrieve type from symbol table, for functor: " ^ function_name, Some e, None))
           | Some ft -> Crisp_syntax_aux.extract_function_types ft in
         assert (chans = []);
         let formal_arg_names =

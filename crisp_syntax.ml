@@ -190,15 +190,19 @@ let function_type_to_string (FunType (fd, fr)) =
 type integer = int (*FIXME precision*)
 
 (*FIXME move into separate module?*)
-type compiler_phase = Type_checking_phase
+type compiler_phase =
+  | Type_checking_phase
+  | Interactive_runtime
 let string_of_compiler_phase cp =
   match cp with
   | Type_checking_phase -> "type_checking"
+  | Interactive_runtime -> "interactive_runtime"
 
 (*FIXME move into separate module?*)
 type meta_instruction =
   | Show_symbol_table of compiler_phase option
   | PrintStr of compiler_phase option * string
+  | Show_runtime_ctxt of compiler_phase option
 let meta_instruction_to_string (mi : meta_instruction) =
   let at_contents cp_opt =
     match cp_opt with
@@ -211,6 +215,9 @@ let meta_instruction_to_string (mi : meta_instruction) =
     "print (\"" ^ what ^ "\")" ^ at_contents cp_opt
   | PrintStr (cp_opt, s) ->
     "print (\"" ^ s ^ "\")" ^ at_contents cp_opt
+  | Show_runtime_ctxt cp_opt ->
+    let what = "runtime_context" in
+    "print (\"" ^ what ^ "\")" ^ at_contents cp_opt
 
 type fun_arg =
   | Exp of expression
@@ -505,12 +512,21 @@ let rec interpret_e_as_mi (e : expression) =
   match e with
   | Functor_App ("print", [Exp (Variable "symbol_table")]) ->
     Show_symbol_table None
+  | Functor_App ("print", [Exp (Variable "runtime_context")]) ->
+    Show_runtime_ctxt None
   | Functor_App ("print", [Exp (Str s)]) -> PrintStr (None, s)
-  | Functor_App ("at", [Exp (Variable "type_checking"); Exp e_mi]) ->
+  | Functor_App ("at", [Exp (Variable when_indicator); Exp e_mi]) ->
     begin
+    let time =
+      match when_indicator with
+      | "type_checking" -> Type_checking_phase
+      | "interactive_runtime" -> Interactive_runtime
+      | _ -> failwith ("Unrecognised point for meta-instruction: " ^ when_indicator) in
     match interpret_e_as_mi e_mi with
-    | Show_symbol_table None -> Show_symbol_table (Some Type_checking_phase)
-    | PrintStr (None, s) -> PrintStr (Some Type_checking_phase, s)
+    | Show_symbol_table None -> Show_symbol_table (Some time)
+    | Show_runtime_ctxt None -> Show_runtime_ctxt (Some time)
+    | PrintStr (None, s) -> PrintStr (Some time, s)
+    | mi -> mi
     end
   | _ ->
     failwith ("Unrecognised meta_instruction: " ^

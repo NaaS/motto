@@ -26,6 +26,7 @@ type inspect_instruction =
   | Declare_channel of string * string
     (*close_channel - break a channel (the connected processes should react to this)*)
   | Close_channel of string
+  | Open_channel of string
     (*queue channel value*)
   | Q_channel of string * channel_direction * chan_idx option * string
     (*dequeue channel value*)
@@ -203,6 +204,31 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
         { ctxt with Runtime_data.value_table = List.filter (fun (v', _) -> v <> v') ctxt.Runtime_data.value_table }
       else
         raise (Runtime_inspect_exc ("Could not close channel " ^ v ^ " since it's not open")) in
+    (st, ctxt')
+
+  | Open_channel v ->
+    let cty =
+      match lookup_term_data (Term Channel_Name) st.term_symbols v with
+      | None ->
+        raise (Runtime_inspect_exc ("No entry in symbol table for " ^ v ^ "; this is needed to work out the channel's type"))
+      | Some (_, md) ->
+        begin
+          match md.source_type with
+          | None ->
+            raise (Runtime_inspect_exc ("Found entry in symbol table, but no specific type for " ^ v))
+          | Some (ChanType cty) -> cty
+          | Some _ ->
+            raise (Runtime_inspect_exc ("Channel " ^ v ^ " has a non-channel type in the symbol table"))
+        end in
+    let value =
+      match cty with
+      | ChannelSingle _ -> Runtime_data.ChannelSingle ([], [])
+      | ChannelArray _ -> Runtime_data.ChannelArray [] (*FIXME what size array?*) in
+    let ctxt' =
+      if List.mem_assoc v ctxt.Runtime_data.value_table then
+        raise (Runtime_inspect_exc ("Could not open channel " ^ v ^ " since it's already open"))
+      else
+        { ctxt with Runtime_data.value_table = (v, Runtime_data.ChanType value) :: ctxt.Runtime_data.value_table } in
     (st, ctxt')
 
   | Q_channel (v, dir, idx_opt, e_s) ->

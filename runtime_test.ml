@@ -19,5 +19,7 @@ let _ = run
    Eval "let v' = 2";
    Eval "F (50)";
    Eval "let l' = F (f (v, v' + 1))";
+   Declare_channel ("somechan", "integer/boolean");
+   Declare_channel ("somechan_array", "[integer/boolean]");
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

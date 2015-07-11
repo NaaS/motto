@@ -14,7 +14,7 @@ type inspect_instruction =
     (*set - variable value*)
   | Set of string * string
     (*channel - declare and define channel (in the symbol table and runtime context)*)
-  | Declare_channel of string
+  | Declare_channel of string * string
     (*close_channel - break a channel (the connected processes should react to this)*)
   | Close_channel of string
     (*queue channel value*)
@@ -141,8 +141,15 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
          exec_table_extension @ ctxt.Runtime_data.exec_table } in
     (st', ctxt')
 
+  | Declare_channel (v, cty_s) ->
+    let cty =
+      match Crisp_parse.parse_string ("(type| " ^ cty_s ^ "|)") with
+      | TypeExpr (ChanType cty) -> cty
+      | _ ->
+        raise (Runtime_inspect_exc ("Could not parse into a channel type: " ^ cty_s)) in
+    declare v st ctxt (Channel cty)
+
 (*FIXME currently unsupported
-  | Declare_channel v ->
   | Close_channel v ->
   | Q_channel (v, e_s) ->
   | Deq_channel v ->

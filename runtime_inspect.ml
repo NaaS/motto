@@ -176,7 +176,6 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
           General.add_unique_assoc pair ctxt.Runtime_data.value_table } in
     (st, ctxt')
 
-
   | Load file_path ->
     let st', (_, fn_decls, proc_decls) =
       Compiler.parse_program file_path

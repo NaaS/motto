@@ -24,9 +24,3 @@ let (st, ctxt) = evals initial_state initial_runtime_ctxt
    Eval "let l' = F (f (v, v' + 1))";
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]
-
-(*
-let _ =
-  print_endline (state_to_str false st);
-  print_endline (string_of_runtime_ctxt ctxt)
-*)

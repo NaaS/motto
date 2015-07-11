@@ -86,6 +86,47 @@ let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : de
     { ctxt' with Runtime_data.value_table = (v, value) :: ctxt'.Runtime_data.value_table } in
   (st'', ctxt'')
 
+(*Lift operation on a channel's contents to the level of channel_types.*)
+let channel_fun v dir idx_opt (operation_verb : string) (f : channel_direction -> (Runtime_data.typed_value list * Runtime_data.typed_value list) -> (Runtime_data.typed_value list * Runtime_data.typed_value list)) st ctxt =
+  if List.mem_assoc v ctxt.Runtime_data.value_table then
+    match idx_opt, lookup_term_data (Term Channel_Name) st.term_symbols v with
+    | None, Some (_, {source_type = Some (ChanType (ChannelSingle (rx_ty, tx_ty)))}) ->
+      { ctxt with Runtime_data.value_table = List.map (fun ((v', value) as unchanged) ->
+        if v <> v' then unchanged
+        else
+          match value with
+          | Runtime_data.ChanType (Runtime_data.ChannelSingle (incoming, outgoing)) ->
+            let (incoming', outgoing') = f dir (incoming, outgoing) in
+            (v, Runtime_data.ChanType (Runtime_data.ChannelSingle (incoming', outgoing')))
+          | _ ->
+            (*FIXME give more info*)
+            raise (Runtime_inspect_exc ("Channel value is of the wrong type"))) ctxt.Runtime_data.value_table }
+    | Some idx, Some (_, {source_type = Some (ChanType (ChannelArray (rx_ty, tx_ty, _)))}) ->
+      { ctxt with Runtime_data.value_table = List.map (fun ((v', value) as unchanged) ->
+        if v <> v' then unchanged
+        else
+          match value with
+          | Runtime_data.ChanType (Runtime_data.ChannelArray chans) ->
+            if List.length chans <= idx then
+              (*FIXME give more info*)
+              raise (Runtime_inspect_exc ("idx out of bounds"))
+            else
+              let pre, (incoming, outgoing), post = General.list_split_nth_exc idx chans in
+              let (incoming', outgoing') = f dir (incoming, outgoing) in
+              (v, Runtime_data.ChanType (Runtime_data.ChannelArray (pre @ (incoming', outgoing') :: post)))
+          | _ ->
+            (*FIXME give more info*)
+            raise (Runtime_inspect_exc ("Channel value is of the wrong type"))) ctxt.Runtime_data.value_table }
+    | None, Some (_, {source_type = Some (ChanType (ChannelArray (rx_ty, tx_ty, _)))}) ->
+      raise (Runtime_inspect_exc ("Could not " ^ operation_verb ^ " onto channel array " ^ v ^ " since an index has not been given"))
+    | Some _, Some (_, {source_type = Some (ChanType (ChannelSingle (rx_ty, tx_ty)))}) ->
+      raise (Runtime_inspect_exc ("Could not " ^ operation_verb ^ " onto channel " ^ v ^ " since an index was given, but wasn't needed"))
+    | _, None ->
+      raise (Runtime_inspect_exc ("Channel " ^ v ^ " does not exist in the symbol table (but does exist in the runtime context)"))
+    | _, _ ->
+      raise (Runtime_inspect_exc ("Could not " ^ operation_verb ^ " onto channel " ^ v ^ " since the symbol table appears to contain invalid data"))
+  else
+    raise (Runtime_inspect_exc ("Could not " ^ operation_verb ^ " onto channel " ^ v ^ " since it appears closed"))
 
 (*Evaluate a single inspect-instruction*)
 let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instruction) : (state * Runtime_data.runtime_ctxt) =
@@ -171,51 +212,11 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
     let ctxt'' =
-      if List.mem_assoc v ctxt'.Runtime_data.value_table then
-        match idx_opt, lookup_term_data (Term Channel_Name) st.term_symbols v with
-        | None, Some (_, {source_type = Some (ChanType (ChannelSingle (rx_ty, tx_ty)))}) ->
-          { ctxt' with Runtime_data.value_table = List.map (fun ((v', value) as unchanged) ->
-            if v <> v' then unchanged
-            else
-              match value with
-              | Runtime_data.ChanType (Runtime_data.ChannelSingle (incoming, outgoing)) ->
-                let incoming', outgoing' =
-                  match dir with
-                  | Incoming -> List.rev (e_value :: List.rev incoming), outgoing
-                  | Outgoing -> incoming, List.rev (e_value :: List.rev outgoing) in
-                (v, Runtime_data.ChanType (Runtime_data.ChannelSingle (incoming', outgoing')))
-              | _ ->
-                (*FIXME give more info*)
-                raise (Runtime_inspect_exc ("Channel value is of the wrong type"))) ctxt'.Runtime_data.value_table }
-        | Some idx, Some (_, {source_type = Some (ChanType (ChannelArray (rx_ty, tx_ty, _)))}) ->
-          { ctxt' with Runtime_data.value_table = List.map (fun ((v', value) as unchanged) ->
-            if v <> v' then unchanged
-            else
-              match value with
-              | Runtime_data.ChanType (Runtime_data.ChannelArray chans) ->
-                if List.length chans <= idx then
-                  (*FIXME*)
-                  raise (Runtime_inspect_exc ("idx out of bounds"))
-                else
-                  let pre, (incoming, outgoing), post = General.list_split_nth_exc idx chans in
-                  let incoming', outgoing' =
-                    match dir with
-                    | Incoming -> List.rev (e_value :: List.rev incoming), outgoing
-                    | Outgoing -> incoming, List.rev (e_value :: List.rev outgoing) in
-                  (v, Runtime_data.ChanType (Runtime_data.ChannelArray (pre @ (incoming', outgoing') :: post)))
-              | _ ->
-                (*FIXME give more info*)
-                raise (Runtime_inspect_exc ("Channel value is of the wrong type"))) ctxt'.Runtime_data.value_table }
-        | None, Some (_, {source_type = Some (ChanType (ChannelArray (rx_ty, tx_ty, _)))}) ->
-          raise (Runtime_inspect_exc ("Could not queue onto channel array " ^ v ^ " since an index has not been given"))
-        | Some _, Some (_, {source_type = Some (ChanType (ChannelSingle (rx_ty, tx_ty)))}) ->
-          raise (Runtime_inspect_exc ("Could not queue onto channel " ^ v ^ " since an index was given, but wasn't needed"))
-        | _, None ->
-          raise (Runtime_inspect_exc ("Channel " ^ v ^ " does not exist in the symbol table (but does exist in the runtime context)"))
-        | _, _ ->
-          raise (Runtime_inspect_exc ("Could not queue onto channel " ^ v ^ " since the symbol table appears to contain invalid data"))
-    else
-      raise (Runtime_inspect_exc ("Could not queue onto channel " ^ v ^ " since it appears closed")) in
+      let f dir (incoming, outgoing) =
+        match dir with
+        | Incoming -> List.rev (e_value :: List.rev incoming), outgoing
+        | Outgoing -> incoming, List.rev (e_value :: List.rev outgoing) in
+      channel_fun v dir idx_opt "queue" f st ctxt in
     (st, ctxt'')
 
 (*FIXME  | Deq_channel (v, dir, idx_opt) ->*)

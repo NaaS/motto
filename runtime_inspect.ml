@@ -145,7 +145,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
     | Show_runtime_ctxt None
     | Show_runtime_ctxt (Some Interactive_runtime) ->
       print_endline (Runtime_data.string_of_runtime_ctxt ctxt)
-    | _ -> () (*ignore other MIs*)
+    | _ -> () (*ignore other MIs, since they're not relevant to this part of the compiler*)
     end;
     (st, ctxt)
 

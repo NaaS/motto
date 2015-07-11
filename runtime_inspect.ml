@@ -75,6 +75,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
     let ctxt'' =
       { ctxt' with Runtime_data.value_table = (v, value) :: ctxt'.Runtime_data.value_table } in
     (st''', ctxt'')
+
   | Set (v, e_s) ->
     let e =
       match Crisp_parse.parse_string ("(| " ^ e_s ^ "|)") with
@@ -109,17 +110,20 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
     let ctxt'' =
       { ctxt' with Runtime_data.value_table = (v, value) :: ctxt'.Runtime_data.value_table } in
     (st, ctxt'')
+
   | Load file_path ->
     let st', _ =
       Compiler.parse_program file_path
       |> Compiler.front_end ~st:st Config.cfg in
     (st', ctxt(*FIXME*))
+
 (*FIXME currently unsupported
   | Declare_channel v ->
   | Close_channel v ->
   | Q_channel (v, e_s) ->
   | Deq_channel v ->
 *)
+
   | Eval e_s ->
     let e =
       match Crisp_parse.parse_string ("(| " ^ e_s ^ "|)") with

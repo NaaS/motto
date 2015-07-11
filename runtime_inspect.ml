@@ -117,8 +117,21 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
   | Q_channel (v, e_s) ->
   | Deq_channel v ->
   | Eval e_s ->
-  | MI mi ->
 *)
+  | MI mi ->
+    begin
+    match mi with
+    | Show_symbol_table None
+    | Show_symbol_table (Some Interactive_runtime) ->
+      print_endline (State_aux.state_to_str false st)
+    | PrintStr (None, s)
+    | PrintStr (Some Interactive_runtime, s) -> print_endline s
+    | Show_runtime_ctxt None
+    | Show_runtime_ctxt (Some Interactive_runtime) ->
+      print_endline (Runtime_data.string_of_runtime_ctxt ctxt)
+    | _ -> () (*ignore other MIs*)
+    end;
+    (st, ctxt)
 
 (*Evaluate a list of inspect-instructions*)
 let evals (st : state) (ctxt : Runtime_data.runtime_ctxt) (is : inspect_instruction list) : (state * Runtime_data.runtime_ctxt) =

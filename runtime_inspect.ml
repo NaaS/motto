@@ -13,6 +13,9 @@ type chan_idx = int
 type channel_direction =
   | Incoming
   | Outgoing
+let str_of_channel_direction : channel_direction -> string = function
+  | Incoming -> "incoming"
+  | Outgoing -> "outgoing"
 
 type inspect_instruction =
     (*declare and define variable, and initialise*)
@@ -216,10 +219,35 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
         match dir with
         | Incoming -> List.rev (e_value :: List.rev incoming), outgoing
         | Outgoing -> incoming, List.rev (e_value :: List.rev outgoing) in
-      channel_fun v dir idx_opt "queue" f st ctxt in
+      channel_fun v dir idx_opt "queue" f st ctxt' in
     (st, ctxt'')
 
-(*FIXME  | Deq_channel (v, dir, idx_opt) ->*)
+  | Deq_channel (v, dir, idx_opt) ->
+    (*NOTE this operation discards an element from a queue (or raises an exception
+           if this is not possible). This element cannot be used elsewhere -- you
+           need to use the Flick language (and not the runtime language) for that.*)
+    let ctxt' =
+      let f dir (incoming, outgoing) =
+        match dir with
+        | Incoming ->
+          begin
+          match incoming with
+          | _ :: xs -> xs, outgoing
+          | [] ->
+            raise (Runtime_inspect_exc ("Could not dequeue from " ^ str_of_channel_direction dir ^
+             "direction of channel " ^ v ^ " since it is empty"))
+          end
+        | Outgoing ->
+          (*FIXME DRY principle -- code similar to that used in clause for Incoming*)
+          begin
+          match outgoing with
+          | _ :: xs -> incoming, xs
+          | [] ->
+            raise (Runtime_inspect_exc ("Could not dequeue from " ^ str_of_channel_direction dir ^
+             "direction of channel " ^ v ^ " since it is empty"))
+          end in
+      channel_fun v dir idx_opt "dequeue" f st ctxt in
+    (st, ctxt')
 
   | Eval e_s ->
     let e =

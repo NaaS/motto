@@ -36,7 +36,8 @@ let rec evaluate_value (ctxt : runtime_ctxt) (e : expression) : typed_value =
     let vs' = List.map (fun (l, v) -> (l, evaluate_value ctxt v)) vs in
     RecordType vs'
   | Crisp_syntax.Functor_App (l, [Crisp_syntax.Exp e]) ->
-    (*FIXME if state is passed to this function then could quickly check that l's
+    (*FIXME would be used to check that functor "l" is indeed a disjunct.
+            if state is passed to this function then could quickly check that l's
             identifier_kind is Disjunct*)
     Disjoint_Union (l, evaluate_value ctxt e)
   | _ ->

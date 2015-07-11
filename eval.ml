@@ -123,7 +123,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
       let results_s =
         strlist_of_value_table results
         |> print_list runtime_ctxt_print_indentation in
-      raise (Eval_Exc ("Multiple resolusions for variable's value: " ^ results_s, Some e, None))
+      raise (Eval_Exc ("Multiple resolutions for variable's value: " ^ results_s, Some e, None))
     end
   | TypeAnnotation (e', _) ->
     (*NOTE there's no runtime type-checking -- we ignore the type annotation.

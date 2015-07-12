@@ -63,8 +63,15 @@ let rec devaluate (v : typed_value) : expression =
     let vs' = List.map (fun (l, v) -> (l, devaluate v)) vs in
     Crisp_syntax.Record vs'
   | Disjoint_Union (l, v) -> Crisp_syntax.Functor_App (l, [Crisp_syntax.Exp (devaluate v)])
-  | Reference _ -> failwith "devaluate: TODO"
+  | Reference _ ->
+    (*FIXME i think this should only be applied to an identifier or to an
+            indexable projection (where the index is ground); this results in
+            references being evaluated lazily, transforming a context -- this means
+              that a context needs to be given to, and returned from, devaluate.
+            in Flick, what form do values of type Reference have?*)
+    failwith "devaluate: TODO"
   | Dictionary _
+    (*FIXME could serialise as an association list?*)
   | ChanType _ ->
     raise (Eval_Exc ("Cannot represent as Flick expression", None, Some v))
 

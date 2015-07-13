@@ -10,13 +10,6 @@ exception Runtime_inspect_exc of string
 
 type chan_idx = int
 
-type channel_direction =
-  | Incoming
-  | Outgoing
-let str_of_channel_direction : channel_direction -> string = function
-  | Incoming -> "incoming"
-  | Outgoing -> "outgoing"
-
 type inspect_instruction =
     (*declare and define variable, and initialise*)
   | Declare_value of string * string
@@ -28,9 +21,9 @@ type inspect_instruction =
   | Close_channel of string
   | Open_channel of string
     (*queue channel value*)
-  | Q_channel of string * channel_direction * chan_idx option * string
+  | Q_channel of string * Runtime_data.channel_direction * chan_idx option * string
     (*dequeue channel value*)
-  | Deq_channel of string * channel_direction * chan_idx option
+  | Deq_channel of string * Runtime_data.channel_direction * chan_idx option
     (*load - Flick program from file*)
   | Load of string
     (*Evaluate a Flick expression.
@@ -86,48 +79,6 @@ let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : de
         let pair = (v, value) in
         General.add_unique_assoc pair ctxt.Runtime_data.value_table } in
   (st'', ctxt')
-
-(*Lift operation on a channel's contents to the level of channel_types.*)
-let channel_fun v dir idx_opt (operation_verb : string) (f : channel_direction -> (Runtime_data.typed_value list * Runtime_data.typed_value list) -> (Runtime_data.typed_value list * Runtime_data.typed_value list)) st ctxt =
-  if List.mem_assoc v ctxt.Runtime_data.value_table then
-    match idx_opt, lookup_term_data (Term Channel_Name) st.term_symbols v with
-    | None, Some (_, {source_type = Some (ChanType (ChannelSingle (rx_ty, tx_ty)))}) ->
-      { ctxt with Runtime_data.value_table = List.map (fun ((v', value) as unchanged) ->
-        if v <> v' then unchanged
-        else
-          match value with
-          | Runtime_data.ChanType (Runtime_data.ChannelSingle (incoming, outgoing)) ->
-            let (incoming', outgoing') = f dir (incoming, outgoing) in
-            (v, Runtime_data.ChanType (Runtime_data.ChannelSingle (incoming', outgoing')))
-          | _ ->
-            (*FIXME give more info*)
-            raise (Runtime_inspect_exc ("Channel value is of the wrong type"))) ctxt.Runtime_data.value_table }
-    | Some idx, Some (_, {source_type = Some (ChanType (ChannelArray (rx_ty, tx_ty, _)))}) ->
-      { ctxt with Runtime_data.value_table = List.map (fun ((v', value) as unchanged) ->
-        if v <> v' then unchanged
-        else
-          match value with
-          | Runtime_data.ChanType (Runtime_data.ChannelArray chans) ->
-            if List.length chans <= idx then
-              (*FIXME give more info*)
-              raise (Runtime_inspect_exc ("idx out of bounds"))
-            else
-              let pre, (incoming, outgoing), post = General.list_split_nth_exc idx chans in
-              let (incoming', outgoing') = f dir (incoming, outgoing) in
-              (v, Runtime_data.ChanType (Runtime_data.ChannelArray (pre @ (incoming', outgoing') :: post)))
-          | _ ->
-            (*FIXME give more info*)
-            raise (Runtime_inspect_exc ("Channel value is of the wrong type"))) ctxt.Runtime_data.value_table }
-    | None, Some (_, {source_type = Some (ChanType (ChannelArray (rx_ty, tx_ty, _)))}) ->
-      raise (Runtime_inspect_exc ("Could not " ^ operation_verb ^ " onto channel array " ^ v ^ " since an index has not been given"))
-    | Some _, Some (_, {source_type = Some (ChanType (ChannelSingle (rx_ty, tx_ty)))}) ->
-      raise (Runtime_inspect_exc ("Could not " ^ operation_verb ^ " onto channel " ^ v ^ " since an index was given, but wasn't needed"))
-    | _, None ->
-      raise (Runtime_inspect_exc ("Channel " ^ v ^ " does not exist in the symbol table (but does exist in the runtime context)"))
-    | _, _ ->
-      raise (Runtime_inspect_exc ("Could not " ^ operation_verb ^ " onto channel " ^ v ^ " since the symbol table appears to contain invalid data"))
-  else
-    raise (Runtime_inspect_exc ("Could not " ^ operation_verb ^ " onto channel " ^ v ^ " since it appears closed"))
 
 (*Evaluate a single inspect-instruction*)
 let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instruction) : (state * Runtime_data.runtime_ctxt) =
@@ -240,9 +191,9 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
     let ctxt'' =
       let f dir (incoming, outgoing) =
         match dir with
-        | Incoming -> List.rev (e_value :: List.rev incoming), outgoing
-        | Outgoing -> incoming, List.rev (e_value :: List.rev outgoing) in
-      channel_fun v dir idx_opt "queue" f st ctxt' in
+        | Runtime_data.Incoming -> List.rev (e_value :: List.rev incoming), outgoing
+        | Runtime_data.Outgoing -> incoming, List.rev (e_value :: List.rev outgoing) in
+      Runtime_data.channel_fun v dir idx_opt "queue" (fun x -> Runtime_inspect_exc x) f st ctxt' in
     (st, ctxt'')
 
   | Deq_channel (v, dir, idx_opt) ->
@@ -252,24 +203,27 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
     let ctxt' =
       let f dir (incoming, outgoing) =
         match dir with
-        | Incoming ->
+        | Runtime_data.Incoming ->
           begin
           match incoming with
           | _ :: xs -> xs, outgoing
           | [] ->
-            raise (Runtime_inspect_exc ("Could not dequeue from " ^ str_of_channel_direction dir ^
+            raise (Runtime_inspect_exc ("Could not dequeue from " ^
+             Runtime_data.str_of_channel_direction dir ^
              "direction of channel " ^ v ^ " since it is empty"))
           end
-        | Outgoing ->
+        | Runtime_data.Outgoing ->
           (*FIXME DRY principle -- code similar to that used in clause for Incoming*)
           begin
           match outgoing with
           | _ :: xs -> incoming, xs
           | [] ->
-            raise (Runtime_inspect_exc ("Could not dequeue from " ^ str_of_channel_direction dir ^
+            raise (Runtime_inspect_exc ("Could not dequeue from " ^
+             Runtime_data.str_of_channel_direction dir ^
              "direction of channel " ^ v ^ " since it is empty"))
           end in
-      channel_fun v dir idx_opt "dequeue" f st ctxt in
+      Runtime_data.channel_fun v dir idx_opt "dequeue" (fun x ->
+        Runtime_inspect_exc x) f st ctxt in
     (st, ctxt')
 
   | Eval e_s ->

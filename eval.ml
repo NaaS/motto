@@ -545,8 +545,46 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
       |> devaluate in
     e, ctxt'
 
+  | Send (chan_e, e) ->
+    (*We can normalise chan_e, reducing it to a reference to a channel
+      (in the form of a Variable or an IndexableProjection, but we cannot
+      evaluate it, since channels are not values in this language*)
+    let chan_e', ctxt' = normalise st ctxt chan_e in
+
+    (*chan_e' can either be IndexableProjection or Variable,
+      depending on whether ChannelArray or ChannelSingle *)
+
+    let v, idx_opt, ctxt'' =
+      match chan_e' with
+      | Variable v -> v, None, ctxt'
+      | IndexableProjection (v, e) ->
+        begin
+        let idx, ctxt'' =
+          evaluate st ctxt' e in
+        let idx =
+          match idx with
+          (*FIXME here assuming that channel arrays are indexable only by integers*)
+          | Runtime_data.Integer i -> i
+          | _ ->
+            raise (Eval_Exc ("Invalid channel index", Some e, None)) in
+        v, Some idx, ctxt''
+        end
+      | _ ->
+        raise (Eval_Exc ("Cannot Send: cannot extract channel reference", Some e, None)) in
+
+    let e', ctxt''' = normalise st ctxt'' e in
+    let e_value = evaluate_value ctxt''' e' in
+
+    let ctxt4 =
+      let f dir (incoming, outgoing) =
+        match dir with
+        | Incoming -> List.rev (e_value :: List.rev incoming), outgoing
+        | Outgoing -> incoming, List.rev (e_value :: List.rev outgoing) in
+      channel_fun v Outgoing idx_opt "send"
+        (fun s -> Eval_Exc (s, Some e, None)) f st ctxt''' in
+    e', ctxt4
+
 (*
-  | Send of expression * expression
   | Receive of expression * expression
   | Exchange of expression * expression
 *)

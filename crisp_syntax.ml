@@ -315,7 +315,11 @@ and expression =
   | Receive of expression * expression
   (*FIXME need a Peek expression*)
   (*Send and receive between two channels*)
-  | Exchange of expression * expression
+  | Exchange of expression * expression (*FIXME can Exchange be decomposed into
+                                                Send and Receive?
+                                                But for this would need to
+                                               "wrap" them into a process,
+                                               for them to operate continuously*)
   (*FIXME it still seems useful to me to have a parallel composition operator*)
 
   | Str of string

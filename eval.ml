@@ -504,16 +504,16 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     e', ctxt''
 
   | UpdateIndexable (v, idx, e) ->
-    let idx_v, ctxt' = evaluate st ctxt idx in
-
-    if not (List.mem_assoc v ctxt'.Runtime_data.value_table) then
+    if not (List.mem_assoc v ctxt.Runtime_data.value_table) then
       raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
 
     let dict =
-      match List.assoc v ctxt'.Runtime_data.value_table with
+      match List.assoc v ctxt.Runtime_data.value_table with
       | Dictionary d -> d
       | _ ->
        raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not a dictionary ", Some e, None)) in
+
+    let idx_v, ctxt' = evaluate st ctxt idx in
 
     if not (List.mem_assoc idx_v dict) then
       raise (Eval_Exc ("Cannot UpdateIndexable: Key " ^ string_of_typed_value idx_v ^ " not found in dictionary " ^ v, Some e, None));

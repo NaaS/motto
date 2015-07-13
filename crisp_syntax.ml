@@ -310,7 +310,8 @@ and expression =
   (*Channel operations. Can be overloaded to, say, send values
     on a channel, or to first obtain values from a channel then send it to
     another.*)
-  | Send of expression * expression
+  | Send of expression * expression (*FIXME should we assume that channels have infinite capacity, or should we specify a static bound?
+                                            this will result in processes blocking if they attempt to send to a full channel.*)
   | Receive of expression * expression
   (*FIXME need a Peek expression*)
   (*Send and receive between two channels*)

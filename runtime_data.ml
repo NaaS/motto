@@ -42,7 +42,7 @@ and string_of_typed_value : typed_value -> string = function
   | UserDefinedType (_, v) -> string_of_typed_value v
   | String s -> "\"" ^ s ^ "\""
   | Integer i -> string_of_int i
-  | Boolean b -> string_of_bool b
+  | Boolean b -> if b then "True" else "False"
   | RecordType fields ->
     let entry_to_string (l, v) =
       l ^ " = " ^ string_of_typed_value v in

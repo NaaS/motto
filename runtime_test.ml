@@ -4,6 +4,7 @@
 *)
 
 open Runtime_inspect
+open Runtime_data
 open Crisp_syntax
 
 let _ = run
@@ -21,5 +22,9 @@ let _ = run
    Eval "let l' = F (f (v, v' + 1))";
    Declare_channel ("somechan", "integer/boolean");
    Declare_channel ("somechan_array", "[integer/boolean]");
+   Q_channel ("somechan", Incoming, None, "40");
+   Q_channel ("somechan", Incoming, None, "400");
+   Q_channel ("somechan", Outgoing, None, "False and True");
+   (*Eval "true => somechan";*)
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

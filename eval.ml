@@ -487,8 +487,23 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     e', ctxt''
     end
 
+  | Update (v, e) ->
+    (*NOTE this handler's implementation is very similar to that for Set in
+           Runtime_data.eval, except that here we don't do any type-checking:
+           that would have been done in earlier parts of the compiler pipeline
+           if we're compiling, or by the interpreter if we're interpreting.*)
+    let e', ctxt' = normalise st ctxt e in
+    let value = evaluate_value ctxt' e' in
+    (*Update runtime context*)
+    let ctxt'' =
+      if not (List.mem_assoc v ctxt'.Runtime_data.value_table) then
+        raise (Eval_Exc ("Symbol " ^ v ^ " has been declared previously, but not defined", Some e, None));
+      { ctxt' with Runtime_data.value_table =
+          let pair = (v, value) in
+          General.add_unique_assoc pair ctxt'.Runtime_data.value_table } in
+    e', ctxt''
+
 (*
-  | Update of value_name * expression (*value_name := expression*)
   (*value_name[idx] := expression*)
   | UpdateIndexable of value_name * expression * expression
 

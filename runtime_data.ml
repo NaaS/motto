@@ -27,7 +27,6 @@ type typed_value =
   | IPv4Address of int * int * int * int
   | Tuple of typed_value list
   | Dictionary of (typed_value * typed_value) list
-  | Reference of typed_value
   | ChanType of channel_type
 (*Channels are abstracted to behave as queues*)
 and channel_type =
@@ -58,7 +57,6 @@ and string_of_typed_value : typed_value -> string = function
     let d_s = List.map (fun (k, v) ->
       string_of_typed_value k ^ " |-> " ^ string_of_typed_value v) d in
     "[" ^ String.concat ", " d_s ^ "]"
-  | Reference v -> string_of_typed_value v
   | ChanType cv -> string_of_channel_type cv
 and string_of_channel_type : channel_type -> string = function
   | ChannelSingle (in_vs, out_vs) -> string_of_chan_vs (in_vs, out_vs)

@@ -63,13 +63,6 @@ let rec devaluate (v : typed_value) : expression =
     let vs' = List.map (fun (l, v) -> (l, devaluate v)) vs in
     Crisp_syntax.Record vs'
   | Disjoint_Union (l, v) -> Crisp_syntax.Functor_App (l, [Crisp_syntax.Exp (devaluate v)])
-  | Reference _ ->
-    (*FIXME i think this should only be applied to an identifier or to an
-            indexable projection (where the index is ground); this results in
-            references being evaluated lazily, transforming a context -- this means
-              that a context needs to be given to, and returned from, devaluate.
-            in Flick, what form do values of type Reference have?*)
-    failwith "devaluate: TODO"
   | Dictionary _
     (*FIXME could serialise as an association list?*)
   | ChanType _ ->
@@ -465,6 +458,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
 
         (*FIXME currently the function set-up and calling isn't implemented properly.
             What remains to be done:
+            - create fresh scope for values that aren't passed by reference,
+              to avoid having their updates leaking to containing scopes.
+              (only by-reference values should have their updates leaked.)
             - set up handlers for exceptions, and "connect" function's state
             - after the function body has been normalised, detach state, and unwind exception handlers.
         *)

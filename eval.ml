@@ -497,16 +497,40 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     (*Update runtime context*)
     let ctxt'' =
       if not (List.mem_assoc v ctxt'.Runtime_data.value_table) then
-        raise (Eval_Exc ("Symbol " ^ v ^ " has been declared previously, but not defined", Some e, None));
+        raise (Eval_Exc ("Cannot Update: Symbol " ^ v ^ " not in runtime context", Some e, None));
       { ctxt' with Runtime_data.value_table =
           let pair = (v, value) in
           General.add_unique_assoc pair ctxt'.Runtime_data.value_table } in
     e', ctxt''
 
-(*
-  (*value_name[idx] := expression*)
-  | UpdateIndexable of value_name * expression * expression
+  | UpdateIndexable (v, idx, e) ->
+    let idx_v, ctxt' = evaluate st ctxt idx in
+    let e', ctxt'' = normalise st ctxt' e in
+    let e_v = evaluate_value ctxt'' e' in
+    let ctxt''' =
+      if not (List.mem_assoc v ctxt''.Runtime_data.value_table) then
+        raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
 
+      let dict =
+       match List.assoc v ctxt''.Runtime_data.value_table with
+       | Dictionary d -> d
+       | _ ->
+        raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not a dictionary ", Some e, None)) in
+
+      if not (List.mem_assoc idx_v dict) then
+        raise (Eval_Exc ("Cannot UpdateIndexable: Key " ^ string_of_typed_value idx_v ^ " not found in dictionary " ^ v, Some e, None));
+
+      let dict' = General.add_unique_assoc (idx_v, e_v) dict in
+
+      if not (List.mem_assoc v ctxt''.Runtime_data.value_table) then
+        raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
+
+      { ctxt'' with Runtime_data.value_table =
+          let pair = (v, Runtime_data.Dictionary dict') in
+          General.add_unique_assoc pair ctxt''.Runtime_data.value_table } in
+    e', ctxt'''
+
+(*
   | IndexableProjection of label * expression
 
   | Send of expression * expression
@@ -527,7 +551,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
   | Hole -> raise (Eval_Exc ("Cannot normalise", Some e, None))
 
 (*Translate an arbitrary expression into a value*)
-let evaluate (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value * runtime_ctxt =
+and evaluate (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value * runtime_ctxt =
   normalise st ctxt e
   |> swap
   |> selfpair

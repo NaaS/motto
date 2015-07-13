@@ -103,6 +103,14 @@ let interpret_flick_list (e : expression) : expression list =
     raise (Eval_Exc ("interpret_flick_list : not given a list", Some e, None)) in
   interpret_flick_list' [] e
 
+let get_dictionary e v ctxt =
+  if not (List.mem_assoc v ctxt.Runtime_data.value_table) then
+    raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
+  match List.assoc v ctxt.Runtime_data.value_table with
+  | Dictionary d -> d
+  | _ ->
+   raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not a dictionary ", Some e, None))
+
 (*Reduce an expression into a value expression*)
 let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expression * runtime_ctxt =
   match e with
@@ -504,14 +512,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     e', ctxt''
 
   | UpdateIndexable (v, idx, e) ->
-    if not (List.mem_assoc v ctxt.Runtime_data.value_table) then
-      raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
-
-    let dict =
-      match List.assoc v ctxt.Runtime_data.value_table with
-      | Dictionary d -> d
-      | _ ->
-       raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not a dictionary ", Some e, None)) in
+    let dict = get_dictionary e v ctxt in
 
     let idx_v, ctxt' = evaluate st ctxt idx in
 

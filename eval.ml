@@ -505,26 +505,27 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
 
   | UpdateIndexable (v, idx, e) ->
     let idx_v, ctxt' = evaluate st ctxt idx in
+
+    if not (List.mem_assoc v ctxt'.Runtime_data.value_table) then
+      raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
+
+    let dict =
+      match List.assoc v ctxt'.Runtime_data.value_table with
+      | Dictionary d -> d
+      | _ ->
+       raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not a dictionary ", Some e, None)) in
+
+    if not (List.mem_assoc idx_v dict) then
+      raise (Eval_Exc ("Cannot UpdateIndexable: Key " ^ string_of_typed_value idx_v ^ " not found in dictionary " ^ v, Some e, None));
+
     let e', ctxt'' = normalise st ctxt' e in
     let e_v = evaluate_value ctxt'' e' in
+    let dict' = General.add_unique_assoc (idx_v, e_v) dict in
+
+    if not (List.mem_assoc v ctxt''.Runtime_data.value_table) then
+      raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
+
     let ctxt''' =
-      if not (List.mem_assoc v ctxt''.Runtime_data.value_table) then
-        raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
-
-      let dict =
-       match List.assoc v ctxt''.Runtime_data.value_table with
-       | Dictionary d -> d
-       | _ ->
-        raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not a dictionary ", Some e, None)) in
-
-      if not (List.mem_assoc idx_v dict) then
-        raise (Eval_Exc ("Cannot UpdateIndexable: Key " ^ string_of_typed_value idx_v ^ " not found in dictionary " ^ v, Some e, None));
-
-      let dict' = General.add_unique_assoc (idx_v, e_v) dict in
-
-      if not (List.mem_assoc v ctxt''.Runtime_data.value_table) then
-        raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
-
       { ctxt'' with Runtime_data.value_table =
           let pair = (v, Runtime_data.Dictionary dict') in
           General.add_unique_assoc pair ctxt''.Runtime_data.value_table } in

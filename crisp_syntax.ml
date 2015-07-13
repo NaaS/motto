@@ -316,6 +316,7 @@ and expression =
   (*FIXME need a Peek expression*)
   (*Send and receive between two channels*)
   | Exchange of expression * expression
+  (*FIXME it still seems useful to me to have a parallel composition operator*)
 
   | Str of string
   | Meta_quoted of meta_instruction list

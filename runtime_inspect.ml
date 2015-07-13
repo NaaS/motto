@@ -35,6 +35,9 @@ type inspect_instruction =
   (*FIXME need command to start and stop processes;
           also, how to define how they are connected with channels?
           and what resources they use?*)
+  (*FIXME add commands to trace running processes and functions. this is quite
+          straightforward -- perhaps simply need to add a meta_instruction that
+          writes to a log file.*)
 
 type declaration =
   | Binding of expression * type_value

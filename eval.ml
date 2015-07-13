@@ -532,9 +532,20 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
           General.add_unique_assoc pair ctxt''.Runtime_data.value_table } in
     e', ctxt'''
 
-(*
-  | IndexableProjection of label * expression
+  | IndexableProjection (v, idx) ->
+    let dict = get_dictionary e v ctxt in
 
+    let idx_v, ctxt' = evaluate st ctxt idx in
+
+    if not (List.mem_assoc idx_v dict) then
+      raise (Eval_Exc ("Cannot IndexableProjection: Key " ^ string_of_typed_value idx_v ^ " not found in dictionary " ^ v, Some e, None));
+
+    let e =
+      List.assoc idx_v dict
+      |> devaluate in
+    e, ctxt'
+
+(*
   | Send of expression * expression
   | Receive of expression * expression
   | Exchange of expression * expression

@@ -312,6 +312,7 @@ and expression =
     another.*)
   | Send of expression * expression
   | Receive of expression * expression
+  (*FIXME need a Peek expression*)
   (*Send and receive between two channels*)
   | Exchange of expression * expression
 

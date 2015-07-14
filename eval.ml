@@ -126,7 +126,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     begin
     match List.filter (fun (name, _) -> name = l) ctxt.value_table with
     | [] ->
-      raise (Eval_Exc ("Cannot resolve variable's value", Some e, None))
+      raise (Eval_Exc ("Cannot resolve variable '" ^ l ^ "' in the value table", Some e, None))
     | [(_, v)] -> devaluate v, ctxt
     | results ->
       let results_s =
@@ -545,7 +545,11 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
       |> devaluate in
     e, ctxt'
 
-  | Send (chan_e, e) ->
+  | Send ((c_name, idx_opt), e) ->
+    let chan_e =
+      match idx_opt with
+      | None -> Variable c_name
+      | Some idx -> IndexableProjection (c_name, idx) in
     (*We can normalise chan_e, reducing it to a reference to a channel
       (in the form of a Variable or an IndexableProjection, but we cannot
       evaluate it, since channels are not values in this language*)

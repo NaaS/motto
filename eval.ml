@@ -111,6 +111,20 @@ let get_dictionary e v ctxt =
   | _ ->
    raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not a dictionary ", Some e, None))
 
+(*Get some value from the runtime context*)
+let resolve ctxt l =
+  match List.filter (fun (name, _) -> name = l) ctxt.value_table with
+  | [] ->
+    raise (Eval_Exc ("Cannot resolve variable '" ^ l ^
+                     "' in the value table", None, None))
+  | [(_, v)] -> v
+  | results ->
+    let results_s =
+      strlist_of_value_table results
+      |> print_list runtime_ctxt_print_indentation in
+    raise (Eval_Exc ("Multiple resolutions for variable's value: " ^
+                     results_s, None, None))
+
 (*Reduce an expression into a value expression*)
 let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expression * runtime_ctxt =
   match e with
@@ -123,17 +137,12 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
   | EmptyList -> e, ctxt
 
   | Variable l ->
-    begin
-    match List.filter (fun (name, _) -> name = l) ctxt.value_table with
-    | [] ->
-      raise (Eval_Exc ("Cannot resolve variable '" ^ l ^ "' in the value table", Some e, None))
-    | [(_, v)] -> devaluate v, ctxt
-    | results ->
-      let results_s =
-        strlist_of_value_table results
-        |> print_list runtime_ctxt_print_indentation in
-      raise (Eval_Exc ("Multiple resolutions for variable's value: " ^ results_s, Some e, None))
-    end
+    let e' =
+      try resolve ctxt l  with
+      | Eval_Exc (s, None, None) ->
+        raise ( Eval_Exc(s, Some e, None)) in
+    devaluate e', ctxt
+
   | TypeAnnotation (e', _) ->
     (*NOTE there's no runtime type-checking -- we ignore the type annotation.
            that should have been checked at an earlier pass.*)
@@ -546,47 +555,45 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     e, ctxt'
 
   | Send ((c_name, idx_opt), e) ->
+    (*chan_e can either be IndexableProjection or Variable,
+      depending on whether c_name refers to a ChannelArray or ChannelSingle *)
     let chan_e =
       match idx_opt with
       | None -> Variable c_name
       | Some idx -> IndexableProjection (c_name, idx) in
-    (*We can normalise chan_e, reducing it to a reference to a channel
-      (in the form of a Variable or an IndexableProjection, but we cannot
-      evaluate it, since channels are not values in this language*)
-    let chan_e', ctxt' = normalise st ctxt chan_e in
+    (*NOTE don't call normalise on the resulting expression, since we won't
+           be able to devaluate the Variable value (since we cannot represent
+           channels as Flick values*)
 
-    (*chan_e' can either be IndexableProjection or Variable,
-      depending on whether ChannelArray or ChannelSingle *)
-
-    let v, idx_opt, ctxt'' =
-      match chan_e' with
-      | Variable v -> v, None, ctxt'
+    let v, idx_opt, ctxt' =
+      match chan_e with
+      | Variable v -> v, None, ctxt
       | IndexableProjection (v, e) ->
         begin
-        let idx, ctxt'' =
-          evaluate st ctxt' e in
+        let idx, ctxt' =
+          evaluate st ctxt e in
         let idx =
           match idx with
           (*FIXME here assuming that channel arrays are indexable only by integers*)
           | Runtime_data.Integer i -> i
           | _ ->
             raise (Eval_Exc ("Invalid channel index", Some e, None)) in
-        v, Some idx, ctxt''
+        v, Some idx, ctxt'
         end
       | _ ->
         raise (Eval_Exc ("Cannot Send: cannot extract channel reference", Some e, None)) in
 
-    let e', ctxt''' = normalise st ctxt'' e in
-    let e_value = evaluate_value ctxt''' e' in
+    let e', ctxt'' = normalise st ctxt' e in
+    let e_value = evaluate_value ctxt'' e' in
 
-    let ctxt4 =
+    let ctxt''' =
       let f dir (incoming, outgoing) =
         match dir with
         | Incoming -> List.rev (e_value :: List.rev incoming), outgoing
         | Outgoing -> incoming, List.rev (e_value :: List.rev outgoing) in
       channel_fun v Outgoing idx_opt "send"
-        (fun s -> Eval_Exc (s, Some e, None)) f st ctxt''' in
-    e', ctxt4
+        (fun s -> Eval_Exc (s, Some e, None)) f st ctxt'' in
+    e', ctxt'''
 
 (*
   | Receive of expression * expression

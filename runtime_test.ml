@@ -26,6 +26,7 @@ let _ = run
    Q_channel ("somechan", Incoming, None, "400");
    Q_channel ("somechan", Outgoing, None, "False and True");
    (*Eval "true => somechan";*)
+   Eval "somechan ! True";
    Deq_channel ("somechan", Incoming, None);
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

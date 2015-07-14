@@ -567,10 +567,19 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     channel_fun_ident chan_ident "send" Outgoing
       (fun s -> Eval_Exc (s, Some e, None)) f st ctxt
 
-(*
-  | Receive of expression * expression
-  | Exchange of expression * expression
-*)
+  | Receive chan_ident ->
+    let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+      match dir with
+      | Incoming ->
+        begin
+        match incoming with
+        | v :: xs -> xs, outgoing, v, ctxt
+        | [] -> failwith "FIXME: block"
+        end
+      | Outgoing ->
+        raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None)) in
+    channel_fun_ident chan_ident "receive" Incoming
+      (fun s -> Eval_Exc (s, Some e, None)) f st ctxt
 
   | Seq (Meta_quoted mis, e') ->
     (*FIXME currently ignoring meta-quoted instructions*)
@@ -621,7 +630,7 @@ and channel_fun_ident ((c_name, idx_opt) : channel_identifier) (operation_verb :
 
     let ctxt'', e_value' =
       let ctxt, pre_e_value' =
-        channel_fun v Outgoing idx_opt operation_verb operation_exn f st ctxt' in
+        channel_fun v dir idx_opt operation_verb operation_exn f st ctxt' in
 
       let e_value' =
         match pre_e_value' with

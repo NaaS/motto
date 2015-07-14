@@ -98,44 +98,12 @@ done;
 
 match !cfg.source_file with
 | Some source_file ->
-  begin
-  try
-    Compiler.parse_program source_file
+  let compile file =
+    Compiler.parse_program file
     |> Compiler.front_end cfg
     |> Compiler.back_end cfg
-    |> Output.write_files !cfg.output_location
-  with Type_infer.Type_Inference_Exc (msg, e, st) ->
-    if !cfg.unexceptional then exit 1
-    else
-      print_endline
-       ("Type error: " ^ msg ^ "\n" ^
-        "in file " ^ source_file ^ "\n" ^
-        "at expression:" ^ Crisp_syntax.expression_to_string
-                             Crisp_syntax.min_indentation e ^ "\n" ^
-        "state :\n" ^
-         State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
-           true st)
-  | Eval.Eval_Exc (msg, e_opt, rtv_opt) ->
-      let e_s =
-        match e_opt with
-        | None -> ""
-        | Some e ->
-          "at expression:" ^ Crisp_syntax.expression_to_string
-                               Crisp_syntax.min_indentation e ^ "\n" in
-      let rtv_s =
-        match rtv_opt with
-        | None -> ""
-        | Some v ->
-          "involving runtime value:" ^ Runtime_data.string_of_typed_value v ^ "\n" in
-      print_endline
-       ("Evaluation error: " ^ msg ^ "\n" ^
-        "in file " ^ source_file ^ "\n" ^
-        e_s ^
-        rtv_s)
-  | e ->
-    if !cfg.unexceptional then exit 1
-    else raise e
-  end
+    |> Output.write_files !cfg.output_location in
+  Wrap_err.wrap compile source_file
 | _ ->
   if !cfg.parser_test_files <> [] || !cfg.parser_test_dirs <> [] then
     Crisp_test.run_parser_test !cfg.parser_test_dirs !cfg.parser_test_files;

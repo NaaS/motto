@@ -259,7 +259,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
 (*Evaluate a list of inspect-instructions*)
 let evals (st : state) (ctxt : Runtime_data.runtime_ctxt) (is : inspect_instruction list) : (state * Runtime_data.runtime_ctxt) =
   List.fold_right (fun instr (st, ctxt) ->
-    eval st ctxt instr) (List.rev is) (st, ctxt)
+   Wrap_err.wrap (eval st ctxt) instr) (List.rev is) (st, ctxt)
 
 let run (is : inspect_instruction list) : unit =
   ignore(evals initial_state Runtime_data.initial_runtime_ctxt is)

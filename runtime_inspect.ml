@@ -192,12 +192,12 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
     let ctxt'', _ =
-      let f dir (incoming, outgoing) =
+      let f dir ctxt (incoming, outgoing) =
         match dir with
         | Runtime_data.Incoming ->
-          (List.rev (e_value :: List.rev incoming), outgoing, e_value)
+          (List.rev (e_value :: List.rev incoming), outgoing, e_value, ctxt)
         | Runtime_data.Outgoing ->
-          (incoming, List.rev (e_value :: List.rev outgoing), e_value) in
+          (incoming, List.rev (e_value :: List.rev outgoing), e_value, ctxt) in
       Runtime_data.channel_fun v dir idx_opt "queue" (fun x -> Runtime_inspect_exc x) f st ctxt' in
     (st, ctxt'')
 
@@ -206,12 +206,12 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
            if this is not possible). This element cannot be used elsewhere -- you
            need to use the Flick language (and not the runtime language) for that.*)
     let ctxt', _ =
-      let f dir (incoming, outgoing) =
+      let f dir ctxt (incoming, outgoing) =
         match dir with
         | Runtime_data.Incoming ->
           begin
           match incoming with
-          | v :: xs -> xs, outgoing, v
+          | v :: xs -> xs, outgoing, v, ctxt
           | [] ->
             raise (Runtime_inspect_exc ("Could not dequeue from " ^
              Runtime_data.str_of_channel_direction dir ^
@@ -221,7 +221,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
           (*FIXME DRY principle -- code similar to that used in clause for Incoming*)
           begin
           match outgoing with
-          | v :: xs -> incoming, xs, v
+          | v :: xs -> incoming, xs, v, ctxt
           | [] ->
             raise (Runtime_inspect_exc ("Could not dequeue from " ^
              Runtime_data.str_of_channel_direction dir ^

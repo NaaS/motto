@@ -554,7 +554,43 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
       |> devaluate in
     e, ctxt'
 
-  | Send ((c_name, idx_opt), e') ->
+  | Send (chan_ident, e') ->
+    let e'', ctxt' = normalise st ctxt e' in
+    let e_value = evaluate_value ctxt' e'' in
+
+    let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+      match dir with
+      | Incoming ->
+        raise (Eval_Exc ("Unexpected direction: Send only works in the outgoing direction", Some e, None))
+      | Outgoing ->
+        (incoming, List.rev (e_value :: List.rev outgoing), e_value, ctxt) in
+    channel_fun_ident chan_ident "send" Outgoing
+      (fun s -> Eval_Exc (s, Some e, None)) f st ctxt
+
+(*
+  | Receive of expression * expression
+  | Exchange of expression * expression
+*)
+
+  | Seq (Meta_quoted mis, e') ->
+    (*FIXME currently ignoring meta-quoted instructions*)
+    normalise st ctxt e'
+  | Meta_quoted _ ->
+    raise (Eval_Exc ("Cannot normalise meta_quoted expressions alone -- add some other expression after them, and normalisation should succeed.", Some e, None))
+
+  | Seq (e1, e2) ->
+    let _, ctxt' = normalise st ctxt e1 in
+    normalise st ctxt' e2
+
+  | Hole -> raise (Eval_Exc ("Cannot normalise", Some e, None))
+
+(*Lift a function over channels to operate on a channel_identifier.
+  It factors out the lookup-related boilerplate for channels.*)
+and channel_fun_ident ((c_name, idx_opt) : channel_identifier) (operation_verb : string)
+      (dir : channel_direction)
+      (operation_exn : string -> exn)
+      (f : channel_direction -> runtime_ctxt -> (typed_value list * typed_value list) ->
+       (typed_value list * typed_value list * typed_value * runtime_ctxt)) st ctxt =
     (*chan_e can either be IndexableProjection or Variable,
       depending on whether c_name refers to a ChannelArray or ChannelSingle *)
     let chan_e =
@@ -581,45 +617,20 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
         v, Some idx, ctxt'
         end
       | _ ->
-        raise (Eval_Exc ("Cannot Send: cannot extract channel reference", Some e, None)) in
+        raise (operation_exn "Cannot Send: cannot extract channel reference") in
 
-    let e'', ctxt'' = normalise st ctxt' e' in
-    let e_value = evaluate_value ctxt'' e'' in
-
-    let ctxt''', e_value' =
+    let ctxt'', e_value' =
       let ctxt, pre_e_value' =
-        let f dir (incoming, outgoing) =
-          match dir with
-          | Incoming -> (List.rev (e_value :: List.rev incoming), outgoing, e_value)
-          | Outgoing -> (incoming, List.rev (e_value :: List.rev outgoing), e_value) in
-        channel_fun v Outgoing idx_opt "send"
-          (fun s -> Eval_Exc (s, Some e, None)) f st ctxt'' in
+        channel_fun v Outgoing idx_opt operation_verb operation_exn f st ctxt' in
+
       let e_value' =
         match pre_e_value' with
         | Some e -> e
         | None -> failwith "Impossible" in
       (ctxt, e_value') in
 
-    assert (e_value = e_value');
     let e''' = devaluate e_value' in
-    e''', ctxt'''
-
-(*
-  | Receive of expression * expression
-  | Exchange of expression * expression
-*)
-
-  | Seq (Meta_quoted mis, e') ->
-    (*FIXME currently ignoring meta-quoted instructions*)
-    normalise st ctxt e'
-  | Meta_quoted _ ->
-    raise (Eval_Exc ("Cannot normalise meta_quoted expressions alone -- add some other expression after them, and normalisation should succeed.", Some e, None))
-
-  | Seq (e1, e2) ->
-    let _, ctxt' = normalise st ctxt e1 in
-    normalise st ctxt' e2
-
-  | Hole -> raise (Eval_Exc ("Cannot normalise", Some e, None))
+    e''', ctxt''
 
 (*Translate an arbitrary expression into a value*)
 and evaluate (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value * runtime_ctxt =

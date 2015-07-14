@@ -135,36 +135,51 @@ let str_of_channel_direction : channel_direction -> string = function
 (*Lift operation on a channel's contents to the level of channel_types.*)
 let channel_fun v dir idx_opt (operation_verb : string)
       (operation_exn : string -> exn)
-      (f : channel_direction -> (typed_value list * typed_value list) -> (typed_value list * typed_value list)) st ctxt =
+      (f : channel_direction -> (typed_value list * typed_value list) ->
+       (typed_value list * typed_value list * typed_value)) st ctxt =
   if List.mem_assoc v ctxt.value_table then
     match idx_opt, lookup_term_data (Term Channel_Name) st.term_symbols v with
     | None, Some (_, {source_type = Some (ChanType (ChannelSingle (rx_ty, tx_ty)))}) ->
-      { ctxt with value_table = List.map (fun ((v', value) as unchanged) ->
-        if v <> v' then unchanged
-        else
-          match value with
-          | ChanType (ChannelSingle (incoming, outgoing)) ->
-            let (incoming', outgoing') = f dir (incoming, outgoing) in
-            (v, ChanType (ChannelSingle (incoming', outgoing')))
-          | _ ->
-            (*FIXME give more info*)
-            raise (operation_exn "Channel value is of the wrong type")) ctxt.value_table }
+      let (vt', result) = fold_map ([], None)
+        (fun result ((v', value) as unchanged) ->
+           if v <> v' then (unchanged, result)
+           else
+             match value with
+             | ChanType (ChannelSingle (incoming, outgoing)) ->
+               (*since v is (should be) unique in vt, we should only encounter
+                 it once, no more, and no less. this assert checks that we don't
+                 encounter it more than once.*)
+               assert (result = None);
+               let (incoming', outgoing', result') = f dir (incoming, outgoing) in
+               ((v, ChanType (ChannelSingle (incoming', outgoing'))), Some result')
+             | _ ->
+               (*FIXME give more info*)
+               raise (operation_exn "Channel value is of the wrong type"))
+        ctxt.value_table in
+      { ctxt with value_table = vt' }, result
     | Some idx, Some (_, {source_type = Some (ChanType (ChannelArray (rx_ty, tx_ty, _)))}) ->
-      { ctxt with value_table = List.map (fun ((v', value) as unchanged) ->
-        if v <> v' then unchanged
-        else
-          match value with
-          | ChanType (ChannelArray chans) ->
-            if List.length chans <= idx then
-              (*FIXME give more info*)
-              raise (operation_exn "idx out of bounds")
-            else
-              let pre, (incoming, outgoing), post = General.list_split_nth_exc idx chans in
-              let (incoming', outgoing') = f dir (incoming, outgoing) in
-              (v, ChanType (ChannelArray (pre @ (incoming', outgoing') :: post)))
-          | _ ->
-            (*FIXME give more info*)
-            raise (operation_exn "Channel value is of the wrong type")) ctxt.value_table }
+      let (vt', result) = fold_map ([], None)
+        (fun result ((v', value) as unchanged) ->
+           if v <> v' then (unchanged, result)
+           else
+             match value with
+             | ChanType (ChannelArray chans) ->
+               (*since v is (should be) unique in vt, we should only encounter
+                 it once, no more, and no less. this assert checks that we don't
+                 encounter it more than once.*)
+               assert (result = None);
+               if List.length chans <= idx then
+                 (*FIXME give more info*)
+                 raise (operation_exn "idx out of bounds")
+               else
+                 let pre, (incoming, outgoing), post = General.list_split_nth_exc idx chans in
+                 let (incoming', outgoing', result') = f dir (incoming, outgoing) in
+                 ((v, ChanType (ChannelArray (pre @ (incoming', outgoing') :: post))), Some result')
+             | _ ->
+               (*FIXME give more info*)
+               raise (operation_exn "Channel value is of the wrong type"))
+        ctxt.value_table in
+      { ctxt with value_table = vt' }, result
     | None, Some (_, {source_type = Some (ChanType (ChannelArray (rx_ty, tx_ty, _)))}) ->
       raise (operation_exn ("Could not " ^ operation_verb ^ " onto channel array " ^ v ^ " since an index has not been given"))
     | Some _, Some (_, {source_type = Some (ChanType (ChannelSingle (rx_ty, tx_ty)))}) ->

@@ -191,11 +191,13 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
       | Expression e -> Eval.evaluate st ctxt e
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
-    let ctxt'' =
+    let ctxt'', _ =
       let f dir (incoming, outgoing) =
         match dir with
-        | Runtime_data.Incoming -> List.rev (e_value :: List.rev incoming), outgoing
-        | Runtime_data.Outgoing -> incoming, List.rev (e_value :: List.rev outgoing) in
+        | Runtime_data.Incoming ->
+          (List.rev (e_value :: List.rev incoming), outgoing, e_value)
+        | Runtime_data.Outgoing ->
+          (incoming, List.rev (e_value :: List.rev outgoing), e_value) in
       Runtime_data.channel_fun v dir idx_opt "queue" (fun x -> Runtime_inspect_exc x) f st ctxt' in
     (st, ctxt'')
 
@@ -203,13 +205,13 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
     (*NOTE this operation discards an element from a queue (or raises an exception
            if this is not possible). This element cannot be used elsewhere -- you
            need to use the Flick language (and not the runtime language) for that.*)
-    let ctxt' =
+    let ctxt', _ =
       let f dir (incoming, outgoing) =
         match dir with
         | Runtime_data.Incoming ->
           begin
           match incoming with
-          | _ :: xs -> xs, outgoing
+          | v :: xs -> xs, outgoing, v
           | [] ->
             raise (Runtime_inspect_exc ("Could not dequeue from " ^
              Runtime_data.str_of_channel_direction dir ^
@@ -219,7 +221,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt) (i : inspect_instructio
           (*FIXME DRY principle -- code similar to that used in clause for Incoming*)
           begin
           match outgoing with
-          | _ :: xs -> incoming, xs
+          | v :: xs -> incoming, xs, v
           | [] ->
             raise (Runtime_inspect_exc ("Could not dequeue from " ^
              Runtime_data.str_of_channel_direction dir ^

@@ -586,11 +586,11 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     let e', ctxt'' = normalise st ctxt' e in
     let e_value = evaluate_value ctxt'' e' in
 
-    let ctxt''' =
+    let ctxt''', _ =
       let f dir (incoming, outgoing) =
         match dir with
-        | Incoming -> List.rev (e_value :: List.rev incoming), outgoing
-        | Outgoing -> incoming, List.rev (e_value :: List.rev outgoing) in
+        | Incoming -> (List.rev (e_value :: List.rev incoming), outgoing, e_value)
+        | Outgoing -> (incoming, List.rev (e_value :: List.rev outgoing), e_value) in
       channel_fun v Outgoing idx_opt "send"
         (fun s -> Eval_Exc (s, Some e, None)) f st ctxt'' in
     e', ctxt'''

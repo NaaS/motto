@@ -170,4 +170,7 @@ rule main = parse
 
   | "_" {UNDERSCORE}
 
+  | "!" {BANG}
+  | "?" {QUESTION}
+
 (*FIXME string primitives as keywords -- e.g., concat, etc*)

@@ -160,6 +160,9 @@ let string_of_token = function
   | TYPED -> "TYPED"
   | META_OPEN -> "META_OPEN"
   | META_CLOSE -> "META_CLOSE"
+
+  | BANG -> "BANG"
+  | QUESTION -> "QUESTION"
 ;;
 
 let test filepath =

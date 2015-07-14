@@ -113,6 +113,9 @@
 %token META_OPEN
 %token META_CLOSE
 
+%token BANG
+%token QUESTION
+
 (*Names*)
 (*
 %token <string> UPPER_ALPHA
@@ -150,6 +153,8 @@
 %left PERIOD
 %nonassoc PERIODPERIOD
 %nonassoc TYPED
+%nonassoc QUESTION
+%right BANG
 
 %start <Crisp_syntax.source_file_contents> source_file_contents
 %%
@@ -498,6 +503,12 @@ meta_block:
   | meta_line = expression; UNDENT; NL
     {[Crisp_syntax.interpret_e_as_mi meta_line]}
 
+specific_channel:
+  | ident = IDENTIFIER; LEFT_S_BRACKET; idx = expression; RIGHT_S_BRACKET
+    {(ident, Some idx)}
+  | ident = IDENTIFIER;
+    {(ident, None)}
+
 expression:
   | META_OPEN; meta_line = expression; META_CLOSE
     {Crisp_syntax.Meta_quoted [Crisp_syntax.interpret_e_as_mi meta_line]}
@@ -666,12 +677,20 @@ expression:
     %prec NL
     {Crisp_syntax.Seq (e, f)}
 
+(* FIXME disabled these for the time being, until i work out the core channel
+   primitives. ARR_RIGHT and ARR_LEFT and ARR_BOTH seem more like sugaring that
+   can be used for functions as well as processes.
   | e = expression; ARR_RIGHT; f = expression
     {Crisp_syntax.Send (e, f)}
   | e = expression; ARR_LEFT; f = expression
     {Crisp_syntax.Receive (e, f)}
   | e = expression; ARR_BOTH; f = expression
     {Crisp_syntax.Exchange (e, f)}
+*)
+  | c = specific_channel; BANG e = expression
+    {Crisp_syntax.Send (c, e)}
+  | QUESTION; c = specific_channel
+    {Crisp_syntax.Receive c}
 
   (*FIXME we're missing operations on strings: substring, concat, etc*)
   | str = STRING

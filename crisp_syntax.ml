@@ -223,6 +223,8 @@ type fun_arg =
   | Exp of expression
   | Named of label * expression
 
+and channel_identifier = channel_name * expression option
+
 and expression =
   | Variable of label
   | TypeAnnotation of expression * type_value
@@ -310,9 +312,10 @@ and expression =
   (*Channel operations. Can be overloaded to, say, send values
     on a channel, or to first obtain values from a channel then send it to
     another.*)
-  | Send of expression * expression (*FIXME should we assume that channels have infinite capacity, or should we specify a static bound?
-                                            this will result in processes blocking if they attempt to send to a full channel.*)
-  | Receive of expression * expression
+   (*FIXME should we assume that channels have infinite capacity, or should we specify a static bound?
+           this will result in processes blocking if they attempt to send to a full channel.*)
+  | Send of channel_identifier * expression
+  | Receive of channel_identifier
   (*FIXME need a Peek expression*)
   (*Send and receive between two channels*)
   | Exchange of expression * expression (*FIXME can Exchange be decomposed into
@@ -328,7 +331,12 @@ and expression =
 
 let flick_unit_value = TupleValue []
 
-let rec expression_to_string indent = function
+let rec channel_identifier_to_string (c_name, idx_opt) =
+  c_name ^
+  match idx_opt with
+  | None -> ""
+  | Some idx -> expression_to_string min_indentation idx
+and expression_to_string indent = function
   | Variable value_name -> indn indent ^ value_name
   | TypeAnnotation (e, ty) ->
     indn indent ^ expression_to_string min_indentation e ^ " typed " ^
@@ -486,7 +494,7 @@ let rec expression_to_string indent = function
       indn indent ^ "for " ^ v ^ " in " ^ unordered_s ^
         expression_to_string 0 l ^ acc_s ^
         expression_to_string (indent + indentation) body
-
+(*
   | Send (e1, e2) ->
     expression_to_string indent e1 ^ " => " ^
      expression_to_string 0 e2
@@ -496,6 +504,12 @@ let rec expression_to_string indent = function
   | Exchange (e1, e2) ->
     expression_to_string indent e1 ^ " <=> " ^
      expression_to_string 0 e2
+*)
+  | Send (chan_id, e) ->
+    channel_identifier_to_string chan_id ^ " ! " ^
+     expression_to_string 0 e
+  | Receive chan_id ->
+    "? " ^ channel_identifier_to_string chan_id
 
   | Str s -> "\"" ^ s ^ "\""
   | Meta_quoted mis ->

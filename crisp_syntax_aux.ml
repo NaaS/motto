@@ -354,13 +354,24 @@ let rec contains_hole : expression -> bool = function
   | AppendList (e1, e2)
   | Seq (e1, e2)
   | IntegerRange (e1, e2)
-  | Send (e1, e2)
-  | Receive (e1, e2)
   | Exchange (e1, e2)
   | UpdateIndexable (_, e1, e2)
   | RecordUpdate (e1, (_, e2))
   | Map (_, e1, e2, _) ->
     contains_hole e1 || contains_hole e2
+
+  | Send ((_, idx_opt), e) ->
+    let b =
+      match idx_opt with
+      | None -> false
+      | Some idx -> contains_hole idx in
+    b || contains_hole e
+  | Receive (_, idx_opt) ->
+    begin
+    match idx_opt with
+    | None -> false
+    | Some idx -> contains_hole idx
+    end
 
   | TupleValue es ->
     List.exists contains_hole es
@@ -497,10 +508,10 @@ let rec fill_hole (contents : expression) (e : expression) : expression =
       | None -> None
       | Some (l, e) -> Some (l, f e) in
     Iterate (v, f l, acc', f body, unordered)
-  | Send (e1, e2) ->
-    Send (f e1, f e2)
-  | Receive (e1, e2) ->
-    Receive (f e1, f e2)
+  | Send ((c_name, idx_opt), e) ->
+    Send ((c_name, General.bind_opt (fun x -> Some (f x)) None idx_opt), f e)
+  | Receive (c_name, idx_opt) ->
+    Receive (c_name, General.bind_opt (fun x -> Some (f x)) None idx_opt)
   | Exchange (e1, e2) ->
     Exchange (f e1, f e2)
 
@@ -548,9 +559,13 @@ let rec subst_var (v : string) (u : expression) (e : expression) : expression =
   | ConsList (e1, e2) -> ConsList (subst_var v u e1, subst_var v u e2)
   | AppendList (e1, e2) -> AppendList (subst_var v u e1, subst_var v u e2)
   | Seq (e1, e2) -> Seq (subst_var v u e1, subst_var v u e2)
-  | Send (e1, e2) -> Send (subst_var v u e1, subst_var v u e2)
-  | Receive (e1, e2) -> Receive (subst_var v u e1, subst_var v u e2)
-  | Exchange (e1, e2) -> Exchange (subst_var v u e1, subst_var v u e2)
+
+  | Send ((c_name, idx_opt), e) ->
+    Send ((c_name,
+           General.bind_opt (fun idx -> Some (subst_var v u idx)) None idx_opt),
+          subst_var v u e)
+  | Receive (c_name, idx_opt) ->
+    Receive (c_name, General.bind_opt (fun idx -> Some (subst_var v u idx)) None idx_opt)
 
   | Not e' -> Not (subst_var v u e')
   | Abs e' -> Abs (subst_var v u e')

@@ -682,10 +682,15 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       end;
     (l1_ty, st)
 
-  | Send (chan_e, data_e) ->
+  | Send ((c_name, idx_opt), data_e) ->
     let data_ty, _ = ty_of_expr ~strict st data_e in
     assert_not_undefined_type data_ty e st;
-    let chan_ty, _ = ty_of_expr ~strict st chan_e in
+    let chan_ty, _ =
+      let chan_e =
+        match idx_opt with
+        | None -> Variable c_name
+        | Some idx -> IndexableProjection (c_name, idx) in
+      ty_of_expr ~strict st chan_e in
     let ty =
       match chan_ty with
       | ChanType ct ->
@@ -698,18 +703,16 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         (*FIXME give more info*)
         raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in
     (ty, st)
-  | Receive (chan_e, data_e) ->
-    let data_ty, _ = ty_of_expr ~strict st data_e in
-    assert_not_undefined_type data_ty e st;
-    let chan_ty, _ = ty_of_expr ~strict st chan_e in
+  | Receive (c_name, idx_opt) ->
+    let chan_ty, _ =
+      let chan_e =
+        match idx_opt with
+        | None -> Variable c_name
+        | Some idx -> IndexableProjection (c_name, idx) in
+      ty_of_expr ~strict st chan_e in
     let ty =
       match chan_ty with
-      | ChanType ct ->
-        if rx_chan_type ct = data_ty then
-          data_ty
-        else
-          (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Mismatch between type of data and that of channel", e, st))
+      | ChanType ct -> rx_chan_type ct
       | _ ->
         (*FIXME give more info*)
         raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in

@@ -10,10 +10,11 @@ open Crisp_syntax
 let _ = run
   [Load "tests/simple_function.cp";
    Load "tests/maps_iterations2.cp";
+   (*Load "tests/simple_function.bad.cp";*)
    Declare_value ("zoo", "100");
    Set ("zoo", "200");
    Eval "zoo * 200";
-(*   Eval "let zoo = 1300";*)
+   Eval "let zoo = 1300";
    Eval "f (zoo, 3 * zoo)";
    Eval "let l = [1,2,3,4]";
    Eval "let v = 1";

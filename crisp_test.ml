@@ -58,12 +58,6 @@ let lex_looper filename () =
   end
 
 let string_of_token = function
-(*
-  | INTEGER x -> "INTEGER(" ^ string_of_int x ^ ")"
-  | STRING x -> "STRING(" ^ x ^ ")"
-  | BOOLEAN x -> "BOOLEAN(" ^ string_of_bool x ^ ")"
-*)
-
   (*Punctuation*)
   | COLON -> "COLON"
   | LEFT_R_BRACKET -> "LEFT_R_BRACKET"
@@ -112,7 +106,7 @@ let string_of_token = function
   | LOCAL -> "LOCAL"
   | LET -> "LET"
   | IPv4 _ -> "IPv4 _"
-  | INTEGER _ -> "INTEGER _"
+  | INTEGER i -> "INTEGER " ^ string_of_int i
   | IN -> "IN"
   | IF -> "IF"
   | GT -> "GT"

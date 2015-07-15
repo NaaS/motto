@@ -37,6 +37,7 @@ type configuration =
     (*Don't let exceptions float to the top, and don't report errors. instead
       simply output non-zero status code if there's an error, and zero otherwise.*)
     unexceptional : bool;
+    run_compiled_runtime_script : bool;
   }
 
 let cfg : configuration ref = ref {
@@ -54,4 +55,5 @@ let cfg : configuration ref = ref {
   summary_types = true;
   skip_type_check = false;
   unexceptional = false;
+  run_compiled_runtime_script = false;
 }

@@ -6,7 +6,7 @@ if [ -z $1 ]
 then
   TARGET=${DEFAULT_TARGET}
 else
-  TARGET="${1}.byte"
+  TARGET="${1}"
 fi
 
 echo "building ${TARGET}"
@@ -14,5 +14,6 @@ echo "building ${TARGET}"
 # NOTE could add -dont-catch-errors to have exceptions pass through catches.
 ocamlbuild -cflag -g -lflag -g -tag thread -use-ocamlfind -use-menhir \
   -package core \
+  -package dynlink \
   -no-hygiene \
   ${TARGET}

@@ -52,6 +52,8 @@ while !arg_idx < Array.length Sys.argv do
       if !next_arg <> None then
         failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
       else next_arg := Some TestParseDir
+    | "--runscript" ->
+      cfg := { !cfg with run_compiled_runtime_script = true }
     | "--no_type_check" ->
       cfg := { !cfg with skip_type_check = true }
     | "--version" ->
@@ -98,12 +100,25 @@ done;
 
 match !cfg.source_file with
 | Some source_file ->
-  let compile file =
-    Compiler.parse_program file
-    |> Compiler.front_end cfg
-    |> Compiler.back_end cfg
-    |> Output.write_files !cfg.output_location in
-  Wrap_err.wrap compile source_file
+  if !cfg.run_compiled_runtime_script then
+    begin
+    Dynlink.init ();
+    Runtime_inspect.run []; (*This line does nothing, but ensures that Runtime_inspect
+                              is a dependency of Otto. Runtime_inspect will be needed
+                              by the loaded script.*)
+    try
+      Dynlink.loadfile source_file
+    with Dynlink.Error error ->
+      print_endline (Dynlink.error_message error);
+      exit 1
+    end
+  else
+    let compile file =
+      Compiler.parse_program file
+      |> Compiler.front_end cfg
+      |> Compiler.back_end cfg
+      |> Output.write_files !cfg.output_location in
+    Wrap_err.wrap compile source_file
 | _ ->
   if !cfg.parser_test_files <> [] || !cfg.parser_test_dirs <> [] then
     Crisp_test.run_parser_test !cfg.parser_test_dirs !cfg.parser_test_files;

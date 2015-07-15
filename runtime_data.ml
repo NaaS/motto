@@ -192,3 +192,10 @@ let channel_fun v dir idx_opt (operation_verb : string)
       raise (operation_exn ("Could not " ^ operation_verb ^ " onto channel " ^ v ^ " since the symbol table appears to contain invalid data"))
   else
     raise (operation_exn ("Could not " ^ operation_verb ^ " onto channel " ^ v ^ " since it appears closed"))
+
+(*Removes the value_table entry for v from a runtime context.
+  Checks to ensure that v is defined in the value_table.*)
+let undefine_value v ctxt =
+   assert (List.mem_assoc v ctxt.value_table);
+   { ctxt with value_table =
+      List.filter (fun (v', _) -> v <> v')  ctxt.value_table }

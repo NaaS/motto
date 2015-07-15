@@ -511,7 +511,15 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
                 | [] -> failwith "Impossible" (*because we just extended the exception stack*)
                 | _ :: rest -> rest }) in
 
-        result, ctxt'''
+        (*Undefine local variables*)
+        (*NOTE i originally thought that the variables to reset are those in
+               the set "bound_vars \ state vars", but actually we just need to
+               look among the bound variables*)
+        let ctxt4 =
+          Crisp_syntax_aux.bound_vars e []
+          |> (fun l -> List.fold_right Runtime_data.undefine_value l ctxt''') in
+
+        result, ctxt4
         end
       | _ ->
         raise (Eval_Exc ("Functor " ^ function_name ^ " had inconsistent identifier kind " ^

@@ -619,3 +619,82 @@ let name_of_decl = function
   | Function {fn_name; _} -> fn_name
   | Process {process_name; _} -> process_name
   | d -> failwith ("name_of_decl : cannot extract name from declaration: " ^ toplevel_decl_to_string d)
+
+(*Return the list of variables that are bound (via LocalDef) in a function*)
+let rec bound_vars (e : expression) (acc : label list) : label list =
+  match e with
+  | LocalDef ((v, _), e) ->
+    bound_vars e (v :: acc)
+
+  | Variable _
+  | True
+  | False
+  | Int _
+  | IPv4_address _
+  | EmptyList
+  | Str _
+  | Meta_quoted _
+  | Hole -> acc
+  | TypeAnnotation (e, _) -> bound_vars e acc
+
+  | Not e
+  | Abs e
+  | Int_to_address e
+  | Address_to_int e
+  | Update (_, e)
+  | RecordProjection (e, _)
+  | IndexableProjection (_, e) -> bound_vars e acc
+
+  | And (e1, e2)
+  | Or (e1, e2)
+  | Equals (e1, e2)
+  | GreaterThan (e1, e2)
+  | LessThan (e1, e2)
+  | Plus (e1, e2)
+  | Minus (e1, e2)
+  | Times (e1, e2)
+  | Mod (e1, e2)
+  | Quotient (e1, e2)
+  | ConsList (e1, e2)
+  | AppendList (e1, e2)
+  | Seq (e1, e2)
+  | UpdateIndexable (_, e1, e2)
+  | IntegerRange (e1, e2)
+  | RecordUpdate (e1, (_, e2))
+  | Map (_, e1, e2, _) ->
+    bound_vars e1 acc
+    |> bound_vars e2
+
+  | TupleValue es ->
+    List.fold_right bound_vars es acc
+  | Record labelled_es ->
+    List.fold_right (fun (_, e) -> bound_vars e) labelled_es acc
+  | CaseOf (e', e_pairs) ->
+    List.fold_right (fun (e1, e2) acc ->
+      bound_vars e1 acc
+      |> bound_vars e2) e_pairs (bound_vars e' acc)
+
+  | ITE (e1, e2, e3_opt) ->
+    let acc' =
+      bound_vars e1 acc
+      |> bound_vars e2 in
+    General.bind_opt (fun e -> bound_vars e acc') acc' e3_opt
+
+  | Iterate (_, e1, labelled_e_opt, e2, _) ->
+    let acc' =
+      bound_vars e1 acc
+      |> bound_vars e2 in
+    General.bind_opt (fun (_, e) -> bound_vars e acc') acc' labelled_e_opt
+
+  | Receive (_, idx_opt) ->
+    General.bind_opt (fun e -> bound_vars e acc) acc idx_opt
+  | Send ((_, idx_opt), e') ->
+    General.bind_opt (fun e -> bound_vars e acc) acc idx_opt
+    |> bound_vars e'
+
+  | Functor_App (_, fun_args) ->
+    List.fold_right (fun funarg acc ->
+      match funarg with
+      | Exp e
+      | Named (_, e) ->
+        bound_vars e acc) fun_args acc

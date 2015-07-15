@@ -427,14 +427,19 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     end
 
   | Functor_App (function_name, fun_args) ->
+    (*FIXME still not handling local and global state well*)
     (*This is used both to call functions and to schedule a process.
       First we extract the function/process info from the relevant runtime context.
       Then:
-        - create fresh scope for values that aren't passed by reference,
-          to avoid having their updates leaking to containing scopes.
-          (only by-reference values should have their updates leaked.)
+        - we don't need to create fresh scope for values that aren't passed by
+          reference (to avoid having their updates leaking to containing scopes).
+          instead, we "undefine" those variables when the function evaluation ends.
+          (only by-reference values should have their updates leaked, so we don't
+           undefine such variables.)
         - set up handlers for exceptions, and "connect" function's state
-        - after the function body has been normalised, detach state, and
+        - after the function body has been normalised, we "detach state" (i.e.,
+          undefine its local variables, and leave its static variables alone --
+          since they will survive until the next invocation).
           unwind exception handlers.
     *)
     begin
@@ -485,15 +490,6 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
 
         let ctxt'' =
           { ctxt' with except_table = excs :: ctxt'.except_table } in
-
-        (*FIXME currently the function set-up and calling isn't implemented properly.
-            What remains to be done:
-            - create fresh scope for values that aren't passed by reference,
-              to avoid having their updates leaking to containing scopes.
-              (only by-reference values should have their updates leaked.)
-            - "connect" function's state
-            - after the function body has been normalised, detach state.
-        *)
 
         (*Evaluate the body*)
         let result, ctxt''' =

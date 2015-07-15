@@ -144,3 +144,9 @@ let add_unique_assoc (((k,  _) as pair) : 'a * 'b) (l : ('a * 'b) list) : ('a * 
       if k = k' then pair :: acc
       else pair' :: acc) (List.rev l) []
   | _ -> failwith "add_unique_assoc: found multiple entries for key"
+
+(*Remove any elements in l1 from l2*)
+let list_diff (l1 : 'a list) (l2 : 'a list) : 'a list =
+  List.fold_right (fun x acc ->
+    if List.mem x l1 then acc
+    else x :: acc) l2 []

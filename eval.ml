@@ -427,6 +427,16 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     end
 
   | Functor_App (function_name, fun_args) ->
+    (*This is used both to call functions and to schedule a process.
+      First we extract the function/process info from the relevant runtime context.
+      Then:
+        - create fresh scope for values that aren't passed by reference,
+          to avoid having their updates leaking to containing scopes.
+          (only by-reference values should have their updates leaked.)
+        - set up handlers for exceptions, and "connect" function's state
+        - after the function body has been normalised, detach state, and
+          unwind exception handlers.
+    *)
     begin
     (*Determine whether this is a function call, or disjunct.
       If the latter, then it's already a value -- cannot be reduced further.*)
@@ -473,20 +483,35 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
               raise (Eval_Exc ("Missing label for parameter typed " ^ ty_s ^ " for functor " ^ function_name, Some e, None))
             | Some label -> label) arg_tys in
 
+        let ctxt'' =
+          { ctxt' with except_table = excs :: ctxt'.except_table } in
+
         (*FIXME currently the function set-up and calling isn't implemented properly.
             What remains to be done:
             - create fresh scope for values that aren't passed by reference,
               to avoid having their updates leaking to containing scopes.
               (only by-reference values should have their updates leaked.)
-            - set up handlers for exceptions, and "connect" function's state
-            - after the function body has been normalised, detach state, and unwind exception handlers.
+            - "connect" function's state
+            - after the function body has been normalised, detach state.
         *)
-        List.fold_right (fun (v, arg) body ->
-          (*Substitute formal for actual parameters in the function body*)
-          Crisp_syntax_aux.subst_var v arg body)
-         (List.combine formal_arg_names normal_arg_es) body
-        (*Normalise the function body*)
-        |> normalise st ctxt'
+
+        (*Evaluate the body*)
+        let result, ctxt''' =
+          List.fold_right (fun (v, arg) body ->
+            (*Substitute formal for actual parameters in the function body*)
+            Crisp_syntax_aux.subst_var v arg body)
+           (List.combine formal_arg_names normal_arg_es) body
+          (*Normalise the function body*)
+          |> normalise st ctxt''
+
+          (*Unwind exception handlers*)
+          |> apsnd (fun ctxt ->
+            { ctxt with except_table =
+                match ctxt.except_table with
+                | [] -> failwith "Impossible" (*because we just extended the exception stack*)
+                | _ :: rest -> rest }) in
+
+        result, ctxt'''
         end
       | _ ->
         raise (Eval_Exc ("Functor " ^ function_name ^ " had inconsistent identifier kind " ^

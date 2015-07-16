@@ -141,6 +141,14 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
       try resolve ctxt l  with
       | Eval_Exc (s, None, None) ->
         raise ( Eval_Exc(s, Some e, None)) in
+    (*FIXME do we need to check if l is a reference? might need to do this to
+            treat it differently depending on whether we want the reference or
+            its dereference. (the latter corresponds to automatically inserting
+            coercions from references to values.)
+            Perhaps the 'normalise' function can be given an optional parameter
+            specifying whether a value or a reference is expected?
+            To answer this i need to look at how the lvalue is handled in
+            assignment expressions.*)
     devaluate e', ctxt
 
   | TypeAnnotation (e', _) ->

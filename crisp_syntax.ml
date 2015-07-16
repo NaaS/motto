@@ -226,7 +226,13 @@ type fun_arg =
 and channel_identifier = channel_name * expression option
 
 and expression =
-  | Variable of label
+  | Variable of label (*FIXME might carry an optional additional label, that
+                              carries the source-name of a variable. This would
+                              allow me to easily rename variables (making them
+                              globally unique) but easily keep track of
+                              what the original name was. Error or diagnostic
+                              messages to the user would show the original name,
+                              and debugging messages would show both.*)
   | TypeAnnotation of expression * type_value
 
   (*Boolean expressions*)

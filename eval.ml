@@ -428,7 +428,11 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
 
   | Functor_App (function_name, fun_args) ->
     (*FIXME still not handling local and global state well*)
-    (*This is used both to call functions and to schedule a process.
+    (*This is used both to call functions and processes. (In the case of a process,
+      its body goes through a single iteration; upon reaching the end of its evaluation,
+      control is returned to the caller. Usually i'd expect that caller to be
+      the scheduler. A scheduler repeatedly calls processes according to some
+      schedule.)
       First we extract the function/process info from the relevant runtime context.
       Then:
         - we don't need to create fresh scope for values that aren't passed by
@@ -436,12 +440,15 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
           instead, we "undefine" those variables when the function evaluation ends.
           (only by-reference values should have their updates leaked, so we don't
            undefine such variables.)
-        - set up handlers for exceptions, and "connect" function's state
-        - after the function body has been normalised, we "detach state" (i.e.,
-          undefine its local variables, and leave its static variables alone --
-          since they will survive until the next invocation).
-          unwind exception handlers.
-    *)
+        - set up handlers for exceptions, and "connect" function's state.
+          there are two kinds of state: local and global.
+          Global state consists of reference cells that other functions/processes
+          may read and change. Local state consists of static variables:
+          reference cells that only invocations of this function/process may
+          read and change.
+        - after the function body has been normalised, we undefine its local variables,
+          unwind exception handlers, and "disconnect" the function's state; its
+          state should survive until the next invocation.*)
     begin
     (*Determine whether this is a function call, or disjunct.
       If the latter, then it's already a value -- cannot be reduced further.*)

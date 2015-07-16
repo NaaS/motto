@@ -74,7 +74,8 @@ type value_table = (symbol_name * typed_value) list
 type runtime_ctxt =
   {
     (*Current value held by each variable.
-      NOTE we fix a single, global, scope. Might replace this with nested scopes, but this will do fine for now.*)
+      NOTE we fix a single, global, scope. Might replace this with nested scopes,
+           but this will do fine for now.*)
     value_table : value_table;
     (*Table of function and process declarations*)
     exec_table : (symbol_name * toplevel_decl) list;

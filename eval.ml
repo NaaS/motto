@@ -603,6 +603,10 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     e, ctxt'
 
   | Send (chan_ident, e') ->
+    (*FIXME currently we assume that channels have infinite capacity, but this
+            assumption should be revised. when channels are annotated with some
+            finite capacity, then Send will block when that channel's capacity
+            has been reached.*)
     let e'', ctxt' = normalise st ctxt e' in
     let e_value = evaluate_value ctxt' e'' in
 

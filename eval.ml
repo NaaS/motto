@@ -435,7 +435,11 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expressi
     end
 
   | Functor_App (function_name, fun_args) ->
-    (*FIXME still not handling local and global state well*)
+    (*NOTE local and global state are handled very naively: we just assume that
+           the type-checker has ensured that the function/process isn't accessing
+           any state that it shouldn't; here we just allow the function/process
+           to interact directly with the runtime context, unchecked.
+           Thus we don't do anything to "connect" or "disconnect" state.*)
     (*This is used both to call functions and processes. (In the case of a process,
       its body goes through a single iteration; upon reaching the end of its evaluation,
       control is returned to the caller. Usually i'd expect that caller to be

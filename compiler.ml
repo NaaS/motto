@@ -48,7 +48,21 @@ let type_check_blob (st : State.state) (chans : channel list)
           label
         |> snd) args in
 
-  (*FIXME currently ignoring state and exceptions*)
+  (*FIXME currently ignoring state and exceptions.
+          exceptions are straightforward to type check: just add a name
+            to the typing context, and check the exception body.
+          state is less straightforward: i think i should hoist its info
+            globally (where it morally belongs) and perhaps classify variables
+            using a scheme like that below, to ensure that variables aren't
+            used in the wrong context (but also that, if shared, variables can
+            be used in different functions):
+
+            type variable_scope =
+              | Local
+              | Global
+            type variable_affinity =
+              | Unique
+              | Shared*)
   let (st_decls, e, ex_decls) = Crisp_syntax_aux.extract_process_body_bits pb in
 
   let actual_ret =

@@ -38,6 +38,11 @@ type inspect_instruction =
   (*FIXME add commands to trace running processes and functions. this is quite
           straightforward -- perhaps simply need to add a meta_instruction that
           writes to a log file.*)
+  (*FIXME could add command to dynamically load a runtime script*)
+  (*FIXME could add a function to call, and a facility to register callbacks,
+          to interact with an external system. (for instance, a C-based
+          protocol parser that can be linked with the .o file generated from
+          a runtime script.*)
 
 type declaration =
   | Binding of expression * type_value

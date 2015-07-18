@@ -125,6 +125,11 @@ let resolve ctxt l =
     raise (Eval_Exc ("Multiple resolutions for variable's value: " ^
                      results_s, None, None))
 
+(*FIXME switch normalise to return values of this type?*)
+type eval_m =
+  | Value of expression * runtime_ctxt
+  | Cont of (expression * (state -> runtime_ctxt -> expression -> expression * runtime_ctxt)) * runtime_ctxt
+
 (*Reduce an expression into a value expression*)
 let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expression * runtime_ctxt =
   match e with

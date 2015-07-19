@@ -128,21 +128,37 @@ let resolve ctxt l =
 type eval_continuation = state -> runtime_ctxt -> eval_m * runtime_ctxt
 (*FIXME update 'normalise' to return values of this type*)
 and eval_m =
+    (*Expression will not be normalised any further*)
   | Value of expression
-  | Cont of eval_continuation * (expression -> eval_continuation)
+    (*Expression should be normalised further.
+      If it reduces to a value in one step, then continue immediately to
+      the first function parameter. Otherwise, use the second function
+      parameter to combine any background continuation with this continuation,
+      to create a new (combined) continuation.*)
+  | Cont of expression * (expression -> eval_continuation) *
+    ((expression -> eval_continuation) -> (expression -> eval_continuation))
 
 let return_eval (e : expression) : eval_m = Value e
-let rec bind_eval (m : eval_m) (f : expression -> eval_continuation) st ctxt : eval_m * runtime_ctxt =
-  match m with
-  | Value e -> f e st ctxt
-  | Cont (em, f') ->
-    let em' st ctxt =
-      let m'', ctxt' = em st ctxt in
-      bind_eval m'' f' st ctxt' in
-    Cont (em', f), ctxt
+let rec bind_eval (e : expression) (f : expression -> eval_continuation) st ctxt : eval_m * runtime_ctxt =
+  let em, ctxt' = normalise st ctxt e in
+  match em with
+  | Value e' -> f e' st ctxt'
+  | Cont (e', _, compose) ->
+    Cont (e', compose f, (fun x -> x)), ctxt'
+
+and run st ctxt (work_list : eval_m list) : expression list * eval_m list * runtime_ctxt =
+  List.fold_right (fun m (el, wl, ctxt) ->
+    match m with
+    | Value e ->
+      (*The value won't be fed into further continuations, so it's removed from
+        the work list and added to the result list*)
+      (e :: el, wl, ctxt)
+    | Cont (e, f, _) ->
+      let em, ctxt' = bind_eval e f st ctxt in
+      (el, em :: wl, ctxt')) work_list ([], [], ctxt)
 
 (*Reduce an expression into a value expression*)
-and normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : expression * runtime_ctxt =
+and normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m * runtime_ctxt =
   match e with
   (*These expressions are already normal*)
   | True

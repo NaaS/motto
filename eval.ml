@@ -8,7 +8,7 @@ open Debug
 open Crisp_syntax
 open State
 open Runtime_data
-open Eval_m
+open Eval_monad
 
 (*FIXME include runtime_ctxt in state?*)
 exception Eval_Exc of string * expression option * typed_value option (** state -- FIXME include runtime_ctxt*)
@@ -129,7 +129,7 @@ let resolve ctxt l =
                      results_s, None, None))
 
 (*Reduce an expression into a value expression*)
-let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m * runtime_ctxt =
+let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_monad * runtime_ctxt =
   match e with
   (*These expressions are already normal*)
   | True

@@ -7,9 +7,9 @@ open Runtime_inspect
 open Runtime_data
 open Crisp_syntax
 
-let _ = run
+let _ = run [
 (*
-  [Load "tests/simple_function.cp";
+   Load "tests/simple_function.cp";
    Load "tests/maps_iterations2.cp";
    (*Load "tests/simple_function.bad.cp";*)
    Declare_value ("zoo", "100");
@@ -31,14 +31,15 @@ let _ = run
    Eval "somechan ! True";
    Eval "somechan ! (if ? somechan = 40: False else: True) and True";
    Deq_channel ("somechan", Incoming, None);
-   MI (Show_symbol_table None);
-   MI (Show_runtime_ctxt None)]
 *)
-  [Declare_channel ("somechan", "boolean/boolean");
-   Q_channel ("somechan", Incoming, None, "True");
-   Q_channel ("somechan", Incoming, None, "False");
+   Declare_channel ("boolchan", "boolean/boolean");
+   Q_channel ("boolchan", Incoming, None, "True");
+   Q_channel ("boolchan", Incoming, None, "False");
    Eval "True";
    Eval "False";
    Eval "not True";
    Eval "not False";
-  ]
+   Eval "not (? boolchan)";
+
+   MI (Show_symbol_table None);
+   MI (Show_runtime_ctxt None)]

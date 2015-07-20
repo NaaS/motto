@@ -41,7 +41,7 @@ let _ = run [
    Eval "not True";
    Eval "not False";
    Eval "? boolchan";
-   Eval "not (? boolchan)";
+(*   Eval "not (? boolchan)";*)
 (*   Eval "(not not ? boolchan) and False";*)
 (*   Eval "not not ? boolchan and False";*)
 
@@ -52,25 +52,24 @@ let _ = run [
    Eval "not (? boolchan)";
 *)
 
+   MI (Show_runtime_ctxt None);
 (*   Eval "((False or not ? boolchan) and True)";*)
-
-(*   Eval "((False or not ? boolchan) or False)"; -- FIXME that bug again*)
+(*   Eval "((False or not ? boolchan) or False)";*)
 (*   Eval "((not ? boolchan) or False)";*)
 (*   Eval "(False or (not ? boolchan))";*)
-(*   Eval "(False or False or (not ? boolchan))"; -- FIXME there it is*)
-(*   Eval "(False or (False or (not ? boolchan)))"; -- FIXME there it is*)
-   MI (Show_runtime_ctxt None);
-   Eval "False or (False or (? boolchan))"; (*-- FIXME there it is*)
-(*   Eval "False or (False or (False or (? boolchan)))"; (*-- FIXME there it is*)*)
-(*   Eval "not (False or (False or (? boolchan)))"; (*-- FIXME there it is*)*)
+(*   Eval "(False or False or (not ? boolchan))";*)
+(*   Eval "(False or (False or (not ? boolchan)))";*)
+(*   Eval "False or (False or (? boolchan))";*)
+(*   Eval "False or (False or (False or (? boolchan)))";*)
+(*   Eval "not (False or (False or (? boolchan)))";*)
 
 (*   Eval "((False or False) or (not ? boolchan))";*)
 (*   Eval "not not not not not ? boolchan";*)
 
-(*   Eval "boolchan ! ((False or not ? boolchan) and True)";*)
+   Eval "boolchan ! ((False or not ? boolchan) and True)";
 (*
    Eval "boolchan ! ((False or not ? boolchan) and True)";
-(*   Eval "boolchan ! (False or not ? boolchan) and True"; -- FIXME this is not side-effecting as expected*)
+   Eval "boolchan ! (False or not ? boolchan) and True";
 *)
 
    MI (Show_symbol_table None);

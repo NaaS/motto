@@ -9,7 +9,8 @@ open State
 open Runtime_data
 
 type eval_continuation = state -> runtime_ctxt -> eval_m * runtime_ctxt
-(*FIXME update 'normalise' to return values of this type*)
+(*FIXME add other kinds of result values -- such as Timeout, and perhaps
+        one that carries exceptions*)
 and eval_m =
     (*Expression will not be normalised any further*)
   | Value of expression

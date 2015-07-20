@@ -765,19 +765,14 @@ and channel_fun_ident ((c_name, idx_opt) : channel_identifier) (operation_verb :
     let e''' = devaluate e_value' in
     e''', ctxt''
 
-and run_until_done st work_list ctxt results =
+and run_until_done st ctxt work_list results =
   if work_list = [] then results, ctxt
   else
     let el, wl, ctxt' = run st ctxt work_list in
-    run_until_done st wl ctxt' (el @ results)
-
-and keep_running st ctxt wl results =
-  let (result, ems, ctxt') = run st ctxt wl in
-  if ems = [] then (result @ results, ctxt')
-  else keep_running st ctxt' ems (result @ results)
+    run_until_done st ctxt' wl (el @ results)
 
 (*Translate an arbitrary expression into a value*)
 and evaluate (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value * runtime_ctxt =
   let em, ctxt' = normalise st ctxt e in
-  let ([result], ctxt'') = keep_running st ctxt' [em] [] in
+  let ([result], ctxt'') = run_until_done st ctxt' [em] [] in
   evaluate_value ctxt'' result, ctxt''

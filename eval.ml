@@ -12,6 +12,8 @@ open Runtime_data
 (*FIXME include runtime_ctxt in state?*)
 exception Eval_Exc of string * expression option * typed_value option (** state -- FIXME include runtime_ctxt*)
 
+exception Empty_Channel
+
 (*Translate a normal expression into a value*)
 let rec evaluate_value (ctxt : runtime_ctxt) (e : expression) : typed_value =
   match e with
@@ -138,7 +140,14 @@ and eval_m =
   | Cont of expression * (expression -> eval_continuation) *
     ((expression -> eval_continuation) -> (expression -> eval_continuation))
 
+(*FIXME bad style*)
+let expect_value m =
+  match m with
+  | Value e -> e
+
 let return_eval (e : expression) : eval_m = Value e
+let continuate f e = Cont (e, f, (fun x -> x))
+
 let rec bind_eval (e : expression) (f : expression -> eval_continuation) st ctxt : eval_m * runtime_ctxt =
   let em, ctxt' = normalise st ctxt e in
   match em with
@@ -166,7 +175,7 @@ and normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m * run
   | Int _
   | IPv4_address _
   | Str _
-  | EmptyList -> e, ctxt
+  | EmptyList -> return_eval e, ctxt
 
   | Variable l ->
     let e' =
@@ -181,13 +190,31 @@ and normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m * run
             specifying whether a value or a reference is expected?
             To answer this i need to look at how the lvalue is handled in
             assignment expressions.*)
-    devaluate e', ctxt
+    return_eval (devaluate e'), ctxt
 
   | TypeAnnotation (e', _) ->
     (*NOTE there's no runtime type-checking -- we ignore the type annotation.
            that should have been checked at an earlier pass.*)
     normalise st ctxt e'
 
+  | Not e' ->
+    continuate (fun e' st ctxt ->
+      match e' with
+      | True -> return_eval False, ctxt
+      | False -> return_eval True, ctxt
+      | _ ->
+        raise (Eval_Exc ("Cannot normalise to Boolean value", Some e', None))) e', ctxt
+
+(*
+    begin
+    match normalise st ctxt e' with
+    | True, ctxt' -> False, ctxt'
+    | False, ctxt' -> True, ctxt'
+    | _ ->
+      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e', None))
+    end
+*)
+(*
   | And (e1, e2)
   | Or (e1, e2) ->
     begin
@@ -214,14 +241,6 @@ and normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m * run
       raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some e2, None))
     | _, _ ->
       raise (Eval_Exc ("Cannot normalise to Boolean value", Some e, None))
-    end
-  | Not e' ->
-    begin
-    match normalise st ctxt e' with
-    | True, ctxt' -> False, ctxt'
-    | False, ctxt' -> True, ctxt'
-    | _ ->
-      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e', None))
     end
   | Equals (e1, e2) ->
     let e1', e2', ctxt' =
@@ -664,6 +683,27 @@ and normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m * run
         raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None)) in
     channel_fun_ident chan_ident "receive" Incoming
       (fun s -> Eval_Exc (s, Some e, None)) f st ctxt
+*)
+  | Receive chan_ident ->
+    begin
+    let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+      match dir with
+      | Incoming ->
+        begin
+        match incoming with
+        | v :: xs -> xs, outgoing, v, ctxt
+        | [] -> raise Empty_Channel
+        end
+      | Outgoing ->
+        raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None)) in
+    try
+      let v, ctxt' =
+        channel_fun_ident chan_ident "receive" Incoming
+          (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
+      return_eval v, ctxt'
+    with
+    | Empty_Channel -> Cont (e, (fun e _ ctxt -> return_eval e, ctxt), (fun x -> x)), ctxt
+    end
 
   | Seq (Meta_quoted mis, e') ->
     (*FIXME currently ignoring meta-quoted instructions*)
@@ -725,10 +765,19 @@ and channel_fun_ident ((c_name, idx_opt) : channel_identifier) (operation_verb :
     let e''' = devaluate e_value' in
     e''', ctxt''
 
+and run_until_done st work_list ctxt results =
+  if work_list = [] then results, ctxt
+  else
+    let el, wl, ctxt' = run st ctxt work_list in
+    run_until_done st wl ctxt' (el @ results)
+
+and keep_running st ctxt wl results =
+  let (result, ems, ctxt') = run st ctxt wl in
+  if ems = [] then (result @ results, ctxt')
+  else keep_running st ctxt' ems (result @ results)
+
 (*Translate an arbitrary expression into a value*)
 and evaluate (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value * runtime_ctxt =
-  normalise st ctxt e
-  |> swap
-  |> selfpair
-  |> apsnd fst
-  |> apfst (uncurry evaluate_value)
+  let em, ctxt' = normalise st ctxt e in
+  let ([result], ctxt'') = keep_running st ctxt' [em] [] in
+  evaluate_value ctxt'' result, ctxt''

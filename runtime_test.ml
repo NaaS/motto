@@ -8,6 +8,7 @@ open Runtime_data
 open Crisp_syntax
 
 let _ = run
+(*
   [Load "tests/simple_function.cp";
    Load "tests/maps_iterations2.cp";
    (*Load "tests/simple_function.bad.cp";*)
@@ -32,3 +33,12 @@ let _ = run
    Deq_channel ("somechan", Incoming, None);
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]
+*)
+  [Declare_channel ("somechan", "boolean/boolean");
+   Q_channel ("somechan", Incoming, None, "True");
+   Q_channel ("somechan", Incoming, None, "False");
+   Eval "True";
+   Eval "False";
+   Eval "not True";
+   Eval "not False";
+  ]

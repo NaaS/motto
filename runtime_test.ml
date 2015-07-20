@@ -35,13 +35,43 @@ let _ = run [
    Declare_channel ("boolchan", "boolean/boolean");
    Q_channel ("boolchan", Incoming, None, "True");
    Q_channel ("boolchan", Incoming, None, "False");
+   Q_channel ("boolchan", Incoming, None, "True");
    Eval "True";
    Eval "False";
    Eval "not True";
    Eval "not False";
+   Eval "? boolchan";
    Eval "not (? boolchan)";
+(*   Eval "(not not ? boolchan) and False";*)
+(*   Eval "not not ? boolchan and False";*)
+
+(* NOTE will cause program to block, unless more input becomes available on that channel.
+   Eval "not (? boolchan)";
+   Eval "not (? boolchan)";
+   Eval "not (? boolchan)";
+   Eval "not (? boolchan)";
+*)
+
+(*   Eval "((False or not ? boolchan) and True)";*)
+
+(*   Eval "((False or not ? boolchan) or False)"; -- FIXME that bug again*)
+(*   Eval "((not ? boolchan) or False)";*)
+(*   Eval "(False or (not ? boolchan))";*)
+(*   Eval "(False or False or (not ? boolchan))"; -- FIXME there it is*)
+(*   Eval "(False or (False or (not ? boolchan)))"; -- FIXME there it is*)
+   MI (Show_runtime_ctxt None);
+   Eval "False or (False or (? boolchan))"; (*-- FIXME there it is*)
+(*   Eval "False or (False or (False or (? boolchan)))"; (*-- FIXME there it is*)*)
+(*   Eval "not (False or (False or (? boolchan)))"; (*-- FIXME there it is*)*)
+
+(*   Eval "((False or False) or (not ? boolchan))";*)
+(*   Eval "not not not not not ? boolchan";*)
+
+(*   Eval "boolchan ! ((False or not ? boolchan) and True)";*)
+(*
    Eval "boolchan ! ((False or not ? boolchan) and True)";
 (*   Eval "boolchan ! (False or not ? boolchan) and True"; -- FIXME this is not side-effecting as expected*)
+*)
 
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

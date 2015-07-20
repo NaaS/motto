@@ -13,7 +13,7 @@ open Eval_m
 (*FIXME include runtime_ctxt in state?*)
 exception Eval_Exc of string * expression option * typed_value option (** state -- FIXME include runtime_ctxt*)
 
-exception Empty_Channel
+exception Empty_Channel of runtime_ctxt
 
 (*Translate a normal expression into a value*)
 let rec evaluate_value (ctxt : runtime_ctxt) (e : expression) : typed_value =
@@ -633,7 +633,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
         begin
         match incoming with
         | v :: xs -> xs, outgoing, v, ctxt
-        | [] -> raise Empty_Channel
+        | [] -> raise (Empty_Channel ctxt)
         end
       | Outgoing ->
         raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None)) in
@@ -643,7 +643,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
           (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
       return_eval v, ctxt'
     with
-    | Empty_Channel -> Cont (e, (fun e _ ctxt -> return_eval e, ctxt), (fun x -> x)), ctxt
+    | Empty_Channel ctxt ->
+(*      Cont (e, (fun e _ ctxt -> return_eval e, ctxt)), ctxt*)
+      Cont (e, return), ctxt
     end
 
   | Seq (Meta_quoted mis, e') ->
@@ -653,6 +655,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
     raise (Eval_Exc ("Cannot normalise meta_quoted expressions alone -- add some other expression after them, and normalisation should succeed.", Some e, None))
 
   | Seq (e1, e2) ->
+(*FIXME ensure that e1 is a Value, otherwise reattempt to evaluate*)
     let _, ctxt' = normalise st ctxt e1 in
     normalise st ctxt' e2
 

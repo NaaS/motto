@@ -160,12 +160,12 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
     normalise st ctxt e'
 
   | Not e' ->
-    continuate (fun e' st ctxt ->
+    continuate e' (fun e' st ctxt ->
       match e' with
       | True -> return_eval False, ctxt
       | False -> return_eval True, ctxt
       | _ ->
-        raise (Eval_Exc ("Cannot normalise to Boolean value", Some e', None))) e', ctxt
+        raise (Eval_Exc ("Cannot normalise to Boolean value", Some e', None))), ctxt
 
 (*
     begin
@@ -614,14 +614,15 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
       List.assoc idx_v dict
       |> devaluate in
     e, ctxt'
+*)
 
   | Send (chan_ident, e') ->
+    continuate e' (fun e' st ctxt ->
     (*FIXME currently we assume that channels have infinite capacity, but this
             assumption should be revised. when channels are annotated with some
             finite capacity, then Send will block when that channel's capacity
             has been reached.*)
-    let e'', ctxt' = normalise st ctxt e' in
-    let e_value = evaluate_value ctxt' e'' in
+    let e_value = evaluate_value ctxt e' in
 
     let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
       match dir with
@@ -631,21 +632,8 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
         (incoming, List.rev (e_value :: List.rev outgoing), e_value, ctxt) in
     channel_fun_ident chan_ident "send" Outgoing
       (fun s -> Eval_Exc (s, Some e, None)) f st ctxt
+    |> apfst return_eval), ctxt
 
-  | Receive chan_ident ->
-    let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
-      match dir with
-      | Incoming ->
-        begin
-        match incoming with
-        | v :: xs -> xs, outgoing, v, ctxt
-        | [] -> failwith "FIXME: block"
-        end
-      | Outgoing ->
-        raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None)) in
-    channel_fun_ident chan_ident "receive" Incoming
-      (fun s -> Eval_Exc (s, Some e, None)) f st ctxt
-*)
   | Receive chan_ident ->
     begin
     let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =

@@ -28,7 +28,7 @@ let expect_value m =
   | Value e -> e
 
 let return_eval (e : expression) : eval_m = Value e
-let continuate f e = Cont (e, f, (fun x -> x))
+let continuate e f = Cont (e, f, (fun x -> x))
 
 let rec bind_eval normalise (e : expression) (f : expression -> eval_continuation) st ctxt : eval_m * runtime_ctxt =
   let em, ctxt' = normalise st ctxt e in

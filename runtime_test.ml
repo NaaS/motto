@@ -40,6 +40,7 @@ let _ = run [
    Eval "not True";
    Eval "not False";
    Eval "not (? boolchan)";
+   Eval "boolchan ! (not ? boolchan)";
 
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

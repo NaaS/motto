@@ -167,16 +167,6 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
       | _ ->
         raise (Eval_Exc ("Cannot normalise to Boolean value", Some e', None))), ctxt
 
-(*
-    begin
-    match normalise st ctxt e' with
-    | True, ctxt' -> False, ctxt'
-    | False, ctxt' -> True, ctxt'
-    | _ ->
-      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e', None))
-    end
-*)
-(*
   | And (e1, e2)
   | Or (e1, e2) ->
     begin
@@ -185,25 +175,26 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
       | And (_, _) -> (fun b1 b2 -> if b1 = True && b2 = True then True else False)
       | Or (_, _) -> (fun b1 b2 -> if b1 = True || b2 = True then True else False)
       | _ -> failwith "Impossible" in
-    let b1, b2, ctxt' =
-       normalise st ctxt e1
-       ||> (normalise st, e2) in
-    match b1, b2 with
-    | True, True
-    | False, True
-    | True, False
-    | False, False -> f b1 b2, ctxt'
-    | anomalous, True
-    | anomalous, False ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some e1, None))
-    | True, anomalous
-    | False, anomalous ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some e2, None))
-    | _, _ ->
-      raise (Eval_Exc ("Cannot normalise to Boolean value", Some e, None))
+
+    continuate e1 (fun b1 st ctxt ->
+      continuate e2 (fun b2 st ctxt' ->
+        match b1, b2 with
+        | True, True
+        | False, True
+        | True, False
+        | False, False -> return_eval (f b1 b2), ctxt'
+        | anomalous, True
+        | anomalous, False ->
+          let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+          raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some e1, None))
+        | True, anomalous
+        | False, anomalous ->
+          let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+          raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some e2, None))
+        | _, _ ->
+          raise (Eval_Exc ("Cannot normalise to Boolean value", Some e, None))), ctxt), ctxt
     end
+(*
   | Equals (e1, e2) ->
     let e1', e2', ctxt' =
        normalise st ctxt e1

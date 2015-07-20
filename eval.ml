@@ -643,8 +643,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
           (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
       return_eval v, ctxt'
     with
-    | Empty_Channel ctxt ->
-      Cont (e, return), ctxt
+    | Empty_Channel ctxt -> retry e, ctxt
     end
 
   | Seq (Meta_quoted mis, e') ->

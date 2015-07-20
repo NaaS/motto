@@ -35,7 +35,7 @@ let _ = run [
    Declare_channel ("boolchan", "boolean/boolean");
    Q_channel ("boolchan", Incoming, None, "True");
    Q_channel ("boolchan", Incoming, None, "False");
-   Q_channel ("boolchan", Incoming, None, "True");
+(*   Q_channel ("boolchan", Incoming, None, "True");*)
    Eval "True";
    Eval "False";
    Eval "not True";

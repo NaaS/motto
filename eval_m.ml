@@ -38,26 +38,7 @@ let continuate e f = Cont (e, f)
 
 let rec bind_eval normalise (m : eval_m) (f : expression -> eval_continuation) st ctxt : eval_m * runtime_ctxt =
   match m with
-(*
   | Value e' -> f e' st ctxt
-  | Bind (Value e', f') ->
-    let m', ctxt' = f' e' st ctxt in
-    bind_eval normalise m' f st ctxt'
-(*    Bind (m', f), ctxt'*)
-  | Bind (em, f') ->
-    let m', ctxt' = bind_eval normalise em f' st ctxt in
-    bind_eval normalise m' f st ctxt'
-  | Cont (e, f') ->
-    let em, ctxt' = normalise st ctxt e in
-    Bind (Bind (em, f'), f), ctxt'
-*)
-  | Value e' -> f e' st ctxt
-(*
-  | Bind (Value e', f') ->
-    let m', ctxt' = f' e' st ctxt in
-    bind_eval normalise m' f st ctxt'
-(*    Bind (m', f), ctxt'*)
-*)
   | Bind (em, f') ->
     begin
     let m', ctxt' = bind_eval normalise em f' st ctxt in
@@ -71,7 +52,7 @@ let rec bind_eval normalise (m : eval_m) (f : expression -> eval_continuation) s
 
 and run normalise st ctxt (work_list : eval_m list) : expression list * eval_m list * runtime_ctxt =
   List.fold_right (fun m (el, wl, ctxt) ->
-    print_endline (evalm_to_string m);
+    if !Config.cfg.Config.debug then print_endline (evalm_to_string m);
     match m with
     | Value e ->
       (*The value won't be fed into further continuations, so it's removed from

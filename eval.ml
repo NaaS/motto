@@ -644,7 +644,6 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
       return_eval v, ctxt'
     with
     | Empty_Channel ctxt ->
-(*      Cont (e, (fun e _ ctxt -> return_eval e, ctxt)), ctxt*)
       Cont (e, return), ctxt
     end
 

@@ -194,13 +194,12 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
         | _, _ ->
           raise (Eval_Exc ("Cannot normalise to Boolean value", Some e, None))), ctxt), ctxt
     end
-(*
+
   | Equals (e1, e2) ->
-    let e1', e2', ctxt' =
-       normalise st ctxt e1
-       ||> (normalise st, e2) in
-    let result = if e1' = e2' then True else False in
-    (result, ctxt')
+    continuate e1 (fun e1' st ctxt ->
+      continuate e2 (fun e2' st ctxt' ->
+        let result = if e1' = e2' then True else False in
+        (return_eval result, ctxt')), ctxt), ctxt
 
   | GreaterThan (e1, e2)
   | LessThan (e1, e2) ->
@@ -210,19 +209,18 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
       | GreaterThan _ -> (fun i1 i2 -> if i1 > i2 then True else False)
       | LessThan _ -> (fun i1 i2 -> if i1 < i2 then True else False)
       | _ -> failwith "Impossible" in
-    let e1', e2', ctxt' =
-       normalise st ctxt e1
-       ||> (normalise st, e2) in
-    match e1', e2' with
-    | Int i1, Int i2 -> f i1 i2, ctxt'
-    | anomalous, Int _ ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e1, None))
-    | Int _, anomalous ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e2, None))
-    | _, _->
-      raise (Eval_Exc ("Cannot normalise to integer value", Some e, None))
+    continuate e1 (fun e1' st ctxt ->
+      continuate e2 (fun e2' st ctxt' ->
+        match e1', e2' with
+        | Int i1, Int i2 -> return_eval (f i1 i2), ctxt'
+        | anomalous, Int _ ->
+          let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+          raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e1, None))
+        | Int _, anomalous ->
+          let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+          raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e2, None))
+        | _, _->
+          raise (Eval_Exc ("Cannot normalise to integer value", Some e, None))), ctxt), ctxt
     end
 
   | Plus (e1, e2)
@@ -243,58 +241,54 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_m *
           enlist i1 i2
           |> Crisp_syntax_aux.flick_integer_list)
       | _ -> failwith "Impossible" in
-    let e1', e2', ctxt' =
-       normalise st ctxt e1
-       ||> (normalise st, e2) in
-    match e1', e2' with
-    | Int i1, Int i2 -> f i1 i2, ctxt'
-    | anomalous, Int _ ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e1, None))
-    | Int _, anomalous ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e2, None))
-    | _, _->
-      raise (Eval_Exc ("Cannot normalise to integer value", Some e, None))
+
+    continuate e1 (fun e1' st ctxt ->
+      continuate e2 (fun e2' st ctxt' ->
+        match e1', e2' with
+        | Int i1, Int i2 -> return_eval (f i1 i2), ctxt'
+        | anomalous, Int _ ->
+          let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+          raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e1, None))
+        | Int _, anomalous ->
+          let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+          raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e2, None))
+        | _, _->
+          raise (Eval_Exc ("Cannot normalise to integer value", Some e, None))), ctxt), ctxt
     end
 
   | Abs e' ->
-    begin
-    match normalise st ctxt e' with
-    | Int i, ctxt' -> Int (abs i), ctxt'
-    | anomalous, _ ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))
-    end
+    continuate e' (fun e' st ctxt' ->
+      match e' with
+      | Int i -> return_eval (Int (abs i)), ctxt'
+      | anomalous ->
+        let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+        raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))), ctxt
 
   | Int_to_address e' ->
-    begin
-    match normalise st ctxt e' with
-    | Int i, _ -> failwith "TODO"
-    | anomalous, _ ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))
-    end
+    continuate e' (fun e' st ctxt' ->
+      match e' with
+      | Int i -> failwith "TODO"
+      | anomalous ->
+        let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+        raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))), ctxt
   | Address_to_int e' ->
-    begin
-    match normalise st ctxt e' with
-    | IPv4_address (i1, i2, i3, i4), _ -> failwith "TODO"
-    | anomalous, _ ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))
-    end
+    continuate e' (fun e' st ctxt' ->
+      match e' with
+      | IPv4_address (i1, i2, i3, i4) -> failwith "TODO"
+      | anomalous ->
+        let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+        raise (Eval_Exc ("Cannot normalise to integer value. Got " ^ anomalous_s, Some e', None))), ctxt
 
   | ConsList (h, t) ->
-    let h', t', ctxt' =
-       normalise st ctxt h
-       ||> (normalise st, t) in
-    ConsList (h', t'), ctxt'
+    continuate h (fun h' st ctxt ->
+      continuate t (fun t' st ctxt' ->
+        return_eval (ConsList (h', t')), ctxt'), ctxt), ctxt
   | AppendList (l1, l2) ->
-    let l1', l2', ctxt' =
-       normalise st ctxt l1
-       ||> (normalise st, l2) in
-    append_list [] l1' l2', ctxt'
+    continuate l1 (fun l1' st ctxt ->
+      continuate l2 (fun l2' st ctxt' ->
+        return_eval (append_list [] l1' l2'), ctxt'), ctxt), ctxt
 
+(*
   | TupleValue es ->
     let es', ctxt' = fold_map ([], ctxt) (normalise st) es in
     TupleValue es', ctxt'

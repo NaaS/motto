@@ -107,7 +107,7 @@ and run_until_done normalise st ctxt work_list results =
     let el, wl, ctxt' = run normalise st ctxt work_list in
     run_until_done normalise st ctxt' wl (el @ results)
 
-(*Monadically evaluate a list of expressions.
+(*Monadically evaluate a list of expressions, in the style of a fold.
   A (acceptable) hack is used to stay within the monad. The hack consists of
   creating a fresh reference cell that's used to accumulate the intermediate
   values. These are then passed on to the remainder of the computation.
@@ -115,29 +115,35 @@ and run_until_done normalise st ctxt work_list results =
   computations of arbitrary nature (i.e., not just normalisations of expressions)
   but that sort of generalisation did not seem warranted for what was needed here.
 
-  z is called last -- it is given the normalised list of expressions, from list
-   "l". These would have been normalised in order*)
-let monadic_map (l : expression list)
-      (continuation : expression list -> eval_continuation) : eval_monad =
-  let store : expression list ref = ref [] in
-  let expr_continuation =
-    continuate flick_unit_value (fun _ st ctxt ->
-      continuation (List.rev !store) st ctxt) in
-  List.fold_right (fun e acc ->
-    continuate e (fun e st ctxt ->
-      store := e :: !store;
-      (acc, ctxt))) l expr_continuation
-
-(*Monadically evaluate a list of expressions.
-  This is more general than monadic_map, as one should expect.*)
+  "l" list down which to fold.
+  "z" initial accumulator value.
+  "f" fold step.
+  "g" function applied to the accumulator before it's passed on to "continuation".
+  "continuation" function takes an arbitrary type (i.e., OCaml, not Flick, type)
+    and produces an eval_continuation.
+*)
 let monadic_fold (l : expression list)
       (z : 'a)
       (f : expression -> 'a -> 'a)
+      (g : 'a -> 'a)
       (continuation : 'a -> eval_continuation) : eval_monad =
   let store : 'a ref = ref z in
   let expr_continuation =
-    continuate flick_unit_value (fun _ st ctxt -> continuation !store st ctxt) in
+    continuate flick_unit_value (fun _ st ctxt -> continuation (g !store) st ctxt) in
   List.fold_right (fun e acc ->
     continuate e (fun e st ctxt ->
       store := f e !store;
       (acc, ctxt))) l expr_continuation
+
+(*Monadically evaluate a list of expressions. These are evaluated one by one,
+  within the monad, then we bind with the continuation of the computation
+  (again, in the monad).
+
+  "continuation" is called last -- it is given the normalised list of
+     expressions, from list "l". These would have been normalised in order*)
+let continuate_list (l : expression list)
+      (continuation : expression list -> eval_continuation) : eval_monad =
+  monadic_fold l ([] : expression list)
+    (fun e stored_es -> e :: stored_es)
+    List.rev
+    continuation

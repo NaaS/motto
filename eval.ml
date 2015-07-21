@@ -307,12 +307,12 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       (*unit value does not need further normalisation*)
       return_eval (TupleValue es), ctxt
     else
-      monadic_map es (fun es' _ ctxt' ->
+      continuate_list es (fun es' _ ctxt' ->
         return_eval (TupleValue es'), ctxt'), ctxt
 
   | Record fields ->
     let labels, es = List.split fields in
-    monadic_map es (fun es' _ ctxt' ->
+    continuate_list es (fun es' _ ctxt' ->
       let fields' = List.combine labels es' in
       return_eval (Record fields'), ctxt'), ctxt
 
@@ -346,54 +346,51 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           let e'_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e' in
           raise (Eval_Exc ("Found multiple cases for this normal disjunct: " ^ e'_s, Some e'norm, None))), ctxt'), ctxt
 
-(*
   (*This work for both tuples and records.*)
   | RecordProjection (e', l) ->
-    begin
-    let e'norm, ctxt' = normalise st ctxt e' in
-    let e'norm_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e'norm in
-    let project_from fields =
-      match List.filter (fun (field_name, _) -> field_name = l) fields with
-      | [] ->
-        raise (Eval_Exc ("Cannot find label called " ^ l ^ " in expression: " ^ e'norm_s, Some e, None))
-      | [(_, field_e)] -> normalise st ctxt' field_e
+    continuate e' (fun e'norm st ctxt' ->
+      let e'norm_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e'norm in
+      let project_from fields =
+        match List.filter (fun (field_name, _) -> field_name = l) fields with
+        | [] ->
+          raise (Eval_Exc ("Cannot find label called " ^ l ^ " in expression: " ^ e'norm_s, Some e, None))
+        | [(_, field_e)] -> normalise st ctxt' field_e
+        | _ ->
+          raise (Eval_Exc ("Found multiple labels called " ^ l ^ " in expression: " ^ e'norm_s, Some e, None)) in
+      match e'norm with
+      | Record fields -> project_from fields
+      | TupleValue es ->
+        let labels =
+          enlist 1 (List.length es)
+          |> List.map string_of_int in
+        List.combine labels es
+        |> project_from
       | _ ->
-        raise (Eval_Exc ("Found multiple labels called " ^ l ^ " in expression: " ^ e'norm_s, Some e, None)) in
-    match e'norm with
-    | Record fields -> project_from fields
-    | TupleValue es ->
-      let labels =
-        enlist 1 (List.length es)
-        |> List.map string_of_int in
-      List.combine labels es
-      |> project_from
-    | _ ->
-      raise (Eval_Exc ("Cannot project from this normal expression: " ^ e'norm_s, Some e, None))
-    end
+        raise (Eval_Exc ("Cannot project from this normal expression: " ^ e'norm_s, Some e, None))), ctxt
 
   | RecordUpdate (record_e, (field_name, field_body_e)) ->
-    begin
-    let e'norm, ctxt' = normalise st ctxt record_e in
-    let e'norm_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e'norm in
-    match e'norm with
-    | Record fields ->
-      let updated, fields', ctxt'' =
-        List.fold_right (fun ((field_l, field_e) as field) (updated, field_acc, ctxt) ->
-          if field_l = field_name then
-            if updated then
-              raise (Eval_Exc ("Cannot record-update this normal expression: " ^ e'norm_s, Some e, None))
-            else
-              let field_body_e', ctxt' = normalise st ctxt field_body_e in
-              (true, (field_name, field_body_e') :: field_acc, ctxt')
-          else (updated, field :: field_acc, ctxt)) (List.rev fields) (false, [], ctxt') in
-      if updated then
-        Record fields', ctxt''
-      else
-        raise (Eval_Exc ("Could not find field name " ^ field_name ^ " to update in this normal expression: " ^ e'norm_s, Some e, None))
-    | _ ->
-      raise (Eval_Exc ("Cannot record-update this normal expression: " ^ e'norm_s, Some e, None))
-    end
+    continuate record_e (fun e'norm st ctxt' ->
+      continuate field_body_e (fun field_body_e' st ctxt'' ->
+        let e'norm_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e'norm in
+        match e'norm with
+        | Record fields ->
+          (*fields have already been normalised, since they're contained in record_e*)
+          let updated, fields' =
+            List.fold_right (fun ((field_l, field_e) as field) (updated, field_acc) ->
+              if field_l = field_name then
+                if updated then
+                  raise (Eval_Exc ("Cannot record-update this normal expression: " ^ e'norm_s, Some e, None))
+                else
+                  (true, (field_name, field_body_e') :: field_acc)
+              else (updated, field :: field_acc)) (List.rev fields) (false, []) in
+          if updated then
+            return_eval (Record fields'), ctxt''
+          else
+            raise (Eval_Exc ("Could not find field name " ^ field_name ^ " to update in this normal expression: " ^ e'norm_s, Some e, None))
+        | _ ->
+          raise (Eval_Exc ("Cannot record-update this normal expression: " ^ e'norm_s, Some e, None))), ctxt'), ctxt
 
+(*
   | Map (v, l, body, unordered) ->
     (*FIXME "unordered" not taken into account*)
     let l', ctxt' = normalise st ctxt l in
@@ -541,32 +538,31 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
                string_of_identifier_kind identifier_kind, Some e, None))
       end
     end
+*)
 
   | LocalDef ((v, _), e) ->
-    begin
-    let e', ctxt' = normalise st ctxt e in
-    let ctxt'' = { ctxt' with
-      value_table =
-        let pair = (v, evaluate_value ctxt' e') in
-        add_unique_assoc pair ctxt'.value_table } in
-    e', ctxt''
-    end
+    continuate e (fun e' st ctxt' ->
+      let ctxt'' = { ctxt' with
+        value_table =
+          let pair = (v, evaluate_value ctxt' e') in
+          add_unique_assoc pair ctxt'.value_table } in
+      return_eval e', ctxt''), ctxt
 
   | Update (v, e) ->
     (*NOTE this handler's implementation is very similar to that for Set in
            Runtime_data.eval, except that here we don't do any type-checking:
            that would have been done in earlier parts of the compiler pipeline
            if we're compiling, or by the interpreter if we're interpreting.*)
-    let e', ctxt' = normalise st ctxt e in
-    let value = evaluate_value ctxt' e' in
-    (*Update runtime context*)
-    let ctxt'' =
-      if not (List.mem_assoc v ctxt'.Runtime_data.value_table) then
-        raise (Eval_Exc ("Cannot Update: Symbol " ^ v ^ " not in runtime context", Some e, None));
-      { ctxt' with Runtime_data.value_table =
-          let pair = (v, value) in
-          General.add_unique_assoc pair ctxt'.Runtime_data.value_table } in
-    e', ctxt''
+    continuate e (fun e' st ctxt' ->
+      let value = evaluate_value ctxt' e' in
+      (*Update runtime context*)
+      let ctxt'' =
+        if not (List.mem_assoc v ctxt'.Runtime_data.value_table) then
+          raise (Eval_Exc ("Cannot Update: Symbol " ^ v ^ " not in runtime context", Some e, None));
+        { ctxt' with Runtime_data.value_table =
+            let pair = (v, value) in
+            General.add_unique_assoc pair ctxt'.Runtime_data.value_table } in
+      return_eval e', ctxt''), ctxt
 
   | UpdateIndexable (v, idx, e) ->
     let dict = get_dictionary e v ctxt in
@@ -576,18 +572,18 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
     if not (List.mem_assoc idx_v dict) then
       raise (Eval_Exc ("Cannot UpdateIndexable: Key " ^ string_of_typed_value idx_v ^ " not found in dictionary " ^ v, Some e, None));
 
-    let e', ctxt'' = normalise st ctxt' e in
-    let e_v = evaluate_value ctxt'' e' in
-    let dict' = General.add_unique_assoc (idx_v, e_v) dict in
+    continuate e (fun e' st ctxt'' ->
+      let e_v = evaluate_value ctxt'' e' in
+      let dict' = General.add_unique_assoc (idx_v, e_v) dict in
 
-    if not (List.mem_assoc v ctxt''.Runtime_data.value_table) then
-      raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
+      if not (List.mem_assoc v ctxt''.Runtime_data.value_table) then
+        raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
 
-    let ctxt''' =
-      { ctxt'' with Runtime_data.value_table =
-          let pair = (v, Runtime_data.Dictionary dict') in
-          General.add_unique_assoc pair ctxt''.Runtime_data.value_table } in
-    e', ctxt'''
+      let ctxt''' =
+        { ctxt'' with Runtime_data.value_table =
+            let pair = (v, Runtime_data.Dictionary dict') in
+            General.add_unique_assoc pair ctxt''.Runtime_data.value_table } in
+      return_eval e', ctxt'''), ctxt'
 
   | IndexableProjection (v, idx) ->
     let dict = get_dictionary e v ctxt in
@@ -600,8 +596,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
     let e =
       List.assoc idx_v dict
       |> devaluate in
-    e, ctxt'
-*)
+    return_eval e, ctxt'
 
   | Send (chan_ident, e') ->
     continuate e' (fun e' st ctxt ->

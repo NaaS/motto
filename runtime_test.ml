@@ -88,6 +88,14 @@ let _ = run [
    Q_channel ("somechan", Incoming, None, "115");
    Eval "{ test = ? somechan, a2 = True, b3 = <? somechan, False, [? somechan]>}";
 
+   Q_channel ("somechan", Incoming, None, "5");
+   Q_channel ("somechan", Incoming, None, "15");
+   Q_channel ("somechan", Incoming, None, "115");
+   Q_channel ("somechan", Incoming, None, "1115");
+   Eval "let testing = { test = ? somechan, a2 = True, b3 = <? somechan, False, [? somechan]>} with test = ? somechan";
+   Eval "testing.test";
+
+
    Load "tests/variants.cp";
 
    MI (Show_symbol_table None);

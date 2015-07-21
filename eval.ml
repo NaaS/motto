@@ -310,17 +310,13 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       monadic_map es (fun es' _ ctxt' ->
         return_eval (TupleValue es'), ctxt'), ctxt
 
-(*
-  | TupleValue es ->
-    let es', ctxt' = fold_map ([], ctxt) (normalise st) es in
-    TupleValue es', ctxt'
-
   | Record fields ->
-    let fields', ctxt' =
-      fold_map ([], ctxt) (fun ctxt (l, e) ->
-        let e', ctxt' = normalise st ctxt e in
-        ((l, e'), ctxt')) fields in
-    Record fields', ctxt'
+    let labels, es = List.split fields in
+    monadic_map es (fun es' _ ctxt' ->
+      let fields' = List.combine labels es' in
+      return_eval (Record fields'), ctxt'), ctxt
+
+(*
 
   | CaseOf (e', cases) ->
     begin

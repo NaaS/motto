@@ -81,5 +81,12 @@ let _ = run [
    Q_channel ("somechan", Incoming, None, "1000");
    Eval "<? somechan, ? somechan, ? somechan>";
 
+   Load "tests/records.cp";
+   Eval "{ test = 3, a2 = True, b3 = <1, False, [3]>}";
+   Q_channel ("somechan", Incoming, None, "5");
+   Q_channel ("somechan", Incoming, None, "15");
+   Q_channel ("somechan", Incoming, None, "115");
+   Eval "{ test = ? somechan, a2 = True, b3 = <? somechan, False, [? somechan]>}";
+
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

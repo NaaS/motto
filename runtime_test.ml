@@ -22,6 +22,7 @@ let _ = run [
    Eval "let v' = 2";
    Eval "F (50)";
    Eval "let l' = F (f (v, v' + 1))";
+*)
    Declare_channel ("somechan", "integer/boolean");
    Declare_channel ("somechan_array", "[integer/boolean]");
    Q_channel ("somechan", Incoming, None, "40");
@@ -29,9 +30,10 @@ let _ = run [
    Q_channel ("somechan", Outgoing, None, "False and True");
    (*Eval "true => somechan";*)
    Eval "somechan ! True";
+   MI (Show_runtime_ctxt None);
    Eval "somechan ! (if ? somechan = 40: False else: True) and True";
    Deq_channel ("somechan", Incoming, None);
-*)
+
    Declare_channel ("boolchan", "boolean/boolean");
    Q_channel ("boolchan", Incoming, None, "True");
    Q_channel ("boolchan", Incoming, None, "False");

@@ -288,25 +288,24 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       continuate l2 (fun l2' st ctxt' ->
         return_eval (append_list [] l1' l2'), ctxt'), ctxt), ctxt
 
+  | ITE (b, e1, e2_opt) ->
+    continuate b (fun b st ctxt' ->
+      match b with
+      | True -> normalise st ctxt' e1
+      | False ->
+        begin
+        match e2_opt with
+        | None -> return_eval Crisp_syntax.flick_unit_value, ctxt'
+        | Some e2 -> normalise st ctxt' e2
+        end
+      | anomalous ->
+        let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+        raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some b, None))), ctxt
+
 (*
   | TupleValue es ->
     let es', ctxt' = fold_map ([], ctxt) (normalise st) es in
     TupleValue es', ctxt'
-
-  | ITE (b, e1, e2_opt) ->
-    begin
-    match normalise st ctxt b with
-    | True, ctxt' -> normalise st ctxt' e1
-    | False, ctxt' ->
-      begin
-      match e2_opt with
-      | None -> Crisp_syntax.flick_unit_value, ctxt'
-      | Some e2 -> normalise st ctxt' e2
-      end
-    | anomalous, _ ->
-      let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-      raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some b, None))
-    end
 
   | Record fields ->
     let fields', ctxt' =

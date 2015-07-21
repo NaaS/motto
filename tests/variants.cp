@@ -5,7 +5,7 @@ type vary : variant
 type vary2 : variant
   e : <>
 
-fun F : (x : type vary) -> ()
+fun F_variants : (x : type vary) -> ()
   switch x:
     c (y):
       <>

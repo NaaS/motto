@@ -316,38 +316,37 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       let fields' = List.combine labels es' in
       return_eval (Record fields'), ctxt'), ctxt
 
-(*
-
   | CaseOf (e', cases) ->
-    begin
-    let e'norm, ctxt' = normalise st ctxt e' in
-    let disj, (arg, ctxt'') =
-      match e'norm with
-      | Functor_App (f_name, [Exp e]) ->
-        (*NOTE would be prudent to check if the functor is indeed a disjunct*)
-        (f_name, normalise st ctxt' e)
-      | anomalous ->
-        let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-        raise (Eval_Exc ("Cannot normalise to disjunct. Got " ^ anomalous_s, Some e', None)) in
-    match List.filter (fun (h, _) ->
-      (*NOTE should not have to normalise h -- it's used as a pattern*)
-      match h with
-      | Functor_App (f_name, [Exp _]) -> f_name = disj
-      | anomalous ->
-        let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
-        raise (Eval_Exc ("This should be a disjunct. Got " ^ anomalous_s, Some h, None))) cases with
-    | [] ->
-      let e'_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e' in
-      raise (Eval_Exc ("Could not find case for this normal disjunct: " ^ e'_s, Some e'norm, None))
-    | [(Functor_App (_, [Exp (Variable v)]), body_e)] ->
-      (*Replace "Variable v" with "arg" in body_e*)
-      Crisp_syntax_aux.subst_var v arg body_e
-      |> normalise st ctxt''
-    | _ ->
-      let e'_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e' in
-      raise (Eval_Exc ("Found multiple cases for this normal disjunct: " ^ e'_s, Some e'norm, None))
-    end
+    continuate e' (fun e'norm st ctxt' ->
+      let disj, body =
+        match e'norm with
+        | Functor_App (f_name, [Exp e]) ->
+          (*NOTE would be prudent to check if the functor is indeed a disjunct*)
+          (f_name, e)
+        | anomalous ->
+          let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+          raise (Eval_Exc ("Cannot normalise to disjunct. Got " ^ anomalous_s, Some e', None)) in
 
+      continuate body (fun arg st ctxt'' ->
+        match List.filter (fun (h, _) ->
+          (*NOTE should not have to normalise h -- it's used as a pattern*)
+          match h with
+          | Functor_App (f_name, [Exp _]) -> f_name = disj
+          | anomalous ->
+            let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
+            raise (Eval_Exc ("This should be a disjunct. Got " ^ anomalous_s, Some h, None))) cases with
+        | [] ->
+          let e'_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e' in
+          raise (Eval_Exc ("Could not find case for this normal disjunct: " ^ e'_s, Some e'norm, None))
+        | [(Functor_App (_, [Exp (Variable v)]), body_e)] ->
+          (*Replace "Variable v" with "arg" in body_e*)
+          Crisp_syntax_aux.subst_var v arg body_e
+          |> normalise st ctxt''
+        | _ ->
+          let e'_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e' in
+          raise (Eval_Exc ("Found multiple cases for this normal disjunct: " ^ e'_s, Some e'norm, None))), ctxt'), ctxt
+
+(*
   (*This work for both tuples and records.*)
   | RecordProjection (e', l) ->
     begin

@@ -121,9 +121,7 @@ let monadic_map (l : expression list)
       (z : expression list -> eval_continuation) : eval_monad =
   let store : expression list ref = ref [] in
   let z_cont =
-    continuate flick_unit_value (fun _ st ctxt ->
-    (*z (Eval.interpret_flick_list !store) st ctxt in*)
-      z (List.rev !store) st ctxt) in
+    continuate flick_unit_value (fun _ st ctxt -> z (List.rev !store) st ctxt) in
   List.fold_right (fun e acc ->
     continuate e (fun e st ctxt ->
       store := e :: !store;

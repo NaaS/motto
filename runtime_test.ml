@@ -103,5 +103,8 @@ let _ = run [
 
    Load "tests/variants.cp";
 
+(*FIXME test case-of, map, iteration, function call,
+        update, update-indexable, and indexable-projection*)
+
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

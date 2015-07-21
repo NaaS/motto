@@ -390,19 +390,19 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         | _ ->
           raise (Eval_Exc ("Cannot record-update this normal expression: " ^ e'norm_s, Some e, None))), ctxt'), ctxt
 
-(*
   | Map (v, l, body, unordered) ->
-    (*FIXME "unordered" not taken into account*)
-    let l', ctxt' = normalise st ctxt l in
-    let l' = interpret_flick_list l' in
-    let l'', ctxt'' =
-      fold_map ([], ctxt') (fun ctxt e ->
-        Crisp_syntax_aux.subst_var v e body
-        |> normalise st ctxt) l' in
-    Crisp_syntax_aux.flick_list l'', ctxt''
+    (*FIXME "unordered" not taken into account. its value will affect the
+            monadic evaluator.*)
+    continuate l (fun l' st ctxt' ->
+      let l' = interpret_flick_list l' in
+      continuate_list (List.map (fun e -> Crisp_syntax_aux.subst_var v e body) l')
+        (fun l'' st ctxt'' ->
+          return_eval (Crisp_syntax_aux.flick_list l''), ctxt''), ctxt'), ctxt
 
+(*
   | Iterate (v, l, acc_opt, body, unordered) ->
-    (*FIXME "unordered" not taken into account*)
+    (*FIXME "unordered" not taken into account. its value will affect the
+            monadic evaluator.*)
     begin
     let l', ctxt' = normalise st ctxt l in
     let l' = interpret_flick_list l' in

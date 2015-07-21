@@ -99,7 +99,7 @@ let _ = run [
    Q_channel ("somechan", Incoming, None, "15");
    Q_channel ("somechan", Incoming, None, "115");
    Q_channel ("somechan", Incoming, None, "1115");
-   Eval "[? somechan, ? somechan, ? somechan, ? somechan]";
+   Eval "[? somechan, ? somechan, let x = ? somechan, ? somechan - x]";
 
    Load "tests/variants.cp";
 

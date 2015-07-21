@@ -129,7 +129,7 @@ let resolve ctxt l =
                      results_s, None, None))
 
 (*Reduce an expression into a value expression*)
-let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_monad * runtime_ctxt =
+let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : ('a, 'b) eval_monad * runtime_ctxt =
   match e with
   (*These expressions are already normal*)
   | True

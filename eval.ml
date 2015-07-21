@@ -302,6 +302,14 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         let anomalous_s = Crisp_syntax.expression_to_string Crisp_syntax.min_indentation anomalous in
         raise (Eval_Exc ("Cannot normalise to Boolean value. Got " ^ anomalous_s, Some b, None))), ctxt
 
+  | TupleValue es ->
+    if es = [] then
+      (*unit value does not need further normalisation*)
+      return_eval (TupleValue es), ctxt
+    else
+      monadic_map es (fun es' _ ctxt' ->
+        return_eval (TupleValue es'), ctxt'), ctxt
+
 (*
   | TupleValue es ->
     let es', ctxt' = fold_map ([], ctxt) (normalise st) es in

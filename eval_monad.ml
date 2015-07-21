@@ -106,3 +106,25 @@ and run_until_done normalise st ctxt work_list results =
   else
     let el, wl, ctxt' = run normalise st ctxt work_list in
     run_until_done normalise st ctxt' wl (el @ results)
+
+(*Monadically evaluate a list of expressions.
+  A (acceptable) hack is used to stay within the monad. The hack consists of
+  creating a fresh reference cell that's used to accumulate the intermediate
+  values. These are then passed on to the remainder of the computation.
+  Alternatively, we could have generalised the evaluation monad to include
+  computations of arbitrary nature (i.e., not just normalisations of expressions)
+  but that sort of generalisation did not seem warranted for what was needed here.
+
+  z is called last -- it is given the normalised list of expressions, from list
+   "l". These would have been normalised in order*)
+let monadic_map (l : expression list)
+      (z : expression list -> eval_continuation) : eval_monad =
+  let store : expression list ref = ref [] in
+  let z_cont =
+    continuate flick_unit_value (fun _ st ctxt ->
+    (*z (Eval.interpret_flick_list !store) st ctxt in*)
+      z (List.rev !store) st ctxt) in
+  List.fold_right (fun e acc ->
+    continuate e (fun e st ctxt ->
+      store := e :: !store;
+      (acc, ctxt))) l z_cont

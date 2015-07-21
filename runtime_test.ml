@@ -74,5 +74,12 @@ let _ = run [
    Eval "boolchan ! (False or not ? boolchan) and True";
 *)
 
+   Eval "<1, True, 1313>";
+
+   Q_channel ("somechan", Incoming, None, "10");
+   Q_channel ("somechan", Incoming, None, "100");
+   Q_channel ("somechan", Incoming, None, "1000");
+   Eval "<? somechan, ? somechan, ? somechan>";
+
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

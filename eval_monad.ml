@@ -118,11 +118,26 @@ and run_until_done normalise st ctxt work_list results =
   z is called last -- it is given the normalised list of expressions, from list
    "l". These would have been normalised in order*)
 let monadic_map (l : expression list)
-      (z : expression list -> eval_continuation) : eval_monad =
+      (continuation : expression list -> eval_continuation) : eval_monad =
   let store : expression list ref = ref [] in
-  let z_cont =
-    continuate flick_unit_value (fun _ st ctxt -> z (List.rev !store) st ctxt) in
+  let expr_continuation =
+    continuate flick_unit_value (fun _ st ctxt ->
+      continuation (List.rev !store) st ctxt) in
   List.fold_right (fun e acc ->
     continuate e (fun e st ctxt ->
       store := e :: !store;
-      (acc, ctxt))) l z_cont
+      (acc, ctxt))) l expr_continuation
+
+(*Monadically evaluate a list of expressions.
+  This is more general than monadic_map, as one should expect.*)
+let monadic_fold (l : expression list)
+      (z : 'a)
+      (f : expression -> 'a -> 'a)
+      (continuation : 'a -> eval_continuation) : eval_monad =
+  let store : 'a ref = ref z in
+  let expr_continuation =
+    continuate flick_unit_value (fun _ st ctxt -> continuation !store st ctxt) in
+  List.fold_right (fun e acc ->
+    continuate e (fun e st ctxt ->
+      store := f e !store;
+      (acc, ctxt))) l expr_continuation

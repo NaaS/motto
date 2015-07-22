@@ -399,38 +399,82 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         (fun l'' st ctxt'' ->
           return_eval (Crisp_syntax_aux.flick_list l''), ctxt''), ctxt'), ctxt
 
-(*
   | Iterate (v, l, acc_opt, body, unordered) ->
     (*FIXME "unordered" not taken into account. its value will affect the
             monadic evaluator.*)
-    begin
-    let l', ctxt' = normalise st ctxt l in
-    let l' = interpret_flick_list l' in
-    let acc_opt', ctxt'' =
+    continuate l (fun l' st ctxt' ->
+      let l' = interpret_flick_list l' in
+      let bodies = List.map (fun e -> Crisp_syntax_aux.subst_var v e body) l' in
       match acc_opt with
-      | None -> None, ctxt'
-      | Some (l, e) ->
-        let e', ctxt'' = normalise st ctxt e in
-        Some (l, e'), ctxt'' in
-    let result, ctxt''' =
-      List.fold_right (fun e (acc_opt, ctxt) ->
-        match acc_opt with
-        | None ->
-          let _, ctxt' =
-            Crisp_syntax_aux.subst_var v e body
-            |> normalise st ctxt in
-          None, ctxt'
-        | Some (acc_l, acc_e) ->
-          let acc', ctxt' =
-            Crisp_syntax_aux.subst_var v e body
-            |> Crisp_syntax_aux.subst_var acc_l acc_e
-            |> normalise st ctxt in
-          Some (acc_l, acc'), ctxt') l' (acc_opt', ctxt'') in
-    match result with
-    | None -> flick_unit_value, ctxt'''
-    | Some (_, e) -> e, ctxt'''
-    end
+      | None ->
+        monadic_fold bodies
+          flick_unit_value
+          (fun _ unity -> unity)
+          (fun (e : expression) -> e)
+          (fun (e : expression) st ctxt -> Cont (e, Id), ctxt), ctxt'
+      | Some (acc_l, acc_e) ->
+        continuate acc_e (fun acc_initial st ctxt'' ->
+(*
+          monadic_fold_pure bodies
+          (return_eval acc_e)
+         (fun body acc_e' -> 
+           continuate (Crisp_syntax_aux.subst_var acc_l acc_e' body) )
+*)
 
+          monadic_fold_pure bodies
+            return
+            (fun body acc_e' -> return_eval (Crisp_syntax_aux.subst_var acc_l acc_e' body))
+(*            (continuation : expression -> eval_continuation)*)
+            return
+ acc_initial st ctxt''
+
+), ctxt'), ctxt
+(*
+        continuate acc_e (fun acc_initial st ctxt'' ->
+        let bodies' =
+          List.map (fun body ->
+            Crisp_syntax_aux.subst_var acc_l
+ acc_initial body) bodies in
+        monadic_fold bodies'
+          acc_initial
+          (fun e _ -> e)
+          (fun (e : expression) -> e)
+          (fun (e : expression) st ctxt -> Cont (e, Id), ctxt), ctxt''), ctxt'), ctxt
+*)
+
+(*
+let monadic_fold (l : expression list)
+      (z : 'a)
+      (f : expression -> 'a -> 'a)
+      (g : 'a -> 'a)
+      (continuation : 'a -> eval_continuation) : eval_monad =
+
+
+
+
+
+
+        continuate acc_e (fun acc_initial st ctxt'' ->
+
+monadic_fold_pure (l : expression list)
+      (z : 'a -> eval_monad)
+      (f : expression -> 'a -> 'a)
+      (continuation : 'a -> eval_continuation) : 'a -> eval_monad =
+
+
+        let bodies' =
+          List.map (fun body ->
+            Crisp_syntax_aux.subst_var acc_l
+ acc_initial body) bodies in
+        monadic_fold bodies'
+          acc_initial
+          (fun e _ -> e)
+          (fun (e : expression) -> e)
+          (fun (e : expression) st ctxt -> Cont (e, Id), ctxt), ctxt''), ctxt'), ctxt
+*)
+
+
+(*
   | Functor_App (function_name, fun_args) ->
     (*NOTE local and global state are handled very naively: we just assume that
            the type-checker has ensured that the function/process isn't accessing

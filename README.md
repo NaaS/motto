@@ -10,7 +10,7 @@ turn this into an _interactive_ runtime -- i.e., a "toplevel" or Read-Eval-Print
 Using the scriptable runtime, you can compile and run Flick programs using the
 OCaml compiler and runtime.  To compile the example:
 ```
-$ ./build.sh runtime_test
+$ ./build.sh runtime_test.byte
 ```
 and then run!
 ```

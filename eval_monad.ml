@@ -134,37 +134,10 @@ let monadic_fold (l : expression list)
     continuate e (fun e st ctxt ->
       store := f e !store;
       (acc, ctxt))) l expr_continuation
-(*
-(*FIXME experimental -- monadic_fold without using references*)
-let monadic_fold_pure (l : expression list)
-      (z : 'a)
-      (f : expression -> 'a -> 'a)
-      (continuation : 'a -> eval_continuation) : eval_monad =
-  let expr_continuation store =
-    continuate flick_unit_value (fun _ st ctxt -> continuation store st ctxt) in
-  (List.fold_right (fun e acc ->
-     fun store -> continuate e (fun e st ctxt ->
-       let store = f e store in
-       (acc store, ctxt))) l expr_continuation) z
 
-let monadic_fold (l : expression list)
-      (z : 'a)
-      (f : expression -> 'a -> 'a)
-      (g : 'a -> 'a)
-      (continuation : 'a -> eval_continuation) : eval_monad =
-  monadic_fold_pure l z f continuation
-*)
-(*
-let monadic_fold_pure (l : expression list)
-      (z : 'a -> eval_monad)
-      (f : expression -> 'a -> 'a)
-      (continuation : 'a -> eval_continuation) : 'a -> eval_monad =
-  List.fold_right (fun e acc ->
-     fun store -> continuate e (fun e st ctxt ->
-       let store = f e store in
-       (acc store, ctxt))) l z
-*)
-
+(*FIXME experimental:
+    - proper threading of acc through the fold
+    - monadic_fold without using references*)
 let monadic_fold_pure (l : expression list)
       (z : expression -> eval_continuation)
       (f : expression -> expression -> eval_monad)

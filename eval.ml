@@ -413,66 +413,11 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           (fun (e : expression) -> e)
           (fun (e : expression) st ctxt -> Cont (e, Id), ctxt), ctxt'
       | Some (acc_l, acc_e) ->
-        continuate acc_e (fun acc_initial st ctxt'' ->
-(*
-          monadic_fold_pure bodies
-          (return_eval acc_e)
-         (fun body acc_e' -> 
-           continuate (Crisp_syntax_aux.subst_var acc_l acc_e' body) )
-*)
-
-          monadic_fold_pure bodies
-            return
-            (fun body acc_e' -> return_eval (Crisp_syntax_aux.subst_var acc_l acc_e' body))
-(*            (continuation : expression -> eval_continuation)*)
-            return
- acc_initial st ctxt''
-
-), ctxt'), ctxt
-(*
-        continuate acc_e (fun acc_initial st ctxt'' ->
-        let bodies' =
-          List.map (fun body ->
-            Crisp_syntax_aux.subst_var acc_l
- acc_initial body) bodies in
-        monadic_fold bodies'
-          acc_initial
-          (fun e _ -> e)
-          (fun (e : expression) -> e)
-          (fun (e : expression) st ctxt -> Cont (e, Id), ctxt), ctxt''), ctxt'), ctxt
-*)
-
-(*
-let monadic_fold (l : expression list)
-      (z : 'a)
-      (f : expression -> 'a -> 'a)
-      (g : 'a -> 'a)
-      (continuation : 'a -> eval_continuation) : eval_monad =
-
-
-
-
-
-
-        continuate acc_e (fun acc_initial st ctxt'' ->
-
-monadic_fold_pure (l : expression list)
-      (z : 'a -> eval_monad)
-      (f : expression -> 'a -> 'a)
-      (continuation : 'a -> eval_continuation) : 'a -> eval_monad =
-
-
-        let bodies' =
-          List.map (fun body ->
-            Crisp_syntax_aux.subst_var acc_l
- acc_initial body) bodies in
-        monadic_fold bodies'
-          acc_initial
-          (fun e _ -> e)
-          (fun (e : expression) -> e)
-          (fun (e : expression) st ctxt -> Cont (e, Id), ctxt), ctxt''), ctxt'), ctxt
-*)
-
+        continuate acc_e
+          (monadic_fold_pure bodies
+             return
+             (fun body acc_e' -> return_eval (Crisp_syntax_aux.subst_var acc_l acc_e' body))
+             return), ctxt'), ctxt
 
 (*
   | Functor_App (function_name, fun_args) ->

@@ -8,7 +8,6 @@ open Runtime_data
 open Crisp_syntax
 
 let _ = run [
-
    Load "tests/simple_function.cp";
    Load "tests/maps_iterations2.cp";
    (*Load "tests/simple_function.bad.cp";*)
@@ -22,7 +21,6 @@ let _ = run [
    Eval "let v' = 2";
    Eval "F_map_iterations2 (50)";
    Eval "let l' = F_map_iterations2 (f (v, v' + 1))";
-
 
    Declare_channel ("somechan", "integer/boolean");
    Declare_channel ("somechan_array", "[integer/boolean]");
@@ -104,7 +102,7 @@ let _ = run [
 
    Load "tests/variants.cp";
 
-(*FIXME test case-of, map, iteration, function call,
+(*FIXME test case-of, iteration,
         update, update-indexable, and indexable-projection*)
 
    MI (Show_symbol_table None);

@@ -419,7 +419,6 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
              (fun body acc_e' -> return_eval (Crisp_syntax_aux.subst_var acc_l acc_e' body))
              return), ctxt'), ctxt
 
-(*
   | Functor_App (function_name, fun_args) ->
     (*NOTE local and global state are handled very naively: we just assume that
            the type-checker has ensured that the function/process isn't accessing
@@ -456,78 +455,71 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
     | Some (_, {identifier_kind; _}) ->
       begin
       match identifier_kind with
-      | Disjunct _ -> e, ctxt
+      | Disjunct _ -> return_eval e, ctxt
       | Function_Name ->
-        begin
-        let normal_arg_es, ctxt' =
-          (*normalise each actual parameter*)
-          fold_map ([], ctxt) (fun ctxt arg ->
-            match arg with
-            | Exp e -> normalise st ctxt e
+        let arg_es = List.map (function
+            | Exp e -> e
             | Named _ -> failwith "TODO") fun_args in
-        let (stata, body, excs) =
-          (*Get function implementation*)
-          match List.filter (fun (name, _) -> name = function_name) ctxt.exec_table with
-          | [] ->
-            raise (Eval_Exc ("Could not retrieve implementation from runtime context, for functor: " ^ function_name, Some e, None))
-          | [(_, Function {fn_body; _})] ->
-            begin
-            match fn_body with
-            | ProcessBody (stata, body, excs) -> (stata, body, excs)
-            end
-          | [(_, Process {process_body; _})] ->
-            raise (Eval_Exc ("Calling processes not supported, for functor: " ^ function_name, Some e, None))
-          | _ ->
-            raise (Eval_Exc ("Invalid declaration found when calling functor:" ^ function_name, Some e, None)) in
-        let ((chans, arg_tys), ret_tys) =
-          match lookup_function_type st function_name with
-          | None ->
-            raise (Eval_Exc ("Could not retrieve type from symbol table, for functor: " ^ function_name, Some e, None))
-          | Some ft -> Crisp_syntax_aux.extract_function_types ft in
-        assert (chans = []);
-        let formal_arg_names =
-          List.map (fun ty ->
-            match Crisp_syntax_aux.label_of_type ty with
+        continuate_list arg_es (fun normal_arg_es st ctxt' ->
+          let (stata, body, excs) =
+            (*Get function implementation*)
+            match List.filter (fun (name, _) -> name = function_name) ctxt.exec_table with
+            | [] ->
+              raise (Eval_Exc ("Could not retrieve implementation from runtime context, for functor: " ^ function_name, Some e, None))
+            | [(_, Function {fn_body; _})] ->
+              begin
+              match fn_body with
+              | ProcessBody (stata, body, excs) -> (stata, body, excs)
+              end
+            | [(_, Process {process_body; _})] ->
+              raise (Eval_Exc ("Calling processes not supported, for functor: " ^ function_name, Some e, None))
+            | _ ->
+              raise (Eval_Exc ("Invalid declaration found when calling functor:" ^ function_name, Some e, None)) in
+          let ((chans, arg_tys), ret_tys) =
+            match lookup_function_type st function_name with
             | None ->
-              let ty_s = type_value_to_string true false min_indentation ty in
-              raise (Eval_Exc ("Missing label for parameter typed " ^ ty_s ^ " for functor " ^ function_name, Some e, None))
-            | Some label -> label) arg_tys in
+              raise (Eval_Exc ("Could not retrieve type from symbol table, for functor: " ^ function_name, Some e, None))
+            | Some ft -> Crisp_syntax_aux.extract_function_types ft in
+          assert (chans = []);
+          let formal_arg_names =
+            List.map (fun ty ->
+              match Crisp_syntax_aux.label_of_type ty with
+              | None ->
+                let ty_s = type_value_to_string true false min_indentation ty in
+                raise (Eval_Exc ("Missing label for parameter typed " ^ ty_s ^ " for functor " ^ function_name, Some e, None))
+              | Some label -> label) arg_tys in
 
-        let ctxt'' =
-          { ctxt' with except_table = excs :: ctxt'.except_table } in
+          let ctxt'' =
+            { ctxt' with except_table = excs :: ctxt'.except_table } in
 
-        (*Evaluate the body*)
-        let result, ctxt''' =
-          List.fold_right (fun (v, arg) body ->
-            (*Substitute formal for actual parameters in the function body*)
-            Crisp_syntax_aux.subst_var v arg body)
-           (List.combine formal_arg_names normal_arg_es) body
-          (*Normalise the function body*)
-          |> normalise st ctxt''
+          (*Substitute formal for actual parameters in the function body*)
+          let body' =
+            List.fold_right (fun (v, arg) body ->
+              Crisp_syntax_aux.subst_var v arg body)
+             (List.combine formal_arg_names normal_arg_es) body in
 
-          (*Unwind exception handlers*)
-          |> apsnd (fun ctxt ->
-            { ctxt with except_table =
-                match ctxt.except_table with
-                | [] -> failwith "Impossible" (*because we just extended the exception stack*)
-                | _ :: rest -> rest }) in
+          continuate body' (fun result st ctxt'' ->
+            (*Unwind exception handlers*)
+            let ctxt''' =
+              { ctxt'' with except_table =
+                  match ctxt''.except_table with
+                  | [] -> failwith "Impossible" (*because we just extended the exception stack*)
+                  | _ :: rest -> rest } in
 
-        (*Undefine local variables*)
-        (*NOTE i originally thought that the variables to reset are those in
-               the set "bound_vars \ state vars", but actually we just need to
-               look among the bound variables*)
-        let ctxt4 =
-          Crisp_syntax_aux.bound_vars e []
-          |> (fun l -> List.fold_right Runtime_data.undefine_value l ctxt''') in
+            (*Undefine local variables*)
+            (*NOTE i originally thought that the variables to reset are those in
+                   the set "bound_vars \ state vars", but actually we just need to
+                   look among the bound variables*)
+            let ctxt4 =
+              Crisp_syntax_aux.bound_vars e []
+              |> (fun l -> List.fold_right Runtime_data.undefine_value l ctxt''') in
 
-        result, ctxt4
-        end
-      | _ ->
-        raise (Eval_Exc ("Functor " ^ function_name ^ " had inconsistent identifier kind " ^
-               string_of_identifier_kind identifier_kind, Some e, None))
+            return_eval result, ctxt4), ctxt''), ctxt
+    | _ ->
+      raise (Eval_Exc ("Functor " ^ function_name ^ " had inconsistent identifier kind " ^
+             string_of_identifier_kind identifier_kind, Some e, None))
       end
     end
-*)
 
   | LocalDef ((v, _), e) ->
     continuate e (fun e' st ctxt' ->

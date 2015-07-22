@@ -8,7 +8,7 @@ open Runtime_data
 open Crisp_syntax
 
 let _ = run [
-(*
+
    Load "tests/simple_function.cp";
    Load "tests/maps_iterations2.cp";
    (*Load "tests/simple_function.bad.cp";*)
@@ -20,9 +20,10 @@ let _ = run [
    Eval "let l = [1,2,3,4]";
    Eval "let v = 1";
    Eval "let v' = 2";
-   Eval "F (50)";
-   Eval "let l' = F (f (v, v' + 1))";
-*)
+   Eval "F_map_iterations2 (50)";
+   Eval "let l' = F_map_iterations2 (f (v, v' + 1))";
+
+
    Declare_channel ("somechan", "integer/boolean");
    Declare_channel ("somechan_array", "[integer/boolean]");
    Q_channel ("somechan", Incoming, None, "40");

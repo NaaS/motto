@@ -413,11 +413,18 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           (fun (e : expression) -> e)
           (fun (e : expression) st ctxt -> Cont (e, Id), ctxt), ctxt'
       | Some (acc_l, acc_e) ->
+        let (h :: t) = bodies in
         continuate acc_e
-          (monadic_fold_pure bodies
-             return
-             (fun body acc_e' -> return_eval (Crisp_syntax_aux.subst_var acc_l acc_e' body))
-             return), ctxt'), ctxt
+          (fun acc_e' st ctxt'' ->
+           let h' = Crisp_syntax_aux.subst_var acc_l acc_e' h in
+(*           let t = List.map (Crisp_syntax_aux.subst_var acc_l acc_e') t in*)
+           let m bodies =
+             monadic_fold_pure bodies
+               return
+               (fun acc_e' body -> return_eval (Crisp_syntax_aux.subst_var acc_l acc_e' body))
+               return
+              acc_e' st ctxt'' in
+           m (h' :: t)), ctxt'), ctxt
 
   | Functor_App (function_name, fun_args) ->
     (*NOTE local and global state are handled very naively: we just assume that

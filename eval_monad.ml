@@ -140,14 +140,13 @@ let monadic_fold (l : expression list)
     - monadic_fold without using references*)
 let monadic_fold_pure (l : expression list)
       (z : expression -> eval_continuation)
-      (f : expression -> expression -> eval_monad)
+      (f : expression -> expression -> expression)
       (continuation : expression -> eval_continuation) : expression -> eval_continuation =
   List.fold_right (fun e acc ->
-     fun store st ctxt -> continuate e (fun e st ctxt ->
-       continuate store (fun store st ctxt' ->
-       let store = f e store in
-       (Bind (store, (Fun acc)),
-        ctxt')), ctxt), ctxt) l z
+     fun store st ctxt ->
+      continuate (f e store) (fun e st ctxt ->
+       (Bind (return_eval e, (Fun acc)),
+        ctxt)), ctxt) (List.rev l) z
 
 (*Monadically evaluate a list of expressions. These are evaluated one by one,
   within the monad, then we bind with the continuation of the computation

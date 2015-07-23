@@ -107,7 +107,9 @@ and run_until_done normalise st ctxt work_list results =
     let el, wl, ctxt' = run normalise st ctxt work_list in
     run_until_done normalise st ctxt' wl (el @ results)
 
-(*Monadically evaluate a list of expressions, in the style of a fold.
+(*Monadically evaluate a list of expressions, in the style of a "map-like fold"
+    (in the sense that, unlike a fold, we don't have access to the acc in the
+     monad at each step -- for that see monadic_fold.)
   A (acceptable) hack is used to stay within the monad. The hack consists of
   creating a fresh reference cell that's used to accumulate the intermediate
   values. These are then passed on to the remainder of the computation.
@@ -122,7 +124,7 @@ and run_until_done normalise st ctxt work_list results =
   "continuation" function takes an arbitrary type (i.e., OCaml, not Flick, type)
     and produces an eval_continuation.
 *)
-let monadic_fold (l : expression list)
+let monadic_map (l : expression list)
       (z : 'a)
       (f : expression -> 'a -> 'a)
       (g : 'a -> 'a)
@@ -135,10 +137,10 @@ let monadic_fold (l : expression list)
       store := f e !store;
       (acc, ctxt))) l expr_continuation
 
-(*FIXME experimental:
-    - proper threading of acc through the fold
-    - monadic_fold without using references*)
-let monadic_fold_pure (l : expression list)
+(*monadic_fold
+    - proper threading of acc through the fold (unlike monadic_map)
+    - doesn't use references (unlike monadic_map)*)
+let monadic_fold (l : expression list)
       (z : expression -> eval_continuation)
       (f : expression -> expression -> expression)
       (continuation : expression -> eval_continuation) : expression -> eval_continuation =
@@ -156,7 +158,7 @@ let monadic_fold_pure (l : expression list)
      expressions, from list "l". These would have been normalised in order*)
 let continuate_list (l : expression list)
       (continuation : expression list -> eval_continuation) : eval_monad =
-  monadic_fold l ([] : expression list)
+  monadic_map l ([] : expression list)
     (fun e stored_es -> e :: stored_es)
     List.rev
     continuation

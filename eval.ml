@@ -407,14 +407,14 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       let bodies = List.map (fun e -> Crisp_syntax_aux.subst_var v e body) l' in
       match acc_opt with
       | None ->
-        monadic_fold bodies
+        monadic_map bodies
           flick_unit_value
           (fun _ unity -> unity)
           (fun (e : expression) -> e)
           (fun (e : expression) st ctxt -> Cont (e, Id), ctxt), ctxt'
       | Some (acc_l, acc_e) ->
         continuate acc_e
-          (monadic_fold_pure bodies
+          (monadic_fold bodies
             return
             (fun body acc_e' -> Crisp_syntax_aux.subst_var acc_l acc_e' body)
             return), ctxt'), ctxt

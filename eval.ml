@@ -141,9 +141,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
 
   | Variable l ->
     let e' =
-      try resolve ctxt l  with
+      try resolve ctxt l with
       | Eval_Exc (s, None, None) ->
-        raise ( Eval_Exc(s, Some e, None)) in
+        raise (Eval_Exc (s, Some e, None)) in
     (*FIXME do we need to check if l is a reference? might need to do this to
             treat it differently depending on whether we want the reference or
             its dereference. (the latter corresponds to automatically inserting

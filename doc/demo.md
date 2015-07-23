@@ -8,8 +8,10 @@ containing Otto:
 ```
 $ ./build.sh runtime_factorial.byte
 ```
+This will generate OCaml bytecode containing the runtime script seen earlier
+(including any Flick code contained within).
 
-Then run it:
+Run the bytecode:
 ```
 $ ./runtime_factorial.byte
 ```

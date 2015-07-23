@@ -1,5 +1,10 @@
 # Quick Flick demo
 
+In this demo we will build a runtime that will set up some context, including
+a channel, load a file containing the [factorial function in
+Flick](https://github.com/NaaS/system/blob/master/crisp/tests/factorial.cp),
+then apply that function to produce a result.
+
 First, take a look at this [example runtime script](https://github.com/NaaS/system/blob/master/crisp/runtime_factorial.ml).
 Each line is documented.
 

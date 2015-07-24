@@ -5,12 +5,11 @@
 
 open State
 open Crisp_syntax
+open Runtime_asynch
 
 exception Runtime_inspect_exc of string
 
 type chan_idx = int
-
-type chan_arg = Runtime_data.channel_direction * string
 
 type inspect_instruction =
     (*declare and define variable, and initialise*)
@@ -33,9 +32,9 @@ type inspect_instruction =
   | Eval of string
   | Asynch_Eval of string
   | Run_Asynch
-    (*enstantiate a process (connecting it to specific channels) and add it to
+    (*instantiate a process (connecting it to specific channels) and add it to
       the Asynch_Eval work list.*)
-  | Instantiate_Process of string * chan_arg list * string list
+  | Instantiate_Process of process_instance
     (*execute some meta-instruction, e.g., to show the whole runtime context,
       or specific parts of it, or the symbol_table*)
   | MI of meta_instruction
@@ -96,8 +95,8 @@ let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : de
 
 (*Evaluate a single inspect-instruction*)
 let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
-   (work_list : Eval_monad.eval_monad list) (i : inspect_instruction)
-   : ((state * Runtime_data.runtime_ctxt) * Eval_monad.eval_monad list) =
+   (actxt : asynch_ctxt) (i : inspect_instruction)
+   : ((state * Runtime_data.runtime_ctxt) * asynch_ctxt) =
   match i with
   | Declare_value (v, e_s) ->
     let e =
@@ -106,7 +105,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
     let ty, st' = Type_infer.ty_of_expr st e in
-    declare v st' ctxt (Binding (e, ty)), work_list
+    declare v st' ctxt (Binding (e, ty)), actxt
 
   | Set (v, e_s) ->
     let e =
@@ -141,7 +140,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       { ctxt with Runtime_data.value_table =
           let pair = (v, value) in
           General.add_unique_assoc pair ctxt.Runtime_data.value_table } in
-    (st, ctxt'), work_list
+    (st, ctxt'), actxt
 
   | Load file_path ->
     let st', (_, fn_decls, proc_decls) =
@@ -154,7 +153,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
     let ctxt' =
       { ctxt with Runtime_data.exec_table =
          exec_table_extension @ ctxt.Runtime_data.exec_table } in
-    (st', ctxt'), work_list
+    (st', ctxt'), actxt
 
   | Declare_channel (v, cty_s) ->
     let cty =
@@ -162,7 +161,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       | TypeExpr (ChanType cty) -> cty
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into a channel type: " ^ cty_s)) in
-    declare v st ctxt (Channel cty), work_list
+    declare v st ctxt (Channel cty), actxt
 
   | Close_channel v ->
     let ctxt' =
@@ -170,7 +169,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
         { ctxt with Runtime_data.value_table = List.filter (fun (v', _) -> v <> v') ctxt.Runtime_data.value_table }
       else
         raise (Runtime_inspect_exc ("Could not close channel " ^ v ^ " since it's not open")) in
-    (st, ctxt'), work_list
+    (st, ctxt'), actxt
 
   | Open_channel v ->
     let cty =
@@ -195,7 +194,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
         raise (Runtime_inspect_exc ("Could not open channel " ^ v ^ " since it's already open"))
       else
         { ctxt with Runtime_data.value_table = (v, Runtime_data.ChanType value) :: ctxt.Runtime_data.value_table } in
-    (st, ctxt'), work_list
+    (st, ctxt'), actxt
 
   | Q_channel (v, dir, idx_opt, e_s) ->
     (*NOTE we don't check that the type of e agrees with the type of the channel it's put in*)
@@ -212,7 +211,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
         | Runtime_data.Outgoing ->
           (incoming, List.rev (e_value :: List.rev outgoing), e_value, ctxt) in
       Runtime_data.channel_fun v dir idx_opt "queue" (fun x -> Runtime_inspect_exc x) f st ctxt' in
-    (st, ctxt''), work_list
+    (st, ctxt''), actxt
 
   | Deq_channel (v, dir, idx_opt) ->
     (*NOTE this operation discards an element from a queue (or raises an exception
@@ -242,7 +241,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
           end in
       Runtime_data.channel_fun v dir idx_opt "dequeue" (fun x ->
         Runtime_inspect_exc x) f st ctxt in
-    (st, ctxt'), work_list
+    (st, ctxt'), actxt
 
   | Eval e_s ->
     let e =
@@ -252,7 +251,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
         raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
     let value, ctxt' = Eval.evaluate st ctxt e in
     print_endline (e_s ^ " ~> " ^ Runtime_data.string_of_typed_value value);
-    (st, ctxt'), work_list
+    (st, ctxt'), actxt
 
   | MI mi ->
     begin
@@ -267,7 +266,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       print_endline (Runtime_data.string_of_runtime_ctxt ctxt)
     | _ -> () (*ignore other MIs, since they're not relevant to this part of the compiler*)
     end;
-    (st, ctxt), work_list
+    (st, ctxt), actxt
 
   | Asynch_Eval e_s ->
     let e =
@@ -275,19 +274,22 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       | Expression e -> e
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
-    (st, ctxt), (Eval_monad.evaluate e :: work_list)
+    let actxt' = { actxt with work_list = Eval_monad.evaluate e :: actxt.work_list } in
+    (st, ctxt), actxt'
 
   | Run_Asynch ->
     (*we ignore the values we get from running the work list*)
-    let _, ctxt' = Eval_monad.run_until_done Eval.normalise st ctxt work_list [] in
-    (st, ctxt'), []
+    let _, ctxt' = Eval_monad.run_until_done Eval.normalise st ctxt actxt.work_list [] in
+    let actxt' = { actxt with work_list = [] } in
+    (st, ctxt'), actxt'
 
 (*Evaluate a list of inspect-instructions*)
 let evals (st : state) (ctxt : Runtime_data.runtime_ctxt)
-   (work_list : Eval_monad.eval_monad list) (is : inspect_instruction list)
-   : ((state * Runtime_data.runtime_ctxt) * Eval_monad.eval_monad list) =
-  List.fold_right (fun instr ((st, ctxt), wl) ->
-   Wrap_err.wrap (eval st ctxt wl) instr) (List.rev is) ((st, ctxt), work_list)
+   (actxt : asynch_ctxt) (is : inspect_instruction list)
+   : ((state * Runtime_data.runtime_ctxt) * asynch_ctxt) =
+  List.fold_right (fun instr ((st, ctxt), actxt) ->
+   Wrap_err.wrap (eval st ctxt actxt) instr) (List.rev is) ((st, ctxt), actxt)
 
 let run (is : inspect_instruction list) : unit =
-  ignore(evals initial_state Runtime_data.initial_runtime_ctxt [] is)
+  ignore(evals initial_state Runtime_data.initial_runtime_ctxt
+           initial_asynch_ctxt is)

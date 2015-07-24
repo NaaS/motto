@@ -9,7 +9,10 @@ open Runtime_asynch
 
 exception Runtime_inspect_exc of string
 
-type chan_idx = int
+type chan_idx = int;;
+
+Sys.set_signal Sys.sigint
+  (Sys.Signal_handle (fun _ -> Eval_monad.kill_run := true));
 
 type inspect_instruction =
     (*declare and define variable, and initialise*)

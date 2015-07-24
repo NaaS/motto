@@ -109,6 +109,9 @@ let _ = run [
    Load "tests/factorial.cp";
    Eval "factorial (5)";
 
+   Asynch_Eval "?somechan";
+   Run_Asynch;
+
    Load "tests/print.cp";
    Asynch_Eval "metaprint (<>)";
    Asynch_Eval "somechan ! True";

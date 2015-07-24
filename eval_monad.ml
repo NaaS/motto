@@ -8,6 +8,8 @@ open Crisp_syntax
 open State
 open Runtime_data
 
+let kill_run = ref false
+
 type eval_continuation = state -> runtime_ctxt -> eval_monad * runtime_ctxt
 
 and bind_kind =
@@ -106,10 +108,17 @@ and run normalise st ctxt (work_list : eval_monad list)
 
 (*Iterate on the work-list until everything's been evaluated*)
 and run_until_done normalise st ctxt work_list results =
-  if work_list = [] then results, ctxt
+  if !kill_run then
+    begin
+      print_endline "(interrupted Run_Asynch)";
+      kill_run := false;
+      [], ctxt
+    end
   else
-    let el, wl, ctxt' = run normalise st ctxt work_list in
-    run_until_done normalise st ctxt' wl (el @ results)
+    if work_list = [] then results, ctxt
+    else
+      let el, wl, ctxt' = run normalise st ctxt work_list in
+      run_until_done normalise st ctxt' wl (el @ results)
 
 (*Monadically evaluate a list of expressions, in the style of a "map-like fold"
     (in the sense that, unlike a fold, we don't have access to the acc in the

@@ -618,9 +618,20 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
     | Empty_Channel ctxt -> retry e, ctxt
     end
 
-  | Seq (Meta_quoted mis, e') ->
-    (*FIXME currently ignoring meta-quoted instructions*)
+  | Seq (TypeAnnotation (Meta_quoted mis, _), e') ->
+    List.iter (fun mi ->
+      match mi with
+      | Show_symbol_table None
+      | Show_symbol_table (Some Runtime_phase) ->
+        print_endline (State_aux.state_to_str false st)
+      | PrintStr (None, s)
+      | PrintStr (Some Runtime_phase, s) -> print_endline s
+      | Show_runtime_ctxt None
+      | Show_runtime_ctxt (Some Runtime_phase) ->
+        print_endline (Runtime_data.string_of_runtime_ctxt ctxt)
+      | _ -> () (*ignore other MIs, since they're not relevant to this part of the compiler*)) mis;
     normalise st ctxt e'
+
   | Meta_quoted _ ->
     raise (Eval_Exc ("Cannot normalise meta_quoted expressions alone -- add some other expression after them, and normalisation should succeed.", Some e, None))
 

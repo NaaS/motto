@@ -46,6 +46,7 @@ let return_eval (e : expression) : eval_monad = Value e
 let return (e : expression) : eval_continuation = fun _ ctxt -> Value e, ctxt
 let continuate e f = Cont (e, Fun f)
 let retry e = Cont (e, Id)
+let evaluate e = Cont (e, Fun return)
 
 (*This serves both as the "bind" operator, and also to evaluate values inside
   the monad, to bring forward the computation.*)
@@ -83,7 +84,9 @@ and evaluate_em normalise (m : eval_monad) st ctxt : eval_monad * runtime_ctxt =
     | Fun _ -> Bind (em, bk), ctxt'
     end
 
-and run normalise st ctxt (work_list : eval_monad list) : expression list * eval_monad list * runtime_ctxt =
+(*A single run through the work-list*)
+and run normalise st ctxt (work_list : eval_monad list)
+   : expression list * eval_monad list * runtime_ctxt =
   List.fold_right (fun m (el, wl, ctxt) ->
     if !Config.cfg.Config.debug then print_endline (evalm_to_string m);
     match m with
@@ -101,6 +104,7 @@ and run normalise st ctxt (work_list : eval_monad list) : expression list * eval
       let em, ctxt' = evaluate_em normalise m st ctxt in
       (el, em :: wl, ctxt')) work_list ([], [], ctxt)
 
+(*Iterate on the work-list until everything's been evaluated*)
 and run_until_done normalise st ctxt work_list results =
   if work_list = [] then results, ctxt
   else

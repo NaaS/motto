@@ -192,11 +192,11 @@ type integer = int (*FIXME precision*)
 (*FIXME move into separate module?*)
 type compiler_phase =
   | Type_checking_phase
-  | Interactive_runtime
+  | Runtime_phase
 let string_of_compiler_phase cp =
   match cp with
   | Type_checking_phase -> "type_checking"
-  | Interactive_runtime -> "interactive_runtime"
+  | Runtime_phase -> "runtime"
 
 (*FIXME move into separate module?*)
 type meta_instruction =
@@ -547,7 +547,7 @@ let rec interpret_e_as_mi (e : expression) =
     let time =
       match when_indicator with
       | "type_checking" -> Type_checking_phase
-      | "interactive_runtime" -> Interactive_runtime
+      | "runtime" -> Runtime_phase
       | _ -> failwith ("Unrecognised point for meta-instruction: " ^ when_indicator) in
     match interpret_e_as_mi e_mi with
     | Show_symbol_table None -> Show_symbol_table (Some time)

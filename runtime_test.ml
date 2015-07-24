@@ -103,12 +103,16 @@ let _ = run [
    Load "tests/variants.cp";
 
 (*FIXME test case-of, update, update-indexable, and indexable-projection
-    add Asynch_Eval and Go directives
         wiring up processes with channels
 *)
 
    Load "tests/factorial.cp";
    Eval "factorial (5)";
+
+   Load "tests/print.cp";
+   Asynch_Eval "metaprint (<>)";
+   Asynch_Eval "somechan ! True";
+   Run_Asynch;
 
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

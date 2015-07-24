@@ -10,6 +10,8 @@ exception Runtime_inspect_exc of string
 
 type chan_idx = int
 
+type chan_arg = Runtime_data.channel_direction * string
+
 type inspect_instruction =
     (*declare and define variable, and initialise*)
   | Declare_value of string * string
@@ -31,12 +33,14 @@ type inspect_instruction =
   | Eval of string
   | Asynch_Eval of string
   | Run_Asynch
+    (*enstantiate a process (connecting it to specific channels) and add it to
+      the Asynch_Eval work list.*)
+  | Instantiate_Process of string * chan_arg list * string list
     (*execute some meta-instruction, e.g., to show the whole runtime context,
       or specific parts of it, or the symbol_table*)
   | MI of meta_instruction
-  (*FIXME need command to start and stop processes;
-          also, how to define how they are connected with channels?
-          and what resources they use?*)
+  (*NOTE could add command to start and pause processes, and remove them
+         from the worklist.*)
   (*FIXME add commands to trace running processes and functions. this is quite
           straightforward -- perhaps simply need to add a meta_instruction that
           writes to a log file.*)

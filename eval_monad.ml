@@ -8,6 +8,8 @@ open Crisp_syntax
 open State
 open Runtime_data
 
+(*Indicates that run_until_done should stop what it's doing, and return.
+  This is false by default.*)
 let kill_run = ref false
 
 type eval_continuation = state -> runtime_ctxt -> eval_monad * runtime_ctxt
@@ -111,7 +113,9 @@ and run_until_done normalise st ctxt work_list results =
   if !kill_run then
     begin
       print_endline "(interrupted Run_Asynch)";
+      (*important to reset kill_run*)
       kill_run := false;
+      (*NOTE we discard all results. we're technically in a failure mode.*)
       [], ctxt
     end
   else

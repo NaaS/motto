@@ -34,7 +34,7 @@ type inspect_instruction =
   | Run_Asynch
     (*instantiate a process (connecting it to specific channels) and add it to
       the Asynch_Eval work list.*)
-  | Instantiate_Process of process_instance
+  | Instantiate_Process of pre_process_instance
     (*execute some meta-instruction, e.g., to show the whole runtime context,
       or specific parts of it, or the symbol_table*)
   | MI of meta_instruction

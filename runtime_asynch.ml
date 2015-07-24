@@ -8,13 +8,18 @@
 type chan_arg =
   Runtime_data.channel_direction *
   string (*channel name*)
-type arg = string (*expression, unparsed*)
 
 type process_class_name = string
 type process_instance_name = string
 
+(*A process is presented for instantiation with unparsed actual parameters*)
+type pre_process_instance =
+  process_instance_name * process_class_name * chan_arg list * string list
+(*When stored in the process_instance_list, the formal arguments are stored
+  fully evaluated, since we don't want to re-evaluate them when the process is
+  rescheduled*)
 type process_instance =
-  process_instance_name * process_class_name * chan_arg list * arg list
+  process_instance_name * process_class_name * chan_arg list * Crisp_syntax.expression list
 
 type asynch_ctxt =
   {

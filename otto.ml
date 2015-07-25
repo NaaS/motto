@@ -114,7 +114,8 @@ let rec param_table : param_entry list =
       parameter_desc = "";
       action = (fun () ->
         begin
-          print_endline "Parameters:";
+          print_endline ("Usage: " ^ Sys.argv.(0) ^ " PARAMETERS [INPUT_FILE]");
+          print_endline "where PARAMETERS can consist of the following:";
           List.iter (fun entry ->
             print_endline ("  " ^ entry.key ^ " " ^ entry.parameter_desc);
             print_endline ("    " ^ entry.desc);

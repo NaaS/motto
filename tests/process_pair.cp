@@ -1,11 +1,11 @@
-process P1 : (<>/<> token)
-  let tkn1 = ? token
+process P1 : (<>/<> token1)
+  let tkn1 = ? token1
   @: print ("loaded P1").at(type_checking) :@ typed <>
   @: print ("P1").at(runtime) :@ typed <>
-  token ! tkn1
+  token1 ! tkn1
 
-process P2 : (<>/<> token)
-  let tkn2 = ? token
+process P2 : (<>/<> token2)
+  let tkn2 = ? token2
   @: print ("loaded P2").at(type_checking) :@ typed <>
   @: print ("P2").at(runtime) :@ typed <>
-  token ! tkn2
+  token2 ! tkn2

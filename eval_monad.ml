@@ -30,6 +30,9 @@ and eval_monad =
       to create a new (combined) continuation.*)
   | Cont of expression * bind_kind
   | Bind of eval_monad * bind_kind
+    (*A process never terminates -- it will be reduced to its body followed by
+      itself again*)
+  | Process of string * string * expression
 
 let rec bk_to_string : bind_kind -> string = function
   | Fun _ -> "Fun _"
@@ -40,6 +43,7 @@ let rec evalm_to_string : eval_monad -> string = function
      bk_to_string bk ^ ")"
   | Bind (m, bk) -> "Bind (" ^ evalm_to_string m ^ ", " ^
      bk_to_string bk ^ ")"
+  | Process (inst, clas, _) -> "Process " ^ inst ^ " (" ^ clas ^ ")"
 
 (*FIXME bad style*)
 let expect_value m =
@@ -72,6 +76,7 @@ let rec bind_eval normalise (m : eval_monad) (f : expression -> eval_continuatio
     | Id -> Cont (e, Fun f), ctxt'
     | Fun _ -> Bind (Bind (em, bk), Fun f), ctxt'
     end
+  | Process _ -> failwith "'Process' should never be encountered by bind_eval"
 
 (*This is a version of bind_eval that does not "bind" computations -- rather it
   only evaluates inside the monad further.*)
@@ -87,6 +92,7 @@ and evaluate_em normalise (m : eval_monad) st ctxt : eval_monad * runtime_ctxt =
     | Id -> em, ctxt'
     | Fun _ -> Bind (em, bk), ctxt'
     end
+  | Process _ -> failwith "'Process' should never be encountered by evaluate_m"
 
 (*A single run through the work-list*)
 and run normalise st ctxt (work_list : eval_monad list)
@@ -100,6 +106,15 @@ and run normalise st ctxt (work_list : eval_monad list)
       (e :: el, wl, ctxt)
     | Cont (_, Id) -> (el, m :: wl, ctxt)
     | Bind (em, Id) -> (el, em :: wl, ctxt)
+    | Process (inst, clas, e) ->
+      begin
+        let em, ctxt' = normalise st ctxt e in
+        let em' =
+          (*This describes the semantics of "Process": when its body is fully
+            evaluate, continue by re-evaluating it*)
+          Bind (em, Fun (fun _ _ ctxt -> m, ctxt)) in
+        (el, em' :: wl, ctxt')
+      end
     | _ ->
 (* NOTE use this line instead of the following one, to see an appreciable
         degradation in memory usage. A lot of memory is leaked because of

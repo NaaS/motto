@@ -286,6 +286,77 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
     let actxt' = { actxt with work_list = [] } in
     (st, ctxt'), actxt'
 
+  | Instantiate_Process (process_instance_name, process_class_name, chan_args, args_s) ->
+(*
+   - evaluate all actual parameters
+   (don't do type checking -- that should have been done elsewhere)
+   - store in the process_instance_list (and fail if name already exists)
+   - add a "Process instance_name" to the worklist
+   - handle it as follows: expand instance name (doing the necessary renaming),
+     and append "Process instance_name" to it.
+*)
+(*FIXME set direction*)
+    if List.mem_assoc process_instance_name actxt.process_instance_list then
+      raise (Runtime_inspect_exc ("Already have process instance called " ^ process_instance_name));
+    let args, ctxt' =
+      List.fold_right (fun e_s (es, ctxt) ->
+        let e =
+          match Crisp_parse.parse_string ("(| " ^ e_s ^ "|)") with
+          | Expression e -> e
+          | _ ->
+            raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
+        let value, ctxt' = Eval.evaluate st ctxt e in
+        (value :: es, ctxt')) (List.rev args_s) ([], ctxt)
+      |> General.apfst (List.map Eval.devaluate) in
+    let process_body, ctxt'', st' =
+          let (stata, body, excs) =
+            (*Get function implementation*)
+            match List.filter (fun (name, _) -> name = process_class_name) ctxt.exec_table with
+            | [(_, Process {process_body; _})] ->
+              begin
+              match process_body with
+              | ProcessBody (stata, body, excs) -> (stata, body, excs)
+              end
+            | _ ->
+              failwith "TODO" in
+          let ((chans, arg_tys), ret_tys) =
+            match lookup_function_type st process_class_name with
+            | Some ft -> Crisp_syntax_aux.extract_function_types ft
+            | _ ->
+              failwith "TODO" in
+(*          assert (chans = []);*)
+          let formal_arg_names =
+            List.map (fun ty ->
+              match Crisp_syntax_aux.label_of_type ty with
+              | Some label -> label
+              | _ ->
+                failwith "TODO") arg_tys in
+
+          let st', ctxt' =
+            List.fold_right (fun (Crisp_syntax.Channel (cty, cname)) (st, ctxt) ->
+              declare cname st ctxt (Channel cty)) chans (st, ctxt') in
+
+          let ctxt'' =
+            { ctxt' with except_table = excs :: ctxt'.except_table } in
+
+          (*Substitute formal for actual parameters in the function body*)
+          let body' =
+            List.fold_right (fun (v, arg) body ->
+              Crisp_syntax_aux.subst_var v arg body)
+             (List.combine formal_arg_names args) body in
+          body', ctxt'', st' in
+    let actxt' =
+      { process_instance_list =
+          (process_instance_name,
+           (process_class_name, chan_args, args)) :: actxt.process_instance_list;
+        work_list =
+          Eval_monad.Process
+            (process_instance_name,
+             process_class_name,
+             process_body) :: actxt.work_list;
+      } in
+    (st', ctxt''), actxt'
+
 (*Evaluate a list of inspect-instructions*)
 let evals (st : state) (ctxt : Runtime_data.runtime_ctxt)
    (actxt : asynch_ctxt) (is : inspect_instruction list)

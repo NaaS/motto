@@ -104,6 +104,7 @@ let _ = run [
 
 (*FIXME test case-of, update, update-indexable, and indexable-projection
         wiring up processes with channels
+        channel arrays
 *)
 
    Load "tests/factorial.cp";
@@ -116,6 +117,14 @@ let _ = run [
    Asynch_Eval "metaprint (<>)";
    Asynch_Eval "somechan ! True";
    Run_Asynch;
+
+   Declare_channel ("unitchan", "<>/<>");
+   Load "tests/process_pair.cp";
+(* FIXME this still doesn't work well
+   Instantiate_Process ("p1", "P1", [(Incoming, "unitchan")], []);
+   Instantiate_Process ("p2", "P2", [(Outgoing, "unitchan")], []);
+   Run_Asynch;
+*)
 
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

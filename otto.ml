@@ -14,53 +14,113 @@ type arg_params =
   | TestParseDir
 ;;
 
+type param_entry =
+  { key : string;
+    parameter_desc : string;
+    action : unit -> unit;
+    desc : string
+  }
+;;
+
+let lookup_param (key : string) (param_entries : param_entry list) : param_entry option =
+  match List.filter (fun entry -> entry.key = key) param_entries with
+  | [] -> None
+  | [entry] -> Some entry
+  | _ -> failwith ("lookup_param found multiple entries for key " ^ key)
+;;
+
 let next_arg : arg_params option ref = ref None in
 let arg_idx = ref 1 in
 
+let param_table : param_entry list =
+  [ { key = "--max_task_cost";
+      parameter_desc = "TODO";
+      action = (fun () -> failwith "Unsupported feature" (*TODO*));
+      desc = "TODO";};
+    { key = "--cost_function_file";
+      parameter_desc = "TODO";
+      action = (fun () -> failwith "Unsupported feature" (*TODO*));
+      desc = "TODO";};
+    { key = "--disable_inlining";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        cfg := { !cfg with disable_inlining = true });
+      desc = "TODO";};
+    { key = "--disable_var_erasure";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        cfg := { !cfg with disable_var_erasure = true });
+      desc = "TODO";};
+    { key = "--debug_output";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        cfg := { !cfg with debug = true });
+      desc = "TODO";};
+    { key = "-q";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        cfg := { !cfg with output_location = No_output });
+      desc = "TODO";};
+    { key = "--unexceptional";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        cfg := { !cfg with unexceptional = true });
+      desc = "TODO";};
+    { key = "-o";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        next_arg := Some OutputDir);
+      desc = "TODO";};
+    { key = "-I";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        next_arg := Some IncludeDir);
+      desc = "TODO";};
+    { key = "--infer_type";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        next_arg := Some TypeInfer);
+      desc = "TODO";};
+    { key =  "--parser_test_file";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        next_arg := Some TestParseFile);
+      desc = "TODO";};
+    { key = "--parser_test_dir";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        next_arg := Some TestParseDir);
+      desc = "TODO";};
+    { key = "--runscript";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        cfg := { !cfg with run_compiled_runtime_script = true });
+      desc = "TODO";};
+    { key = "--no_type_check";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        cfg := { !cfg with skip_type_check = true });
+      desc = "TODO";};
+    { key = "--version";
+      parameter_desc = "TODO";
+      action = (fun () ->
+        begin
+        print_endline ("Otto Flick compiler version " ^ Config.version ^
+                       "\nvisit naas-project.org to find out more.");
+        exit 0
+        end);
+      desc = "TODO";};
+  ] in
+
 while !arg_idx < Array.length Sys.argv do
   let handle_arg idx =
-    match Sys.argv.(idx) with
-    | "--max_task_cost" -> failwith "Unsupported feature" (*TODO*)
-    | "--cost_function_file" -> failwith "Unsupported feature" (*TODO*)
-    | "--disable_inlining" ->
-      cfg := { !cfg with disable_inlining = true }
-    | "--disable_var_erasure" ->
-      cfg := { !cfg with disable_var_erasure = true }
-    | "--debug_output" ->
-      cfg := { !cfg with debug = true }
-    | "-q" ->
-      cfg := { !cfg with output_location = No_output }
-    | "--unexceptional" ->
-      cfg := { !cfg with unexceptional = true }
-    | "-o" ->
-      if !next_arg <> None then
-        failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
-      else next_arg := Some OutputDir
-    | "-I" ->
-      if !next_arg <> None then
-        failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
-      else next_arg := Some IncludeDir
-    | "--infer_type" ->
-      if !next_arg <> None then
-        failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
-      else next_arg := Some TypeInfer
-    | "--parser_test_file" ->
-      if !next_arg <> None then
-        failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
-      else next_arg := Some TestParseFile
-    | "--parser_test_dir" ->
-      if !next_arg <> None then
-        failwith ("Was expecting a parameter value before " ^ Sys.argv.(idx))
-      else next_arg := Some TestParseDir
-    | "--runscript" ->
-      cfg := { !cfg with run_compiled_runtime_script = true }
-    | "--no_type_check" ->
-      cfg := { !cfg with skip_type_check = true }
-    | "--version" ->
-      print_endline ("Otto Flick compiler version " ^ Config.version ^
-                     "\nvisit naas-project.org to find out more.");
-      exit 0
-    | s ->
+    let s = Sys.argv.(idx) in
+    match lookup_param s param_table with
+    | Some entry ->
+        if !next_arg <> None then
+          failwith ("Was expecting a parameter value before " ^ s);
+        entry.action ();
+    | None ->
       match !next_arg with
       | None ->
         begin

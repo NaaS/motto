@@ -19,7 +19,7 @@ type pre_process_instance =
   fully evaluated, since we don't want to re-evaluate them when the process is
   rescheduled*)
 type process_instance =
-  process_instance_name * process_class_name * chan_arg list * Crisp_syntax.expression list
+  process_instance_name * (process_class_name * chan_arg list * Crisp_syntax.expression list)
 
 type asynch_ctxt =
   {

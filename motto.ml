@@ -42,74 +42,74 @@ let rec param_table : param_entry list =
       action = (fun () -> failwith "Unsupported feature" (*TODO*));
       desc = "TODO";};
     { key = "--disable_inlining";
-      parameter_desc = "TODO";
+      parameter_desc = "";
       action = (fun () ->
         cfg := { !cfg with disable_inlining = true });
-      desc = "TODO";};
+      desc = "Disable inlining phase on target code";};
     { key = "--disable_var_erasure";
-      parameter_desc = "TODO";
+      parameter_desc = "";
       action = (fun () ->
         cfg := { !cfg with disable_var_erasure = true });
-      desc = "TODO";};
+      desc = "Don't prune temporary variables from the symbol table";};
     { key = "--debug_output";
-      parameter_desc = "TODO";
+      parameter_desc = "";
       action = (fun () ->
         cfg := { !cfg with debug = true });
-      desc = "TODO";};
+      desc = "Show lots of internal information during compilation";};
     { key = "-q";
-      parameter_desc = "TODO";
+      parameter_desc = "";
       action = (fun () ->
         cfg := { !cfg with output_location = No_output });
-      desc = "TODO";};
+      desc = "Quiet mode: don't complain if we don't get any input";};
     { key = "--unexceptional";
-      parameter_desc = "TODO";
+      parameter_desc = "";
       action = (fun () ->
         cfg := { !cfg with unexceptional = true });
-      desc = "TODO";};
+      desc = "Exceptions are not thrown";};
     { key = "-o";
-      parameter_desc = "TODO";
+      parameter_desc = "(path to (non-existing) directory)";
       action = (fun () ->
         next_arg := Some OutputDir);
-      desc = "TODO";};
+      desc = "Generate output in the specified directory";};
     { key = "-I";
-      parameter_desc = "TODO";
+      parameter_desc = "(path to directory)";
       action = (fun () ->
         next_arg := Some IncludeDir);
-      desc = "TODO";};
+      desc = "Add directory's contents to the inclusion file list";};
     { key = "--infer_type";
-      parameter_desc = "TODO";
+      parameter_desc = "(expression)";
       action = (fun () ->
         next_arg := Some TypeInfer);
-      desc = "TODO";};
+      desc = "Run type inference on the given expression";};
     { key =  "--parser_test_file";
-      parameter_desc = "TODO";
+      parameter_desc = "(path to file)";
       action = (fun () ->
         next_arg := Some TestParseFile);
-      desc = "TODO";};
+      desc = "Test the parser on a file";};
     { key = "--parser_test_dir";
-      parameter_desc = "TODO";
+      parameter_desc = "(path to directory)";
       action = (fun () ->
         next_arg := Some TestParseDir);
-      desc = "TODO";};
+      desc = "Test the parser on all files in a directory";};
     { key = "--runscript";
-      parameter_desc = "TODO";
+      parameter_desc = "(.cmo file containing the compiled runtime script)";
       action = (fun () ->
         cfg := { !cfg with run_compiled_runtime_script = true });
-      desc = "TODO";};
+      desc = "Execute a compiled runtime script";};
     { key = "--no_type_check";
-      parameter_desc = "TODO";
+      parameter_desc = "";
       action = (fun () ->
         cfg := { !cfg with skip_type_check = true });
-      desc = "TODO";};
+      desc = "Skip type-checking phase";};
     { key = "--version";
-      parameter_desc = "TODO";
+      parameter_desc = "";
       action = (fun () ->
         begin
         print_endline ("Motto compiler version " ^ Config.version ^
                        "\nvisit naas-project.org to find out more.");
         exit 0
         end);
-      desc = "TODO";};
+      desc = "Show version info and quit";};
     { key = "-h";
       parameter_desc = "";
       action = (fun () ->
@@ -122,7 +122,7 @@ let rec param_table : param_entry list =
           ) param_table;
         exit 0
         end);
-      desc = "TODO";};
+      desc = "Show this list";};
   ] in
 
 while !arg_idx < Array.length Sys.argv do

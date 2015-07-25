@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DEFAULT_TARGET=otto.byte
+DEFAULT_TARGET=motto.byte
 
 if [ -z $1 ]
 then

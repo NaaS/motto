@@ -30,7 +30,7 @@ $ ./build.sh
 
 To run:
 ```
-$ ./otto.byte -o output_directory source_file
+$ ./motto.byte -o output_directory source_file
 ```
 where `output_directory` is the name of the directory (that doesn't yet
 exist) that's intended to hold the compiler's output.
@@ -38,7 +38,7 @@ The compiler will create `output_directory` and deposit the output files there,
 where they can be compiled and linked using a C++ toolchain.
 
 **NOTE** the compiler accepts several switches. At the moment all of them are
-only described in the [code](https://github.com/NaaS/system/blob/master/crisp/otto.ml).
+only described in the [code](https://github.com/NaaS/system/blob/master/crisp/motto.ml).
 
 
 # Testing
@@ -49,16 +49,16 @@ For testing, I'm currently using the following as `source_file`:
 
 To run the parser regression tests on both the `examples` and `tests` directories:
 ```
-$ ./otto.byte -q --parser_test_dir examples --parser_test_dir tests
+$ ./motto.byte -q --parser_test_dir examples --parser_test_dir tests
 ```
 Or you might wish to only test a single file:
 ```
-./otto.byte -q --parser_test_file tests/types_process.cp
+./motto.byte -q --parser_test_file tests/types_process.cp
 ```
 
 To run type inference on expressions:
 ```
-$ ./otto.byte -q --infer_type "(| E |)"
+$ ./motto.byte -q --infer_type "(| E |)"
 ```
 where `E` is an expression.
 

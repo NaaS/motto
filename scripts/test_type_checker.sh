@@ -14,7 +14,7 @@ DIR=tests/
 #      negative tests. Perhaps should include them and flip the result?
 for FILE in `ls $DIR | grep -v bad`
 do
-  ./otto.byte --unexceptional -q "$DIR$FILE"
+  ./motto.byte --unexceptional -q "$DIR$FILE"
   STATUS=$?
   echo -n "${FILE} : "
   if [ ${STATUS} -eq 0 ]

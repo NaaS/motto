@@ -105,7 +105,7 @@ let rec param_table : param_entry list =
       parameter_desc = "TODO";
       action = (fun () ->
         begin
-        print_endline ("Otto Flick compiler version " ^ Config.version ^
+        print_endline ("Motto compiler version " ^ Config.version ^
                        "\nvisit naas-project.org to find out more.");
         exit 0
         end);
@@ -177,7 +177,7 @@ match !cfg.source_file with
     begin
     Dynlink.init ();
     Runtime_inspect.run []; (*This line does nothing, but ensures that Runtime_inspect
-                              is a dependency of Otto. Runtime_inspect will be needed
+                              is a dependency of Motto. Runtime_inspect will be needed
                               by the loaded script.*)
     try
       Dynlink.loadfile source_file

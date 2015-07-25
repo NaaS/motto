@@ -9,7 +9,7 @@ First, take a look at this [example runtime script](https://github.com/NaaS/syst
 Each line is documented.
 
 Now build it using the following command, which you need to run in the directory
-containing Otto:
+containing Motto:
 ```
 $ ./build.sh runtime_factorial.byte
 ```

@@ -32,7 +32,7 @@ let lookup_param (key : string) (param_entries : param_entry list) : param_entry
 let next_arg : arg_params option ref = ref None in
 let arg_idx = ref 1 in
 
-let param_table : param_entry list =
+let rec param_table : param_entry list =
   [ { key = "--max_task_cost";
       parameter_desc = "TODO";
       action = (fun () -> failwith "Unsupported feature" (*TODO*));
@@ -107,6 +107,18 @@ let param_table : param_entry list =
         begin
         print_endline ("Otto Flick compiler version " ^ Config.version ^
                        "\nvisit naas-project.org to find out more.");
+        exit 0
+        end);
+      desc = "TODO";};
+    { key = "-h";
+      parameter_desc = "";
+      action = (fun () ->
+        begin
+          print_endline "Parameters:";
+          List.iter (fun entry ->
+            print_endline ("  " ^ entry.key ^ " " ^ entry.parameter_desc);
+            print_endline ("    " ^ entry.desc);
+          ) param_table;
         exit 0
         end);
       desc = "TODO";};

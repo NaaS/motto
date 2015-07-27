@@ -43,6 +43,7 @@ let rec evaluate_value (ctxt : runtime_ctxt) (e : expression) : typed_value =
             if state is passed to this function then could quickly check that l's
             identifier_kind is Disjunct*)
     Disjoint_Union (l, evaluate_value ctxt e)
+  | TypeAnnotation (e', _) -> evaluate_value ctxt e'
   | _ ->
     raise (Eval_Exc ("Cannot represent as Flick expression. Perhaps it's not in normal form?", Some e, None))
 
@@ -648,9 +649,8 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
     raise (Eval_Exc ("Cannot normalise meta_quoted expressions alone -- add some other expression after them, and normalisation should succeed.", Some e, None))
 
   | Seq (e1, e2) ->
-(*FIXME ensure that e1 is a Value, otherwise reattempt to evaluate*)
-    let _, ctxt' = normalise st ctxt e1 in
-    normalise st ctxt' e2
+    let em, ctxt' = normalise st ctxt e1 in
+    Bind (em, Fun (fun _ st ctxt' -> normalise st ctxt' e2)), ctxt'
 
   | Hole -> raise (Eval_Exc ("Cannot normalise", Some e, None))
 

@@ -51,6 +51,8 @@ type state =
     next_symbol : identifier;
     type_symbols : (string * identifier * naasty_type option) list;
     term_symbols : (string * identifier * term_symbol_metadata) list;
+    (*FIXME rename, to indicate that i'm also using this for processes.
+            add a bool to indicate whether it's a function or a process.*)
     crisp_funs : (function_name * function_type) list;
   }
 

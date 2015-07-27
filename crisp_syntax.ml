@@ -53,7 +53,7 @@ type type_value =
   | Undefined
     (*NOTE ChanType should not be contained in any other types -- lists,
            variants, etc*)
-  | ChanType of channel_type
+  | ChanType of label option * channel_type
 and channel_type =
   | ChannelSingle of type_value * type_value
   | ChannelArray of type_value * type_value * dependency_index option
@@ -128,7 +128,9 @@ let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfi
        type_value_to_string mixfix_lists false 0 ty ^
         endline
   | Undefined -> "undefined"
-  | ChanType ct -> "channel " ^ channel_type_to_string ct
+  | ChanType (label_opt, ct) -> "channel " ^
+      opt_string (indn indent) label_opt " : " ^ channel_type_to_string ct
+
 and channel_type_to_string = function
   | ChannelSingle (type_value1, type_value2) ->
     type_value_to_string default_use_mixfix_lists false 0 type_value1 ^ "/" ^
@@ -512,10 +514,10 @@ and expression_to_string indent = function
      expression_to_string 0 e2
 *)
   | Send (chan_id, e) ->
-    channel_identifier_to_string chan_id ^ " ! " ^
+    indn indent ^ channel_identifier_to_string chan_id ^ " ! " ^
      expression_to_string 0 e
   | Receive chan_id ->
-    "? " ^ channel_identifier_to_string chan_id
+    indn indent ^ "? " ^ channel_identifier_to_string chan_id
 
   | Str s -> "\"" ^ s ^ "\""
   | Meta_quoted mis ->

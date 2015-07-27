@@ -28,7 +28,7 @@ type typed_value =
   | IPv4Address of int * int * int * int
   | Tuple of typed_value list
   | Dictionary of (typed_value * typed_value) list
-  | ChanType of channel_type
+  | ChanType of label * channel_type
 (*Channels are abstracted to behave as queues*)
 and channel_type =
   | ChannelSingle of typed_value list * typed_value list
@@ -58,7 +58,7 @@ and string_of_typed_value : typed_value -> string = function
     let d_s = List.map (fun (k, v) ->
       string_of_typed_value k ^ " |-> " ^ string_of_typed_value v) d in
     "[" ^ String.concat ", " d_s ^ "]"
-  | ChanType cv -> string_of_channel_type cv
+  | ChanType (cn, cv) -> cn ^ "(" ^ string_of_channel_type cv ^ ")"
 and string_of_channel_type : channel_type -> string = function
   | ChannelSingle (in_vs, out_vs) -> string_of_chan_vs (in_vs, out_vs)
   | ChannelArray chans ->
@@ -140,32 +140,46 @@ let channel_fun v dir idx_opt (operation_verb : string)
        (typed_value list * typed_value list * typed_value * runtime_ctxt)) st ctxt =
   if List.mem_assoc v ctxt.value_table then
     match idx_opt, lookup_term_data (Term Channel_Name) st.term_symbols v with
-    | None, Some (_, {source_type = Some (ChanType (ChannelSingle (rx_ty, tx_ty)))}) ->
+    | None, Some (_, {source_type = Some (ChanType (lbl_opt, ChannelSingle (rx_ty, tx_ty)))}) ->
+      let _ =
+        match lbl_opt with
+        | None -> ()
+        | Some lbl ->
+          if lbl <> v then
+            raise (operation_exn ("Channel " ^ v ^ " expected to be called " ^ lbl)) in
       let (vt', (ctxt', result)) = fold_map ([], (ctxt, None))
         (fun (ctxt, result) ((v', value) as unchanged) ->
            if v <> v' then (unchanged, (ctxt, result))
            else
              match value with
-             | ChanType (ChannelSingle (incoming, outgoing)) ->
+             | ChanType (name, ChannelSingle (incoming, outgoing)) ->
+               assert (v = name);
                (*since v is (should be) unique in vt, we should only encounter
                  it once, no more, and no less. this assert checks that we don't
                  encounter it more than once.*)
                assert (result = None);
                let (incoming', outgoing', result', ctxt') = f dir ctxt (incoming, outgoing) in
-               ((v, ChanType (ChannelSingle (incoming', outgoing'))),
+               ((v, ChanType (name, ChannelSingle (incoming', outgoing'))),
                 (ctxt', Some result'))
              | _ ->
                (*FIXME give more info*)
                raise (operation_exn "Channel value is of the wrong type"))
         ctxt.value_table in
       { ctxt' with value_table = vt' }, result
-    | Some idx, Some (_, {source_type = Some (ChanType (ChannelArray (rx_ty, tx_ty, _)))}) ->
+    | Some idx, Some (_, {source_type = Some (ChanType (lbl_opt, ChannelArray (rx_ty, tx_ty, _)))}) ->
+      let _ =
+        match lbl_opt with
+        | None -> ()
+        | Some lbl ->
+          if lbl <> v then
+            raise (operation_exn ("Channel " ^ v ^ " expected to be called " ^ lbl)) in
       let (vt', (ctxt', result)) = fold_map ([], (ctxt, None))
         (fun (ctxt, result) ((v', value) as unchanged) ->
            if v <> v' then (unchanged, (ctxt, result))
            else
              match value with
-             | ChanType (ChannelArray chans) ->
+             | ChanType (name, ChannelArray chans) ->
+               assert (name = v);
                (*since v is (should be) unique in vt, we should only encounter
                  it once, no more, and no less. this assert checks that we don't
                  encounter it more than once.*)
@@ -176,16 +190,16 @@ let channel_fun v dir idx_opt (operation_verb : string)
                else
                  let pre, (incoming, outgoing), post = General.list_split_nth_exc idx chans in
                  let (incoming', outgoing', result', ctxt') = f dir ctxt (incoming, outgoing) in
-                 ((v, ChanType (ChannelArray (pre @ (incoming', outgoing') :: post))),
+                 ((v, ChanType (name, ChannelArray (pre @ (incoming', outgoing') :: post))),
                   (ctxt', Some result'))
              | _ ->
                (*FIXME give more info*)
                raise (operation_exn "Channel value is of the wrong type"))
         ctxt.value_table in
       { ctxt' with value_table = vt' }, result
-    | None, Some (_, {source_type = Some (ChanType (ChannelArray (rx_ty, tx_ty, _)))}) ->
+    | None, Some (_, {source_type = Some (ChanType (_, ChannelArray (rx_ty, tx_ty, _)))}) ->
       raise (operation_exn ("Could not " ^ operation_verb ^ " onto channel array " ^ v ^ " since an index has not been given"))
-    | Some _, Some (_, {source_type = Some (ChanType (ChannelSingle (rx_ty, tx_ty)))}) ->
+    | Some _, Some (_, {source_type = Some (ChanType (_, ChannelSingle (rx_ty, tx_ty)))}) ->
       raise (operation_exn ("Could not " ^ operation_verb ^ " onto channel " ^ v ^ " since an index was given, but wasn't needed"))
     | _, None ->
       raise (operation_exn ("Channel " ^ v ^ " does not exist in the symbol table (but does exist in the runtime context)"))

@@ -66,10 +66,10 @@ let rec devaluate (v : typed_value) : expression =
     let vs' = List.map (fun (l, v) -> (l, devaluate v)) vs in
     Crisp_syntax.Record vs'
   | Disjoint_Union (l, v) -> Crisp_syntax.Functor_App (l, [Crisp_syntax.Exp (devaluate v)])
-  | Dictionary _
+  | Dictionary _ ->
     (*FIXME could serialise as an association list?*)
-  | ChanType _ ->
     raise (Eval_Exc ("Cannot represent as Flick expression", None, Some v))
+  | ChanType (cn, _) -> Variable cn
 
 (*NOTE b and l should be in normal form*)
 let rec fold_list ?acc:(acc : expression option = None)
@@ -480,7 +480,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
             | None ->
               raise (Eval_Exc ("Could not retrieve type from symbol table, for functor: " ^ function_name, Some e, None))
             | Some ft -> Crisp_syntax_aux.extract_function_types ft in
-          assert (chans = []);
+          let arg_tys =
+            (*Regard channels as simply being parameters*)
+            List.map Crisp_syntax_aux.chan_to_ty chans @ arg_tys in
           let formal_arg_names =
             List.map (fun ty ->
               match Crisp_syntax_aux.label_of_type ty with
@@ -496,7 +498,17 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           let body' =
             List.fold_right (fun (v, arg) body ->
               Crisp_syntax_aux.subst_var v arg body)
-             (List.combine formal_arg_names normal_arg_es) body in
+              (List.combine formal_arg_names normal_arg_es) body in
+
+          if !Config.cfg.Config.debug then
+            begin
+              print_endline "Function application. Arguments:";
+              List.combine formal_arg_names normal_arg_es
+              |> List.iter (fun (v, e) ->
+                print_endline ("  " ^ v ^ " |-> " ^ expression_to_string 0 e));
+              print_endline "Function application. Body:";
+              print_endline (expression_to_string 2 body')
+            end;
 
           continuate body' (fun result st ctxt'' ->
             (*Unwind exception handlers*)

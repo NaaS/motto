@@ -35,8 +35,8 @@ let type_check_blob (st : State.state) (chans : channel list)
   let st' =
     List.fold_right (fun ((Channel (ct, name)) : channel) (st : state) ->
         let scope = Term Channel_Name in
-        Naasty_aux.extend_scope_unsafe scope st ~src_ty_opt:(Some (ChanType ct))
-          name
+        Naasty_aux.extend_scope_unsafe scope st
+          ~src_ty_opt:(Some (ChanType (Some name, ct))) name
         |> snd) chans st
     |> List.fold_right (fun (arg : type_value) (st : state) ->
         let scope = Term Value(*FIXME*) in
@@ -131,9 +131,47 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
         else (None, st') in
       { st'' with type_declarations =
                     (type_name, type_value, nst_ty) :: st''.type_declarations}
-    | Process _ ->
-      (*FIXME currently we ignore process declarations*)
-      st
+    | Process {process_name; process_type; process_body} ->
+      (*FIXME work in progress:
+              some duplication with code that handles function declarations.
+              seems like a good idea to kinda treat this as a function*)
+      let fn_params =
+        match process_type with
+        | ProcessType (_, (chans, args)) ->
+          FunType (FunDomType (chans, args), FunRetType [flick_unit_type]) in
+      begin
+      let st =
+        { st with crisp_funs = (process_name, fn_params) :: st.crisp_funs} in
+      match lookup_term_data (Term Function_Name) st.term_symbols process_name with
+      | None ->
+        let (fn_idx, st') =
+          if Naasty_aux.is_fresh process_name st then
+            Naasty_aux.extend_scope_unsafe (Term Function_Name) st
+              ~ty_opt:None(*FIXME put process's type here?*)
+                              process_name
+          else
+            failwith ("Process name " ^ process_name ^ " isn't fresh.") in
+
+        let _ =
+          let ((chans, arg_tys), ret_tys) =
+            Crisp_syntax_aux.extract_function_types fn_params in
+
+          let ret_ty = flick_unit_type in
+
+          if !Config.cfg.Config.skip_type_check then ()
+          else
+            match type_check_blob st chans arg_tys ret_ty process_body with
+            | (true, _) -> ()
+            | (false, (expected_ty, actual_ty)) ->
+              let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
+              let actual_ty_s = type_value_to_string true false min_indentation actual_ty in
+              failwith ("Types don't check in " ^ process_name ^ " expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
+        (*NOTE order of declarations isn't preserved within term_symbols*)
+        st'
+      | Some (_, _) -> failwith ("Process " ^ process_name ^ " declared more than once")
+      end
+
+
     | Include _ ->
       failwith "Inclusions should have been expanded before reaching this point.")
     p st
@@ -175,16 +213,19 @@ let check_distinct_parameter_names (st : state) : state =
     List.iter (fun (function_name, function_type) ->
       let ((chans, arg_tys), ret_tys) =
         Crisp_syntax_aux.extract_function_types function_type in
-      assert (chans = []); (*FIXME currently functions cannot be given channel
-                             parameters*)
-      ignore (List.fold_right (fun ty acc ->
-        match Crisp_syntax_aux.label_of_type ty with
-        | None -> failwith "All function parameters must be named"
+      let arg_names = List.map Crisp_syntax_aux.label_of_type arg_tys in
+      let channel_names =
+        List.map (fun cn -> Some (Crisp_syntax_aux.label_of_channel cn)) chans in
+      ignore (List.fold_right (fun name_opt acc ->
+        let thing = "function" in (*FIXME determine whether we're dealing with a
+                                  function or a process*)
+        match name_opt with
+        | None -> failwith ("All " ^ thing ^ " parameters must be named")
         | Some label ->
           if List.exists (fun lbl -> lbl = label) acc then
             (*This is the problem that this analysis is designed to catch.*)
-            failwith ("Function " ^ function_name ^ " has two parameters called " ^ label)
-          else label :: acc) arg_tys [])) st.crisp_funs
+            failwith (thing ^ " " ^ function_name ^ " has two parameters called " ^ label)
+          else label :: acc) (channel_names @ arg_names) [])) st.crisp_funs
     end
   in st
 

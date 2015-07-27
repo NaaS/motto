@@ -5,6 +5,9 @@
 
 open Crisp_syntax
 
+(*Map channel info into type info*)
+let chan_to_ty (Channel (cty, cname)) = ChanType (Some cname, cty)
+
 let name_of_type = function
   | Type ty_decl -> ty_decl.type_name
   | _ -> failwith "Expected type declaration."
@@ -103,7 +106,9 @@ let label_of_type : type_value -> label option = function
   | Empty -> failwith "Empty type cannot be given a label"
   | IPv4Address l_opt -> l_opt
   | Undefined -> None
-  | ChanType _ -> None
+  | ChanType (l_opt, _) -> l_opt
+
+let label_of_channel (Channel (_, channel_name)) = channel_name
 
 (*Eliminate named parameters, by ordering parameters according to how
   the function expects them to be given.*)
@@ -120,19 +125,20 @@ let order_fun_args (fname : function_name) (st : State.state) (args : fun_arg li
     let ((chans, arg_tys), ret_tys) =
       List.assoc fname st.State.crisp_funs
       |> extract_function_types in
+    let chan_labels =
+        List.map label_of_channel chans in
     let arg_labels =
       List.fold_right (fun ty acc ->
         match label_of_type ty with
         | None -> failwith "Expecting type to be labelled"
         | Some l -> l :: acc) arg_tys []
       |> List.rev in
-    assert (chans = []); (*FIXME currently functions cannot be given channel
-                           parameters*)
+    let complete_arg_list = chan_labels @ arg_labels in
     List.fold_right (fun arg acc ->
       match arg with
       | Named (l, e) ->
         begin
-        match General.find_idx arg_labels l with
+        match General.find_idx complete_arg_list l with
         | None -> failwith ("Parameter name not found : " ^ l)
         | Some i -> (i, e) :: acc
         end
@@ -205,7 +211,7 @@ let rec is_fully_defined_type : type_value -> bool = function
   | Dictionary (_, ty1, ty2) ->
     is_fully_defined_type ty1 && is_fully_defined_type ty2
 
-  | ChanType ct -> is_fully_defined_channel_type ct
+  | ChanType (_, ct) -> is_fully_defined_channel_type ct
 and is_fully_defined_channel_type = function
   | ChannelSingle (ty1, ty2) ->
     is_fully_defined_type ty1 && is_fully_defined_type ty2
@@ -243,7 +249,7 @@ let rec type_match (ty1 : type_value) (ty2 : type_value) : bool =
     type_match ty1A ty1B &&
     type_match ty2A ty2B
 
-  | (ChanType ct1, ChanType ct2) ->
+  | (ChanType (_, ct1), ChanType (_, ct2)) ->
     channel_type_match ct1 ct2
   | (_, Undefined) -> true
   | (_, _) -> false
@@ -561,11 +567,23 @@ let rec subst_var (v : string) (u : expression) (e : expression) : expression =
   | Seq (e1, e2) -> Seq (subst_var v u e1, subst_var v u e2)
 
   | Send ((c_name, idx_opt), e) ->
-    Send ((c_name,
+    let c_name' =
+      if v = c_name then
+        match u with
+        | Variable x -> x
+        | _ -> failwith "Channel name cannot be an arbitrary expression"
+      else c_name in
+    Send ((c_name',
            General.bind_opt (fun idx -> Some (subst_var v u idx)) None idx_opt),
           subst_var v u e)
   | Receive (c_name, idx_opt) ->
-    Receive (c_name, General.bind_opt (fun idx -> Some (subst_var v u idx)) None idx_opt)
+    let c_name' =
+      if v = c_name then
+        match u with
+        | Variable x -> x
+        | _ -> failwith "Channel name cannot be an arbitrary expression"
+      else c_name in
+    Receive (c_name', General.bind_opt (fun idx -> Some (subst_var v u idx)) None idx_opt)
 
   | Not e' -> Not (subst_var v u e')
   | Abs e' -> Abs (subst_var v u e')

@@ -161,7 +161,8 @@
 
 source_file_contents:
   | FAT_BRACKET_OPEN; e = expression; FAT_BRACKET_CLOSE {Crisp_syntax.Expression e}
-  | FAT_TYPE_BRACKET_OPEN; cty = channel_type; FAT_BRACKET_CLOSE {Crisp_syntax.TypeExpr (Crisp_syntax.ChanType cty)}
+  | FAT_TYPE_BRACKET_OPEN; cty = channel_type; FAT_BRACKET_CLOSE
+    {Crisp_syntax.TypeExpr (Crisp_syntax.ChanType (None, cty))}
   | FAT_TYPE_BRACKET_OPEN; td = type_def; FAT_BRACKET_CLOSE
     {Crisp_syntax.TypeExpr (td None [])}
   | p = program {Crisp_syntax.Program p}

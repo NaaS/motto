@@ -126,5 +126,10 @@ let _ = run [
    Run_Asynch;
 *)
 
+   Declare_channel ("int_chan", "integer/integer");
+   Q_channel ("int_chan", Incoming, None, "640");
+   Load "tests/fun_chan.cp";
+   Eval "fun_chan(int_chan)";
+
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

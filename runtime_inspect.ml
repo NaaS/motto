@@ -54,18 +54,18 @@ type inspect_instruction =
 
 type declaration =
   | Binding of expression * type_value
-  | Channel of channel_type
+  | Channel of channel_name * channel_type
 
 let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : declaration) : (state * Runtime_data.runtime_ctxt) =
   let ty, ik, value =
      match d with
      | Binding (e, ty) -> ty, Value, Eval.evaluate_value ctxt e
-     | Channel cty ->
+     | Channel (cn, cty) ->
          let value =
            match cty with
            | ChannelSingle _ -> Runtime_data.ChannelSingle ([], [])
            | ChannelArray _ -> Runtime_data.ChannelArray [] (*FIXME what size array?*) in
-         ChanType cty, Channel_Name, Runtime_data.ChanType value in
+         ChanType (Some v, cty), Channel_Name, Runtime_data.ChanType (cn, value) in
   (*Remove binding of "v" if it exists*)
   let st' =
     match lookup_term_data (Term ik) st.term_symbols v with
@@ -161,10 +161,10 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
   | Declare_channel (v, cty_s) ->
     let cty =
       match Crisp_parse.parse_string ("(type| " ^ cty_s ^ "|)") with
-      | TypeExpr (ChanType cty) -> cty
+      | TypeExpr (ChanType (_, cty)) -> cty
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into a channel type: " ^ cty_s)) in
-    declare v st ctxt (Channel cty), actxt
+    declare v st ctxt (Channel (v, cty)), actxt
 
   | Close_channel v ->
     let ctxt' =
@@ -184,7 +184,14 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
           match md.source_type with
           | None ->
             raise (Runtime_inspect_exc ("Found entry in symbol table, but no specific type for " ^ v))
-          | Some (ChanType cty) -> cty
+          | Some (ChanType (lbl_opt, cty)) ->
+            let _ =
+              match lbl_opt with
+              | None -> ()
+              | Some lbl ->
+                if lbl <> v then
+                  raise (Runtime_inspect_exc ("Type of channel " ^ v ^ " is associated with channel " ^ lbl)) in
+            cty
           | Some _ ->
             raise (Runtime_inspect_exc ("Channel " ^ v ^ " has a non-channel type in the symbol table"))
         end in
@@ -196,7 +203,8 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       if List.mem_assoc v ctxt.Runtime_data.value_table then
         raise (Runtime_inspect_exc ("Could not open channel " ^ v ^ " since it's already open"))
       else
-        { ctxt with Runtime_data.value_table = (v, Runtime_data.ChanType value) :: ctxt.Runtime_data.value_table } in
+        { ctxt with Runtime_data.value_table =
+                      (v, Runtime_data.ChanType (v, value)) :: ctxt.Runtime_data.value_table } in
     (st, ctxt'), actxt
 
   | Q_channel (v, dir, idx_opt, e_s) ->
@@ -334,7 +342,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
 
           let st', ctxt' =
             List.fold_right (fun (Crisp_syntax.Channel (cty, cname)) (st, ctxt) ->
-              declare cname st ctxt (Channel cty)) chans (st, ctxt') in
+              declare cname st ctxt (Channel (cname, cty))) chans (st, ctxt') in
 
           let ctxt'' =
             { ctxt' with except_table = excs :: ctxt'.except_table } in

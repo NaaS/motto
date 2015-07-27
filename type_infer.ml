@@ -29,7 +29,11 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   : type_value * state =
   match e with
   | Variable label ->
-    let scope = Term Value in
+    let scope =
+      (*This must be "Undetermined" since the "Variable" in question might be
+        a channel, which has an identifier_kind of "Channel_Name", while a
+        normal variable has an identifier_kind of "Value"*)
+      Term Undetermined in
     begin
     match lookup_term_data ~unexceptional:true scope st.term_symbols label with
     | None ->
@@ -339,11 +343,17 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
           end;
         idx_ty, val_ty
-      | Some (ChanType (ChannelArray (rx_ty, tx_ty, di_opt))) ->
+      | Some (ChanType (lbl_opt, ChannelArray (rx_ty, tx_ty, di_opt))) ->
+        if not (lbl_opt = Some map_name) then
+          begin
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
+          end;
         (Undefined(*FIXME unsure how to index channel arrays*),
-         ChanType (ChannelSingle (rx_ty, tx_ty)))
-      | Some (List (lbl_opt, val_ty, _, _)) ->
+         ChanType (None, ChannelSingle (rx_ty, tx_ty)))
+      | Some (List (lbl_opt, val_ty, dpd_idx, _)) ->
         (*NOTE currently ignoring list's dependency_index*)
+        assert (dpd_idx = None);
         (Integer (None, []), (*NOTE currently lists can only be indexed numerically*)
          val_ty)
       | _ ->
@@ -487,7 +497,9 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
             raise (Type_Inference_Exc ("Functor_App function: Missing declaration for '" ^ functor_name ^ "'", e, st))
           | Some f_ty -> f_ty in
         let ((chans, arg_tys), ret_tys) = extract_function_types functor_ty in
-        assert (chans = []);
+        let arg_tys =
+          (*Regard channels as simply being parameters*)
+          List.map chan_to_ty chans @ arg_tys in
         let ret_ty =
           match ret_tys with
           | [ty] ->
@@ -519,9 +531,9 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
                 |> General.apsnd (ty_of_expr ~strict st)
                 |> General.apsnd fst) arg_expressions in
             let formal_and_actual_parameters =
-              (*check that two lists are of same list.
+              (*check that two lists are of same length.
                 we'll check whether the types agree later*)
-              if List.length fun_args_tys <> List.length arg_tys then
+              if List.length fun_args_tys <> List.length chans + List.length arg_tys then
                 raise (Type_Inference_Exc ("Inconsistency between the number of formal and actual parameters.", e, st))
               else List.combine fun_args_tys arg_tys in
             List.iter (fun ((arg_e, ty1), ty2) ->
@@ -693,7 +705,12 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       ty_of_expr ~strict st chan_e in
     let ty =
       match chan_ty with
-      | ChanType ct ->
+      | ChanType (label_opt, ct) ->
+        if not (label_opt = Some c_name) then
+          begin
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
+          end;
         if tx_chan_type ct = data_ty then
           data_ty
         else
@@ -712,11 +729,18 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       ty_of_expr ~strict st chan_e in
     let ty =
       match chan_ty with
-      | ChanType ct -> rx_chan_type ct
+      | ChanType (label_opt, ct) ->
+        if not (label_opt = Some c_name) then
+          begin
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
+          end;
+        rx_chan_type ct
       | _ ->
         (*FIXME give more info*)
         raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in
     (ty, st)
+(*FIXME currently not using this primitive
   | Exchange (chan1_e, chan2_e) ->
     let chan1_ty, _ = ty_of_expr ~strict st chan1_e in
     let chan2_ty, _ = ty_of_expr ~strict st chan2_e in
@@ -733,7 +757,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         (*FIXME give more info*)
         raise (Type_Inference_Exc ("Expected both types to be channels", e, st)) in
     (ty, st)
-
+*)
   | TypeAnnotation (e', ty) ->
     if not (is_fully_defined_type ty) then
       begin

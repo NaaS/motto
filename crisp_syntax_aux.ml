@@ -578,7 +578,7 @@ let rec subst_var (v : string) (u : expression) (e : expression) : expression =
         | InvertedVariable x -> x, not inv
         | _ -> failwith "Channel name cannot be an arbitrary expression"
       else c_name, inv in
-    Send (inv, (c_name',
+    Send (inv', (c_name',
            General.bind_opt (fun idx -> Some (subst_var v u idx)) None idx_opt),
           subst_var v u e)
   | Receive (inv, (c_name, idx_opt)) ->

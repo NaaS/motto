@@ -472,6 +472,10 @@ expression_tuple:
     {[x]}
 
 function_arguments:
+  | DASH; l = IDENTIFIER; RIGHT_R_BRACKET
+    {[Crisp_syntax.Exp (Crisp_syntax.InvertedVariable l)]}
+  | DASH; l = IDENTIFIER; COMMA; xs = function_arguments
+    {Crisp_syntax.Exp (Crisp_syntax.InvertedVariable l) :: xs}
   | x = expression; COMMA; xs = function_arguments
     {Crisp_syntax.Exp x :: xs}
   | x = expression; RIGHT_R_BRACKET
@@ -689,9 +693,11 @@ expression:
     {Crisp_syntax.Exchange (e, f)}
 *)
   | c = specific_channel; BANG e = expression
-    {Crisp_syntax.Send (c, e)}
+    (*NOTE by default channels are not inverted, thus the "false" below.*)
+    {Crisp_syntax.Send (false, c, e)}
   | QUESTION; c = specific_channel
-    {Crisp_syntax.Receive c}
+    (*NOTE by default channels are not inverted, thus the "false" below.*)
+    {Crisp_syntax.Receive (false, c)}
 
   (*FIXME we're missing operations on strings: substring, concat, etc*)
   | str = STRING

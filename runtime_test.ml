@@ -131,7 +131,9 @@ let _ = run [
    Declare_channel ("int_chan", "integer/integer");
    Q_channel ("int_chan", Incoming, None, "640");
    Load "tests/fun_chan.cp";
+   (*NOTE that things block if we swap the next two lines.*)
    Eval "fun_chan(int_chan)";
+   Eval "fun_chan(-int_chan)";
 
    Load "tests/fun_call.cp";
    Eval "fun_call_f2(6)";

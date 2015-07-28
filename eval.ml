@@ -154,6 +154,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
             To answer this i need to look at how the lvalue is handled in
             assignment expressions.*)
     return_eval (devaluate e'), ctxt
+  | InvertedVariable _ -> return_eval e, ctxt
 
   | TypeAnnotation (e', _) ->
     (*NOTE there's no runtime type-checking -- we ignore the type annotation.
@@ -593,7 +594,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       |> devaluate in
     return_eval e, ctxt'
 
-  | Send (chan_ident, e') ->
+  | Send (inv, chan_ident, e') ->
     continuate e' (fun e' st ctxt ->
     (*FIXME currently we assume that channels have infinite capacity, but this
             assumption should be revised. when channels are annotated with some
@@ -604,28 +605,43 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
     let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
       match dir with
       | Incoming ->
-        raise (Eval_Exc ("Unexpected direction: Send only works in the outgoing direction", Some e, None))
+        if not inv then
+          raise (Eval_Exc ("Unexpected direction: Send only works in the outgoing direction", Some e, None))
+        else (List.rev (e_value :: List.rev incoming), outgoing, e_value, ctxt)
       | Outgoing ->
-        (incoming, List.rev (e_value :: List.rev outgoing), e_value, ctxt) in
-    channel_fun_ident chan_ident "send" Outgoing
+        if not inv then
+          (incoming, List.rev (e_value :: List.rev outgoing), e_value, ctxt)
+        else
+          raise (Eval_Exc ("Unexpected direction: inverted Send only works in the incoming direction", Some e, None)) in
+    channel_fun_ident chan_ident
+      (if not inv then "send" else "inverted send")
+      (if not inv then Outgoing else Incoming)
       (fun s -> Eval_Exc (s, Some e, None)) f st ctxt
     |> apfst return_eval), ctxt
 
-  | Receive chan_ident ->
+  | Receive (inv, chan_ident) ->
     begin
     let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
       match dir with
       | Incoming ->
-        begin
-        match incoming with
-        | v :: xs -> xs, outgoing, v, ctxt
-        | [] -> raise (Empty_Channel ctxt)
-        end
+        if not inv then
+          match incoming with
+          | v :: xs -> xs, outgoing, v, ctxt
+          | [] -> raise (Empty_Channel ctxt)
+        else
+          raise (Eval_Exc ("Unexpected direction: inverted Receive only works in the outgoing direction", Some e, None))
       | Outgoing ->
-        raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None)) in
+        if not inv then
+          raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None))
+        else 
+          match outgoing with
+          | v :: xs -> incoming, xs, v, ctxt
+          | [] -> raise (Empty_Channel ctxt) in
     try
       let v, ctxt' =
-        channel_fun_ident chan_ident "receive" Incoming
+        channel_fun_ident chan_ident
+          (if not inv then "receive" else "inverted receive")
+          (if not inv then Incoming else Outgoing)
           (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
       return_eval v, ctxt'
     with

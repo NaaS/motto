@@ -362,19 +362,19 @@ let rec contains_hole : expression -> bool = function
   | AppendList (e1, e2)
   | Seq (e1, e2)
   | IntegerRange (e1, e2)
-  | Exchange (e1, e2)
+(*  | Exchange (e1, e2)*)
   | UpdateIndexable (_, e1, e2)
   | RecordUpdate (e1, (_, e2))
   | Map (_, e1, e2, _) ->
     contains_hole e1 || contains_hole e2
 
-  | Send ((_, idx_opt), e) ->
+  | Send (_, (_, idx_opt), e) ->
     let b =
       match idx_opt with
       | None -> false
       | Some idx -> contains_hole idx in
     b || contains_hole e
-  | Receive (_, idx_opt) ->
+  | Receive (_, (_, idx_opt)) ->
     begin
     match idx_opt with
     | None -> false
@@ -516,12 +516,14 @@ let rec fill_hole (contents : expression) (e : expression) : expression =
       | None -> None
       | Some (l, e) -> Some (l, f e) in
     Iterate (v, f l, acc', f body, unordered)
-  | Send ((c_name, idx_opt), e) ->
-    Send ((c_name, General.bind_opt (fun x -> Some (f x)) None idx_opt), f e)
-  | Receive (c_name, idx_opt) ->
-    Receive (c_name, General.bind_opt (fun x -> Some (f x)) None idx_opt)
+  | Send (inv, (c_name, idx_opt), e) ->
+    Send (inv, (c_name, General.bind_opt (fun x -> Some (f x)) None idx_opt), f e)
+  | Receive (inv, (c_name, idx_opt)) ->
+    Receive (inv, (c_name, General.bind_opt (fun x -> Some (f x)) None idx_opt))
+(*
   | Exchange (e1, e2) ->
     Exchange (f e1, f e2)
+*)
 
 let funarg_contains_hole : fun_arg -> bool = function
   | Exp e
@@ -568,24 +570,28 @@ let rec subst_var (v : string) (u : expression) (e : expression) : expression =
   | AppendList (e1, e2) -> AppendList (subst_var v u e1, subst_var v u e2)
   | Seq (e1, e2) -> Seq (subst_var v u e1, subst_var v u e2)
 
-  | Send ((c_name, idx_opt), e) ->
-    let c_name' =
+  | Send (inv, (c_name, idx_opt), e) ->
+    let c_name', inv' =
       if v = c_name then
         match u with
-        | Variable x -> x
+        | Variable x -> x, inv
+        | InvertedVariable x -> x, not inv
         | _ -> failwith "Channel name cannot be an arbitrary expression"
-      else c_name in
-    Send ((c_name',
+      else c_name, inv in
+    Send (inv, (c_name',
            General.bind_opt (fun idx -> Some (subst_var v u idx)) None idx_opt),
           subst_var v u e)
-  | Receive (c_name, idx_opt) ->
-    let c_name' =
+  | Receive (inv, (c_name, idx_opt)) ->
+    let c_name', inv' =
       if v = c_name then
         match u with
-        | Variable x -> x
+        | Variable x -> x, inv
+        | InvertedVariable x -> x, not inv
         | _ -> failwith "Channel name cannot be an arbitrary expression"
-      else c_name in
-    Receive (c_name', General.bind_opt (fun idx -> Some (subst_var v u idx)) None idx_opt)
+      else c_name, inv in
+    Receive (inv',
+             (c_name', General.bind_opt (fun idx ->
+                Some (subst_var v u idx)) None idx_opt))
 
   | Not e' -> Not (subst_var v u e')
   | Abs e' -> Abs (subst_var v u e')
@@ -647,6 +653,7 @@ let rec bound_vars (e : expression) (acc : label list) : label list =
     bound_vars e (v :: acc)
 
   | Variable _
+  | InvertedVariable _
   | True
   | False
   | Int _
@@ -706,9 +713,9 @@ let rec bound_vars (e : expression) (acc : label list) : label list =
       |> bound_vars e2 in
     General.bind_opt (fun (_, e) -> bound_vars e acc') acc' labelled_e_opt
 
-  | Receive (_, idx_opt) ->
+  | Receive (_, (_, idx_opt)) ->
     General.bind_opt (fun e -> bound_vars e acc) acc idx_opt
-  | Send ((_, idx_opt), e') ->
+  | Send (_, (_, idx_opt), e') ->
     General.bind_opt (fun e -> bound_vars e acc) acc idx_opt
     |> bound_vars e'
 

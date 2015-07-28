@@ -694,7 +694,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       end;
     (l1_ty, st)
 
-  | Send ((c_name, idx_opt), data_e) ->
+  | Send (inv, (c_name, idx_opt), data_e) ->
     let data_ty, _ = ty_of_expr ~strict st data_e in
     assert_not_undefined_type data_ty e st;
     let chan_ty, _ =
@@ -711,7 +711,9 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           (*FIXME give more info*)
           raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
           end;
-        if tx_chan_type ct = data_ty then
+        if not inv && tx_chan_type ct = data_ty then
+          data_ty
+        else if inv && rx_chan_type ct = data_ty then
           data_ty
         else
           (*FIXME give more info*)
@@ -720,7 +722,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         (*FIXME give more info*)
         raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in
     (ty, st)
-  | Receive (c_name, idx_opt) ->
+  | Receive (inv, (c_name, idx_opt)) ->
     let chan_ty, _ =
       let chan_e =
         match idx_opt with
@@ -735,7 +737,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           (*FIXME give more info*)
           raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
           end;
-        rx_chan_type ct
+        if not inv then rx_chan_type ct
+        else tx_chan_type ct
       | _ ->
         (*FIXME give more info*)
         raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in

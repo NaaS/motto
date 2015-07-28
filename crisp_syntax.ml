@@ -225,9 +225,13 @@ type fun_arg =
   | Exp of expression
   | Named of label * expression
 
+and channel_inverted = bool
 and channel_identifier = channel_name * expression option
 
 and expression =
+    (*This is used for channels, to indicate that the channel is being passed
+      inverted (with send/receive "swapped")*)
+  | InvertedVariable of label
   | Variable of label (*FIXME might carry an optional additional label, that
                               carries the source-name of a variable. This would
                               allow me to easily rename variables (making them
@@ -310,6 +314,7 @@ and expression =
     Also, the second parameter could be specialised to a natural
     number -- we might go for that for the moment.*)
   | IndexableProjection of label * expression
+    (*FIXME need InvertedIndexableProjection, for channel arrays*)
 
   | IntegerRange of expression * expression
   | Map of label * expression * expression * bool
@@ -322,15 +327,17 @@ and expression =
     another.*)
    (*FIXME should we assume that channels have infinite capacity, or should we specify a static bound?
            this will result in processes blocking if they attempt to send to a full channel.*)
-  | Send of channel_identifier * expression
-  | Receive of channel_identifier
+  | Send of channel_inverted * channel_identifier * expression
+  | Receive of channel_inverted * channel_identifier
   (*FIXME need a Peek expression*)
   (*Send and receive between two channels*)
+(*
   | Exchange of expression * expression (*FIXME can Exchange be decomposed into
                                                 Send and Receive?
                                                 But for this would need to
                                                "wrap" them into a process,
                                                for them to operate continuously*)
+*)
   (*FIXME it still seems useful to me to have a parallel composition operator*)
 
   | Str of string
@@ -345,6 +352,7 @@ let rec channel_identifier_to_string (c_name, idx_opt) =
   | None -> ""
   | Some idx -> expression_to_string min_indentation idx
 and expression_to_string indent = function
+  | InvertedVariable value_name -> indn indent ^ "-" ^ value_name
   | Variable value_name -> indn indent ^ value_name
   | TypeAnnotation (e, ty) ->
     indn indent ^ expression_to_string min_indentation e ^ " typed " ^
@@ -513,10 +521,10 @@ and expression_to_string indent = function
     expression_to_string indent e1 ^ " <=> " ^
      expression_to_string 0 e2
 *)
-  | Send (chan_id, e) ->
+  | Send (inv, chan_id, e) ->
     indn indent ^ channel_identifier_to_string chan_id ^ " ! " ^
      expression_to_string 0 e
-  | Receive chan_id ->
+  | Receive (inv, chan_id) ->
     indn indent ^ "? " ^ channel_identifier_to_string chan_id
 
   | Str s -> "\"" ^ s ^ "\""

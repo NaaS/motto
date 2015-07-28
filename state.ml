@@ -51,9 +51,10 @@ type state =
     next_symbol : identifier;
     type_symbols : (string * identifier * naasty_type option) list;
     term_symbols : (string * identifier * term_symbol_metadata) list;
-    (*FIXME rename, to indicate that i'm also using this for processes.
-            add a bool to indicate whether it's a function or a process.*)
-    crisp_funs : (function_name * function_type) list;
+    (* FIXME the name of this field should be improved: it's used for both
+         functions and processes.
+       bool indicates whether it's a function or a process.*)
+    crisp_funs : (function_name * (bool * function_type)) list;
   }
 
 let initial_state =
@@ -262,7 +263,7 @@ let lookup_symbol_type (id : identifier)
   | Term _ -> term_symbol_lookup st.term_symbols None
   | Type -> type_symbol_lookup st.type_symbols None
 
-let lookup_function_type (st : state) (function_name : string) : function_type option =
+let lookup_function_type (st : state) (function_name : string) : (bool * function_type) option =
   if not (List.mem_assoc function_name st.crisp_funs) then
     None
   else

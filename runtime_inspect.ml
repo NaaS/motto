@@ -327,9 +327,10 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
               end
             | _ ->
               failwith "TODO" in
-          let ((chans, arg_tys), ret_tys) =
+          let (is_fun(*FIXME this info is currently unused*), ((chans, arg_tys), ret_tys)) =
             match lookup_function_type st process_class_name with
-            | Some ft -> Crisp_syntax_aux.extract_function_types ft
+            | Some (is_fun, ft) ->
+              (is_fun, Crisp_syntax_aux.extract_function_types ft)
             | _ ->
               failwith "TODO" in
 (*          assert (chans = []);*)

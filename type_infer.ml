@@ -491,7 +491,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     | Some (_, {source_type; identifier_kind; _}) ->
       match source_type with
       | None ->
-        let functor_ty =
+        let (is_fun(*FIXME currently unused*), functor_ty) =
           match lookup_function_type st functor_name with
           | None ->
             raise (Type_Inference_Exc ("Functor_App function: Missing declaration for '" ^ functor_name ^ "'", e, st))

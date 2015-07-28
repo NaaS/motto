@@ -571,6 +571,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
     let ((chans, arg_tys), ret_tys) =
       List.assoc function_name st.State.crisp_funs
+      |> snd (*FIXME disregarding whether function or process*)
       |> Crisp_syntax_aux.extract_function_types in
     assert (chans = []); (*FIXME currently functions cannot be given channel
                            parameters*)

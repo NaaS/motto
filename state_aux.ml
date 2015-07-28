@@ -45,6 +45,7 @@ let state_to_str ?indentation:(indentation : string = "  ")
                               str_of_term_symbol_metadata md ^ ")")
                         term_symbols) ^ "\n" ^
   indentation ^ "crisp_funs : " ^ print_list indentation
-                     (List.map (fun (s, ft) -> "(" ^ s ^ ", " ^
+                     (List.map (fun (s, (is_fun, ft)) -> "(" ^ s ^ ", " ^
+                              string_of_bool is_fun ^ ", " ^
                               Crisp_syntax.function_type_to_string ft ^ ")")
                         crisp_funs) ^ "\n"

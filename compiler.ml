@@ -79,7 +79,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
     | Function {fn_name; fn_params; fn_body} ->
       begin
       let st =
-        { st with crisp_funs = (fn_name, fn_params) :: st.crisp_funs} in
+        { st with crisp_funs = (fn_name, (true, fn_params)) :: st.crisp_funs} in
       match lookup_term_data (Term Function_Name) st.term_symbols fn_name with
       | None ->
         let (fn_idx, st') =
@@ -141,7 +141,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
           FunType (FunDomType (chans, args), FunRetType [flick_unit_type]) in
       begin
       let st =
-        { st with crisp_funs = (process_name, fn_params) :: st.crisp_funs} in
+        { st with crisp_funs = (process_name, (false, fn_params)) :: st.crisp_funs} in
       match lookup_term_data (Term Function_Name) st.term_symbols process_name with
       | None ->
         let (fn_idx, st') =
@@ -210,15 +210,14 @@ let split_declaration_kinds (p : Crisp_syntax.program) :
 let check_distinct_parameter_names (st : state) : state =
   let _ =
     begin
-    List.iter (fun (function_name, function_type) ->
+    List.iter (fun (function_name, (is_fun, function_type)) ->
       let ((chans, arg_tys), ret_tys) =
         Crisp_syntax_aux.extract_function_types function_type in
       let arg_names = List.map Crisp_syntax_aux.label_of_type arg_tys in
       let channel_names =
         List.map (fun cn -> Some (Crisp_syntax_aux.label_of_channel cn)) chans in
       ignore (List.fold_right (fun name_opt acc ->
-        let thing = "function" in (*FIXME determine whether we're dealing with a
-                                  function or a process*)
+        let thing = if is_fun then "function" else "process" in
         match name_opt with
         | None -> failwith ("All " ^ thing ^ " parameters must be named")
         | Some label ->

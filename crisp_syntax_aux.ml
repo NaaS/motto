@@ -124,6 +124,8 @@ let order_fun_args (fname : function_name) (st : State.state) (args : fun_arg li
   | (Named _) :: _ ->
     let ((chans, arg_tys), ret_tys) =
       List.assoc fname st.State.crisp_funs
+      |> snd (*it shouldn't matter if we're dealing with a call to a function or
+              a process*)
       |> extract_function_types in
     let chan_labels =
         List.map label_of_channel chans in

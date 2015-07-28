@@ -131,5 +131,8 @@ let _ = run [
    Load "tests/fun_chan.cp";
    Eval "fun_chan(int_chan)";
 
+   Load "tests/fun_call.cp";
+   Eval "fun_call_f2(6)";
+
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

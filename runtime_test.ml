@@ -121,6 +121,8 @@ let _ = run [
    Declare_channel ("unitchan", "<>/<>");
    Load "tests/process_pair.cp";
 (* FIXME this still doesn't work well
+   Q_channel ("unitchan", Incoming, None, "<>");
+   Asynch_Eval "unitchan ! <>";
    Instantiate_Process ("p1", "P1", [(Incoming, "unitchan")], []);
    Instantiate_Process ("p2", "P2", [(Outgoing, "unitchan")], []);
    Run_Asynch;

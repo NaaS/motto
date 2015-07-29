@@ -37,8 +37,7 @@ let loop filename () =
 *)
 
 let lex_looper filename () =
-  let open Core.Std in
-  let inx = In_channel.create filename in
+  let inx = open_in filename in
   let lexbuf = Lexing.from_channel inx in
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
   let results =
@@ -53,7 +52,7 @@ let lex_looper filename () =
       else contents (x :: acc)
     in contents [] in
   begin
-    In_channel.close inx;
+    close_in inx;
     results
   end
 
@@ -167,7 +166,7 @@ let string_of_token = function
 
 let test filepath =
   print_endline ("Testing " ^ filepath);
-  Core.Std.printf "%s\n"
+  Printf.printf "%s\n"
     ((List.map string_of_token (lex_looper filepath ()))
      |> String.concat ", ");
   loop filepath ()
@@ -175,7 +174,6 @@ let test filepath =
 
 (*Only considers files ending in ".cp"*)
 let test_whole_dir testdir =
-  let open Core.Std in
   let ending = ".cp" in
   let ending_length = String.length ending in
   let dh = Unix.opendir testdir in
@@ -187,8 +185,8 @@ let test_whole_dir testdir =
       if filename <> "." && filename <> ".." &&
          filename_length > ending_length &&
          ending = String.sub filename
-                    ~pos:(filename_length - ending_length)
-                    ~len:ending_length then
+                    (filename_length - ending_length)
+                    ending_length then
         test (testdir ^ "/" ^ filename)
       else ()
     done

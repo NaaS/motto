@@ -6,7 +6,6 @@
   https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html
 *)
 
-open Core.Std
 open Lexing
 open Crisp_syntax
 
@@ -18,7 +17,7 @@ let token_q_filter : Crisp_parser.token Queue.t = Queue.create ()
 let enqueue_token token_q (i : int) (token : Crisp_parser.token) =
   let cnt = ref i in
   while !cnt > 0 do
-    Queue.enqueue token_q token;
+    Queue.add token token_q;
     cnt := !cnt - 1
   done
 let token_stream_processor (token_q : Crisp_parser.token Queue.t)
@@ -30,7 +29,7 @@ let token_stream_processor (token_q : Crisp_parser.token Queue.t)
   if Queue.is_empty token_q then
     wrapper_lexer token_q lexer lexbuf
   else
-    Queue.dequeue_exn token_q
+    Queue.take token_q
 
 (*turns NL,NL into NL
   and NL,UNDENT into UNDENT*)
@@ -71,9 +70,9 @@ let expand_macro_tokens
         assert (times > -1); (*we can have UNINDENTN 0 times, in case we just had
                                an \n*)
         let insert_trailing_tokens () =
-          List.fold_right ~init:()
-            ~f:(fun tok _ -> Queue.enqueue token_q tok)
-             trailing_tokens in
+          List.iter
+            (fun tok -> Queue.add tok token_q)
+            trailing_tokens in
         if times > 0 then
           begin
             enqueue_token token_q (times - 1) token;
@@ -98,7 +97,7 @@ let expand_macro_tokens
 
 let print_position outx lexbuf =
   let pos = lexbuf.lex_curr_p in
-  fprintf outx "%s:%d:%d" pos.pos_fname
+  Printf.fprintf outx "%s:%d:%d" pos.pos_fname
     pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
 
 let parse_with_error lexbuf : Crisp_syntax.source_file_contents =
@@ -114,7 +113,7 @@ let parse_with_error lexbuf : Crisp_syntax.source_file_contents =
     None
 *)
   | Crisp_parser.Error ->
-    fprintf stderr "%a: syntax error\n" print_position lexbuf;
+    Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf;
     (*exit(-1)*)
     Empty
 
@@ -129,11 +128,11 @@ let rec parse_and_print lexbuf =
 *)
 
 let parse_file filename =
-  let inx = In_channel.create filename in
+  let inx = open_in filename in
   let lexbuf = Lexing.from_channel inx in
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
   let result = parse_and_print lexbuf in
-    In_channel.close inx;
+    close_in inx;
     result
 
 let parse_string s =

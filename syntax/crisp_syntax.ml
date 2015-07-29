@@ -485,7 +485,7 @@ and expression_to_string indent = function
       indn (indent + indentation) ^ expression_to_string 0 body ^ "\n"
     in
       indn indent ^ "switch " ^ expression_to_string 0 e ^ ":\n" ^
-      mk_block (indent + indentation) match_to_string  matches
+      mk_block (indent + indentation) match_to_string matches
 
   | IndexableProjection (v, idx) ->
     indn indent ^ v ^ "[" ^

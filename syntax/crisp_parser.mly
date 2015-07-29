@@ -321,18 +321,18 @@ type_def:
   | TYPE_RECORD; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_type_annotation.type_annotation) ->
-     Crisp_syntax.RecordType (name, List.rev tl, ann)}
+     Crisp_syntax.RecordType (name, tl, ann)}
   | TYPE_VARIANT; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_type_annotation.type_annotation) ->
      if ann <> [] then failwith "variant type shouldn't be annotated"
-     else Crisp_syntax.Disjoint_Union (name, List.rev tl)}
+     else Crisp_syntax.Disjoint_Union (name, tl)}
   | TYPE_RECORD; INDENT; ann = type_annotation; NL;
     tl = type_lines
     {fun (name : Crisp_syntax.label option)
          (ann' : Crisp_type_annotation.type_annotation) ->
      if ann' <> [] then failwith "record has already been annotated"
-     else Crisp_syntax.RecordType (name, List.rev tl, ann)}
+     else Crisp_syntax.RecordType (name, tl, ann)}
 
 type_decl:
   | TYPE; type_name = IDENTIFIER; COLON; td = type_def

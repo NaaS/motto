@@ -24,7 +24,7 @@ let indn (indent : int) : string =
 
 let mk_block (indent : int) (f : int -> 'a -> string) (l : 'a list) : string =
   List.fold_right (fun x already ->
-    already ^ f indent x) l ""
+    already ^ f indent x) (List.rev l) ""
 
 (*Fold-right that threads another parameter through the fold, and behaving like
   a map. I use this for threading a state value through a "map".*)

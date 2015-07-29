@@ -16,4 +16,9 @@ ocamlbuild -cflag -g -lflag -g -tag thread -use-ocamlfind -use-menhir \
   -package core \
   -package dynlink \
   -no-hygiene \
+  -I backend \
+  -I general \
+  -I runtime \
+  -I syntax \
+  -I il \
   ${TARGET}

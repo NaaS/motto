@@ -1,0 +1,14 @@
+B _build
+B _build/backend
+B _build/general
+B _build/runtime
+B _build/syntax
+B _build/il
+S .
+S backend
+S general
+S runtime
+S syntax
+S il
+PKG core
+PKG dynlink

@@ -4,8 +4,12 @@
    Nik Sultana, Cambridge University Computer Lab, July 2015
 *)
 
-open Config
+open Config;;
 
+Printexc.record_backtrace true;;
+
+(*FIXME since i only use a single printer for each exception, makes more sense
+        to use Printexc.register_printer*)
 let wrap (f : 'a -> 'b) (x : 'a) : 'b =
   try f x with
   | Type_infer.Type_Inference_Exc (msg, e, st) ->

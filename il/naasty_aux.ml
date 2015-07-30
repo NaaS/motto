@@ -599,6 +599,7 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
       substitute fresh names false id st id (fun x -> x)
     in (Var id', st')
   | Int_Value _
+  | Char_Value _
   | Bool_Value _ -> (scheme, st)
   | Not e -> unary_op_inst e (fun e' -> Not e')
   | Abs e -> unary_op_inst e (fun e' -> Abs e')
@@ -630,6 +631,15 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
   | ArrayElement (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> ArrayElement (e1', e2'))
   | Left_shift (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Left_shift (e1', e2'))
   | Right_shift (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Right_shift (e1', e2'))
+  | Array_Value es ->
+    let es', st' = fold_map ([], st) (instantiate_expression fresh names) es
+    in (Array_Value es', st')
+  | Record_Value fields ->
+    let fields', st' = fold_map ([], st) (fun st (id, e) ->
+      let e', st' = instantiate_expression fresh names st e in
+      ((id, e'), st')) fields
+    in (Record_Value fields', st')
+  | Union_Value (id, e') -> unary_op_inst e' (fun e' -> Union_Value (id, e'))
 
 (*Instantiates a naasty_statement scheme with a set of names*)
 let rec instantiate_statement (fresh : bool) (names : string list) (st : state)

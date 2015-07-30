@@ -6,6 +6,7 @@
 
 open Config;;
 
+(*avoids needing OCAMLRUNPARAM="b" in environment at runtime*)
 Printexc.record_backtrace true;;
 
 (*FIXME since i only use a single printer for each exception, makes more sense

@@ -68,8 +68,8 @@ let type_check_blob (st : State.state) (chans : channel list)
   let actual_ret =
     ty_of_expr ~strict:true st' e
     |> fst
-    |> Crisp_syntax_aux.forget_label in
-  let ret = Crisp_syntax_aux.forget_label ret in
+    |> forget_label in
+  let ret = forget_label ret in
   (Crisp_syntax_aux.type_match ret actual_ret, (ret, actual_ret))
 
 (*Gather declaration information from a program, and encode in the state.*)

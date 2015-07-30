@@ -473,7 +473,7 @@ let substitute (fresh : bool) (names : string list) (type_mode : bool)
             else
               (idx, st)
         else
-          match lookup_name (Term Value) st local_name with
+          match lookup_name (Term Undetermined) st local_name with
           | None ->
             extend_scope_unsafe (Term Value) st local_name
           | Some idx ->

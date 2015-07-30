@@ -263,31 +263,6 @@ and channel_type_match (ct1 : channel_type) (ct2 : channel_type) : bool =
     type_match ty1A ty1B && type_match ty2A ty2B
   | (_, _) -> false
 
-(*Erases label, making it easier to compare two types.
-  NOTE you might need to erase or match type_annotation values too.*)
-let rec forget_label (ty : type_value) =
-  match ty with
-  | UserDefinedType (_, type_name) -> UserDefinedType (None, type_name)
-  | String (_, type_annotation) -> String (None, type_annotation)
-  | Integer (_, type_annotation) -> Integer (None, type_annotation)
-  | Boolean (_, type_annotation) -> Boolean (None, type_annotation)
-  | RecordType (_, tys, type_annotation) ->
-    (*NOTE we must not erase field names, so we don't recurse on tys*)
-    RecordType (None, tys, type_annotation)
-  | List (_, ty, dep_idx_opt, type_annotation) ->
-    List (None, forget_label ty, dep_idx_opt, type_annotation)
-  | Tuple (_, tys) ->
-    Tuple (None, List.map forget_label tys)
-  | Dictionary (_, idx_ty, ty) ->
-    Dictionary (None, forget_label idx_ty, forget_label ty)
-  | Reference (_, ty) ->
-    Reference (None, forget_label ty)
-  | Disjoint_Union (_, _) (*NOTE we must not erase field names, so we don't recurse on tys*)
-  | Empty
-  | Undefined
-  | ChanType _
-  | IPv4Address _ -> ty
-
 (*Simple predicate to indicate whether, at the surface level, a type is a
   usertype*)
 let is_usertype = function

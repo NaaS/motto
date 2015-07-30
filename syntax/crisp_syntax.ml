@@ -62,7 +62,8 @@ type channel = Channel of channel_type * channel_name
 
 let flick_unit_type = Tuple (None, [])
 
-let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfix_lists ending_newline indent ty_value =
+let rec type_value_to_string ?summary_types:(summary_types : bool = false)
+         ?show_annot:(show_annot : bool = true) mixfix_lists ending_newline indent ty_value =
   let endline = if ending_newline then "\n" else "" in
   let use_mixfix_list_syntax_for = function
     | UserDefinedType _
@@ -77,17 +78,17 @@ let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfi
       opt_string (indn indent) label " : " ^ "type " ^ type_name ^ endline
   | String (label, ann) ->
     opt_string (indn indent) label " : " ^ "string" ^
-    ann_string indent indentation ann ^ endline
+    (if show_annot then ann_string indent indentation ann else "") ^ endline
   | Integer (label, ann) ->
     opt_string (indn indent) label " : " ^ "integer" ^
-    ann_string indent indentation ann ^ endline
+    (if show_annot then ann_string indent indentation ann else "") ^ endline
   | Boolean (label, ann) ->
     opt_string (indn indent) label " : " ^ "boolean" ^
-    ann_string indent indentation ann ^ endline
+    (if show_annot then ann_string indent indentation ann else "") ^ endline
   | RecordType (label, tys, ann) ->
     opt_string (indn indent) label " : " ^ "record" ^
     if summary_types then "" else
-      ann_string indent indentation ann ^  "\n" ^
+      (if show_annot then ann_string indent indentation ann else "") ^  "\n" ^
       mk_block (indent + indentation) (type_value_to_string mixfix_lists ending_newline) tys
   | Disjoint_Union (label, tys) ->
     opt_string (indn indent) label " : " ^ "variant" ^ "\n" ^
@@ -105,7 +106,7 @@ let rec type_value_to_string ?summary_types:(summary_types : bool = false) mixfi
         opt_string (indn indent) label " : " ^ "list" ^
          opt_string "{" dep_idx_opt "}" ^ " " ^
         type_value_to_string mixfix_lists ending_newline indent ty
-    in s ^ ann_string indent indentation ann ^ endline
+    in s ^ (if show_annot then ann_string indent indentation ann else "") ^ endline
   | Empty -> "-" ^ endline
   | IPv4Address label ->
       opt_string (indn indent) label " : " ^ "ipv4_address" ^ endline
@@ -658,3 +659,28 @@ let source_file_contents_to_string (p : source_file_contents) =
   | TypeExpr ty ->
     "(type| " ^ type_value_to_string ~summary_types:true true false min_indentation ty ^ " |)"
   | Empty -> "(Empty)"
+
+(*Erases label, making it easier to compare two types.
+  NOTE you might need to erase or match type_annotation values too.*)
+let rec forget_label (ty : type_value) =
+  match ty with
+  | UserDefinedType (_, type_name) -> UserDefinedType (None, type_name)
+  | String (_, type_annotation) -> String (None, type_annotation)
+  | Integer (_, type_annotation) -> Integer (None, type_annotation)
+  | Boolean (_, type_annotation) -> Boolean (None, type_annotation)
+  | RecordType (_, tys, type_annotation) ->
+    (*NOTE we must not erase field names, so we don't recurse on tys*)
+    RecordType (None, tys, type_annotation)
+  | List (_, ty, dep_idx_opt, type_annotation) ->
+    List (None, forget_label ty, dep_idx_opt, type_annotation)
+  | Tuple (_, tys) ->
+    Tuple (None, List.map forget_label tys)
+  | Dictionary (_, idx_ty, ty) ->
+    Dictionary (None, forget_label idx_ty, forget_label ty)
+  | Reference (_, ty) ->
+    Reference (None, forget_label ty)
+  | Disjoint_Union (_, _) (*NOTE we must not erase field names, so we don't recurse on tys*)
+  | Empty
+  | Undefined
+  | ChanType _
+  | IPv4Address _ -> ty

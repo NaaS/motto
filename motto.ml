@@ -144,7 +144,9 @@ while !arg_idx < Array.length Sys.argv do
           failwith ("Parameters seem incorrect. Cannot handle: " ^ remaining_params)
         end
       | Some OutputDir ->
-        cfg := { !cfg with output_location = Directory s };
+        cfg := { !cfg with
+                 output_location = Directory s;
+                 translate = true };
         next_arg := None
       | Some IncludeDir ->
         cfg := { !cfg with include_directories = s :: !cfg.include_directories};

@@ -9,6 +9,8 @@ open Naasty
 open State
 
 
+type lbl = string
+
 let prog_indentation = 0
 let no_indent = 0
 let default_indentation = 2
@@ -262,6 +264,15 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | LEq (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") <= (" ^
     string_of_naasty_expression ~st_opt e2 ^ ")"
+  | ArrayElement (arr, idx) ->
+    string_of_naasty_expression ~st_opt arr ^ "[" ^
+    string_of_naasty_expression ~st_opt idx ^ "]"
+  | Left_shift (e1, e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") << (" ^
+    string_of_naasty_expression ~st_opt e2 ^ ")"
+  | Right_shift (e1, e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") >> (" ^
+    string_of_naasty_expression ~st_opt e2 ^ ")"
 
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
           ?print_semicolon:(print_semicolon : bool = true) indent statement =
@@ -324,6 +335,11 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     string_of_naasty_statement ~st_opt indent stmt ^ " // " ^ comment
   | St_of_E e ->
     indn indent ^ string_of_naasty_expression ~st_opt e ^ terminal
+  | Label (lbl, stmt) ->
+    indn indent ^ lbl ^ ": " ^
+    string_of_naasty_statement ~st_opt no_indent stmt ^ terminal
+  | GotoLabel lbl ->
+    indn indent ^ "goto " ^ lbl ^ terminal
 
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent naasty_function =
   let arg_types_s =
@@ -611,6 +627,9 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
   | Dereference e -> unary_op_inst e (fun e' -> Dereference e')
   | RecordProjection (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> RecordProjection (e1', e2'))
   | Address_of e -> unary_op_inst e (fun e' -> Address_of e')
+  | ArrayElement (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> ArrayElement (e1', e2'))
+  | Left_shift (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Left_shift (e1', e2'))
+  | Right_shift (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Right_shift (e1', e2'))
 
 (*Instantiates a naasty_statement scheme with a set of names*)
 let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
@@ -683,6 +702,10 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
     let (increment', st''') = instantiate_statement fresh names st'' increment in
     let (body', st4) = instantiate_statement fresh names st''' body
     in (For ((id', condition', increment'), body'), st4)
+  | Label (lbl, stmt) ->
+    let (stmt', st') = instantiate_statement fresh names st stmt
+    in (Label (lbl, stmt'), st')
+  | GotoLabel lbl -> (GotoLabel lbl, st)
 
 (*Instantiates a naasty_function scheme with a set of names*)
 let rec instantiate_function (fresh : bool) (names : string list) (st : state)

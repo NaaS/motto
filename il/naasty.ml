@@ -89,6 +89,9 @@ type naasty_expression =
   | RecordProjection of naasty_expression * naasty_expression
   | Address_of of naasty_expression
   | LEq of naasty_expression * naasty_expression
+  | ArrayElement of naasty_expression * naasty_expression
+  | Left_shift of naasty_expression * naasty_expression
+  | Right_shift of naasty_expression * naasty_expression
 
 type naasty_statement =
     (*Should include function prototypes here?*)
@@ -108,6 +111,8 @@ type naasty_statement =
   | Skip
   | Commented of naasty_statement * string
   | St_of_E of naasty_expression
+  | Label of string * naasty_statement
+  | GotoLabel of string
 
 type naasty_function = {
   id : identifier;

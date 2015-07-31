@@ -296,7 +296,10 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
   | Run_Asynch ->
 (*FIXME provide seed for random sequence*)
     (*we ignore the values we get from running the work list*)
-    let _, ctxt' = Eval_monad.run_until_done Eval.normalise st ctxt actxt.work_list [] in
+    let results, ctxt' = Eval_monad.run_until_done Eval.normalise st ctxt actxt.work_list [] in
+    List.iter (fun (name, result_e) ->
+      print_endline ("(asynch) " ^ name ^ " ~> " ^
+                     expression_to_string min_indentation result_e)) results;
     let actxt' = { actxt with work_list = [] } in
     (st, ctxt'), actxt'
 

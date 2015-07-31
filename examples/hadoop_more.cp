@@ -4,11 +4,12 @@ type k_v = record
   key : integer
   value : integer
 
-process Wc_node : (k_v/- x, k_v/- y, -/k_v z)
+process Wc_node : (k_v/- x, k_v/- y, -/k_v z) # * k_v occurrences missing "type" prefix
   # Instead of "vs" could have pattern matching, to give v1 and v2
   let vs = peek_all ([x, y])
   let v1 = vs[0] # * check if can project from lists like this
   let v2 = vs[1]
+
   if v1.key = -1 and v2.key = -1: # * i think "-" cannot be prefix
     x => z # * this syntax had been disabled
     y => _ # * this is used to discard the next item on channel y

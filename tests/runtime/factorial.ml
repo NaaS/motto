@@ -21,7 +21,7 @@ let _ =
    Q_channel ("somechan", Incoming, None, "2");
 
    (*Load and evaluate a Flick file -- this contains the factorial function.*)
-   Load "tests/factorial.cp";
+   Load "tests/flick_code/factorial.cp";
 
    (*Bind z to an expression, that includes a read from a channel.*)
    Eval "let z = 5 + (y * ?somechan) + y";

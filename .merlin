@@ -1,11 +1,13 @@
 B _build
-B _build/backend
+B _build/back-end
+B _build/front-end
 B _build/general
 B _build/runtime
 B _build/syntax
 B _build/il
 S .
-S backend
+S back-end
+S front-end
 S general
 S runtime
 S syntax

@@ -15,7 +15,8 @@ echo "building ${TARGET}"
 ocamlbuild -cflag -g -lflag -g -tag thread -use-ocamlfind -use-menhir \
   -package dynlink \
   -no-hygiene \
-  -I backend \
+  -I front-end \
+  -I back-end \
   -I general \
   -I runtime \
   -I syntax \

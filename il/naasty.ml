@@ -92,6 +92,7 @@ type naasty_expression =
   | ArrayElement of naasty_expression * naasty_expression
   | Left_shift of naasty_expression * naasty_expression
   | Right_shift of naasty_expression * naasty_expression
+  | PeekChan of identifier
 
 type naasty_statement =
     (*Should include function prototypes here?*)
@@ -106,7 +107,8 @@ type naasty_statement =
   | Break
   | Continue
   | WriteToChan of identifier * identifier
-  | ReadFromChan of identifier * identifier
+  | ConsumeChan of identifier
+  | ForwardChan of identifier * identifier
   | Return of naasty_expression option
   | Skip
   | Commented of naasty_statement * string

@@ -273,6 +273,10 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | Right_shift (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") >> (" ^
     string_of_naasty_expression ~st_opt e2 ^ ")"
+  | Bool_Value (b) -> 
+    string_of_bool b
+  | Abs (e) ->
+     "abs(" ^ string_of_naasty_expression ~st_opt e ^ ")" 
 
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
           ?print_semicolon:(print_semicolon : bool = true) indent statement =
@@ -321,7 +325,9 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
   | Continue -> indn indent ^ "continue" ^ terminal
 (*
   | WriteToChan of identifier * identifier
-  | ReadFromChan of identifier * identifier
+  | PeekChan of identifier
+	| ConsumeChan of identifier
+	| ForwardChan of identifier * identifier
 *)
   | Return e_opt ->
     let f e = " " ^ "(" ^ string_of_naasty_expression ~st_opt e ^ ")" in
@@ -700,12 +706,16 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
     let var_id', st'' =
       substitute fresh names false var_id st' var_id (fun x -> x)
     in (WriteToChan (chan_id', var_id'), st'')
-  | ReadFromChan (chan_id, var_id) ->
+  | ConsumeChan (chan_id) ->
     let chan_id', st' =
-      substitute fresh names false chan_id st chan_id (fun x -> x) in
-    let var_id', st'' =
-      substitute fresh names false var_id st' var_id (fun x -> x)
-    in (ReadFromChan (chan_id', var_id'), st'')
+      substitute fresh names false chan_id st chan_id (fun x -> x) 
+    in (ConsumeChan (chan_id'), st')
+  | ForwardChan (chan_in, chan_out) ->
+    let chan_in', st' =
+      substitute fresh names false chan_in st chan_in (fun x -> x) in
+    let chan_out', st'' =
+      substitute fresh names false chan_out st' chan_out (fun x -> x)
+    in (ForwardChan (chan_in', chan_out'), st'')
   | For ((id, condition, increment), body) ->
     let id', st' = instantiate_type fresh names st id in
     let (condition', st'') = instantiate_expression fresh names st' condition in

@@ -85,8 +85,8 @@ let translate_function_compilation_unit (st : state)
          else ([], st') in
        ({Naasty_project.name = name;
          Naasty_project.unit_type = Naasty_project.Cpp;
-         Naasty_project.inclusions =
-           [(*FIXME*)];
+         Naasty_project.inclusions = (*FIXME*)
+           ["<stdlib.h>"];
          Naasty_project.content = translated
         }, (*FIXME generate header file together with this .cpp*)
         st''))

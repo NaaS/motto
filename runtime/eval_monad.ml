@@ -34,6 +34,10 @@ and eval_monad =
       itself again*)
   | Process of string * string * expression
 
+type work_item_name = string
+type work_item = work_item_name * eval_monad
+type finished_work_item = string * expression
+
 let rec bk_to_string : bind_kind -> string = function
   | Fun _ -> "Fun _"
   | Id -> "Id"
@@ -61,19 +65,18 @@ let evaluate e = Cont (e, Fun return)
 let rec bind_eval normalise (m : eval_monad) (f : expression -> eval_continuation) st ctxt : eval_monad * runtime_ctxt =
   match m with
   | Value e' -> f e' st ctxt
-  | Bind (em, Id) -> Bind (em, Fun f), ctxt
+  | Bind (em, Id) -> (*Bind (em, Fun f), ctxt*)
+    bind_eval normalise em f st ctxt
   | Bind (em, Fun f') ->
     begin
     let m', ctxt' = bind_eval normalise em f' st ctxt in
-    match m' with
-    | Value e' -> f e' st ctxt'
-    | _ -> Bind (m', Fun f), ctxt'
+    Bind (m', Fun f), ctxt'
     end
   | Cont (e, bk) ->
     begin
     let em, ctxt' = normalise st ctxt e in
     match bk with
-    | Id -> Cont (e, Fun f), ctxt'
+    | Id -> Bind (em, Fun f), ctxt'
     | Fun _ -> Bind (Bind (em, bk), Fun f), ctxt'
     end
   | Process _ -> failwith "'Process' should never be encountered by bind_eval"
@@ -82,7 +85,7 @@ let rec bind_eval normalise (m : eval_monad) (f : expression -> eval_continuatio
   only evaluates inside the monad further.*)
 and evaluate_em normalise (m : eval_monad) st ctxt : eval_monad * runtime_ctxt =
   match m with
-  | Value e' -> m, ctxt
+  | Value _ -> m, ctxt
   | Bind (em, Id) -> em, ctxt
   | Bind (em, Fun f') -> bind_eval normalise em f' st ctxt
   | Cont (e, bk) ->
@@ -95,17 +98,22 @@ and evaluate_em normalise (m : eval_monad) st ctxt : eval_monad * runtime_ctxt =
   | Process _ -> failwith "'Process' should never be encountered by evaluate_m"
 
 (*A single run through the work-list*)
-and run normalise st ctxt (work_list : eval_monad list)
-   : expression list * eval_monad list * runtime_ctxt =
-  List.fold_right (fun m (el, wl, ctxt) ->
-    if !Config.cfg.Config.debug then print_endline (evalm_to_string m);
+and run normalise st ctxt (work_list : work_item list)
+   : finished_work_item list * work_item list * runtime_ctxt =
+  List.fold_right (fun (name, m) (el, wl, ctxt) ->
+    if !Config.cfg.Config.debug then
+      print_endline ("Running " ^ name ^ ": " ^ evalm_to_string m);
     match m with
     | Value e ->
       (*The value won't be fed into further continuations, so it's removed from
         the work list and added to the result list*)
-      (e :: el, wl, ctxt)
-    | Cont (_, Id) -> (el, m :: wl, ctxt)
-    | Bind (em, Id) -> (el, em :: wl, ctxt)
+      ((name, e) :: el, wl, ctxt)
+    | Cont (e, Id) ->
+      let em, ctxt' = normalise st ctxt e in
+      (el, (name, em) :: wl, ctxt')
+    | Bind (em, Id) ->
+      let em', ctxt' = evaluate_em normalise em st ctxt in
+      (el, (name, em') :: wl, ctxt')
     | Process (inst, clas, e) ->
       begin
         let em, ctxt' = normalise st ctxt e in
@@ -113,7 +121,7 @@ and run normalise st ctxt (work_list : eval_monad list)
           (*This describes the semantics of "Process": when its body is fully
             evaluate, continue by re-evaluating it*)
           Bind (em, Fun (fun _ _ ctxt -> m, ctxt)) in
-        (el, em' :: wl, ctxt')
+        (el, (name, em') :: wl, ctxt')
       end
     | _ ->
 (* NOTE use this line instead of the following one, to see an appreciable
@@ -121,10 +129,16 @@ and run normalise st ctxt (work_list : eval_monad list)
         accumuldated closures, consisting of repeated "return" closures.
       let em, ctxt' = bind_eval normalise m return st ctxt in*)
       let em, ctxt' = evaluate_em normalise m st ctxt in
-      (el, em :: wl, ctxt')) work_list ([], [], ctxt)
+      (el, (name, em) :: wl, ctxt')) work_list ([], [], ctxt)
 
 (*Iterate on the work-list until everything's been evaluated*)
-and run_until_done normalise st ctxt work_list results =
+and run_until_done normalise st ctxt (work_list : work_item list) results =
+  if !Config.cfg.Config.debug then
+    begin
+    print_endline ("work_list:" ^
+                   Debug.print_list "  " (List.map (fun (name, m) ->
+                     name ^ ":" ^ evalm_to_string m) work_list));
+    end;
   if !kill_run then
     begin
       print_endline "(interrupted Run_Asynch)";

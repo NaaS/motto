@@ -33,7 +33,8 @@ type inspect_instruction =
     (*Evaluate a Flick expression.
       If a process is called, then it runs for a single iteration.*)
   | Eval of string
-  | Asynch_Eval of string
+  | Clear_Asynch_Eval
+  | Asynch_Eval of Eval_monad.work_item_name * string
   | Run_Asynch
     (*instantiate a process (connecting it to specific channels) and add it to
       the Asynch_Eval work list.*)
@@ -279,16 +280,21 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
     end;
     (st, ctxt), actxt
 
-  | Asynch_Eval e_s ->
+  | Clear_Asynch_Eval ->
+    let actxt' = { actxt with work_list = [] } in
+    (st, ctxt), actxt'
+  | Asynch_Eval (name, e_s) ->
     let e =
       match Crisp_parse.parse_string ("(| " ^ e_s ^ "|)") with
       | Expression e -> e
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
-    let actxt' = { actxt with work_list = Eval_monad.evaluate e :: actxt.work_list } in
+    let actxt' =
+      { actxt with work_list = (name, Eval_monad.evaluate e) :: actxt.work_list } in
     (st, ctxt), actxt'
 
   | Run_Asynch ->
+(*FIXME provide seed for random sequence*)
     (*we ignore the values we get from running the work list*)
     let _, ctxt' = Eval_monad.run_until_done Eval.normalise st ctxt actxt.work_list [] in
     let actxt' = { actxt with work_list = [] } in
@@ -359,10 +365,11 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
           (process_instance_name,
            (process_class_name, chan_args, args)) :: actxt.process_instance_list;
         work_list =
-          Eval_monad.Process
+          (process_instance_name,
+           Eval_monad.Process
             (process_instance_name,
              process_class_name,
-             process_body) :: actxt.work_list;
+             process_body)) :: actxt.work_list;
       } in
     (st', ctxt''), actxt'
 

@@ -413,7 +413,10 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           flick_unit_value
           (fun _ unity -> unity)
           (fun (e : expression) -> e)
-          (fun (e : expression) st ctxt -> Cont (e, Id), ctxt), ctxt'
+          (fun (e : expression) st ctxt ->
+             Cont (e, Id)(*FIXME use "retry" here?
+                                 "retry" doesn't feel like the right name for
+                                   the idiom*), ctxt), ctxt'
       | Some (acc_l, acc_e) ->
         continuate acc_e
           (monadic_fold bodies
@@ -465,7 +468,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         continuate_list arg_es (fun normal_arg_es st ctxt' ->
           let (stata, body, excs) =
             (*Get function implementation*)
-            match List.filter (fun (name, _) -> name = function_name) ctxt.exec_table with
+            match List.filter (fun (name, _) -> name = function_name) ctxt'.exec_table with
             | [] ->
               raise (Eval_Exc ("Could not retrieve implementation from runtime context, for functor: " ^ function_name, Some e, None))
             | [(_, Function {fn_body; _})] ->
@@ -483,6 +486,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
               raise (Eval_Exc ("Could not retrieve type from symbol table, for functor: " ^ function_name, Some e, None))
             | Some (is_fun, ft) ->
               (is_fun, Crisp_syntax_aux.extract_function_types ft) in
+          assert is_fun; (*FIXME currently this only works for functions*)
           let arg_tys =
             (*Regard channels as simply being parameters*)
             List.map Crisp_syntax_aux.chan_to_ty chans @ arg_tys in
@@ -643,9 +647,10 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           (if not inv then "receive" else "inverted receive")
           (if not inv then Incoming else Outgoing)
           (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
-      return_eval v, ctxt'
+      (return_eval v, ctxt')
     with
-    | Empty_Channel ctxt -> retry e, ctxt
+    | Empty_Channel _(*FIXME was ctxt, but should ignore any changes done to the context*) ->
+      (retry e, ctxt)
     end
 
   | Seq (TypeAnnotation (Meta_quoted mis, _), e') ->
@@ -666,8 +671,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
     raise (Eval_Exc ("Cannot normalise meta_quoted expressions alone -- add some other expression after them, and normalisation should succeed.", Some e, None))
 
   | Seq (e1, e2) ->
-    let em, ctxt' = normalise st ctxt e1 in
-    Bind (em, Fun (fun _ st ctxt' -> normalise st ctxt' e2)), ctxt'
+    continuate e1 (fun _ _ ctxt -> normalise st ctxt e2), ctxt
 
   | Hole -> raise (Eval_Exc ("Cannot normalise", Some e, None))
 
@@ -720,7 +724,9 @@ and channel_fun_ident ((c_name, idx_opt) : channel_identifier) (operation_verb :
     e''', ctxt''
 
 (*Translate an arbitrary expression into a value*)
-and evaluate (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value * runtime_ctxt =
+and evaluate ?work_item_name:(work_item_name : work_item_name = "<unnamed>")
+      (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value * runtime_ctxt =
   let em, ctxt' = normalise st ctxt e in
-  let ([result], ctxt'') = run_until_done normalise st ctxt' [em] [] in
+  let ([(_, result)], ctxt'') = run_until_done normalise st ctxt'
+                             [(work_item_name, em)] [] in
   evaluate_value ctxt'' result, ctxt''

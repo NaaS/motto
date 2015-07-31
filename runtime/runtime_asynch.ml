@@ -23,7 +23,7 @@ type process_instance =
 
 type asynch_ctxt =
   {
-    work_list : Eval_monad.eval_monad list;
+    work_list : Eval_monad.work_item list;
     process_instance_list : process_instance list;
   }
 

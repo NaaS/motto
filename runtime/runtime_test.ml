@@ -110,12 +110,12 @@ let _ = run [
    Load "tests/factorial.cp";
    Eval "factorial (5)";
 
-   Asynch_Eval "?somechan";
+   Asynch_Eval ("t1", "?somechan");
    Run_Asynch;
 
    Load "tests/print.cp";
-   Asynch_Eval "metaprint (<>)";
-   Asynch_Eval "somechan ! True";
+   Asynch_Eval ("t2", "metaprint (<>)");
+   Asynch_Eval ("t3", "somechan ! True");
    Run_Asynch;
 
    Declare_channel ("unitchan", "<>/<>");
@@ -134,6 +134,44 @@ let _ = run [
    (*NOTE that things block if we swap the next two lines.*)
    Eval "fun_chan(int_chan)";
    Eval "fun_chan(-int_chan)";
+   (*NOTE the following shouldn't block if evaluated concurrently*)
+   Asynch_Eval ("f1", "fun_chan(int_chan)");
+   Asynch_Eval ("f2", "fun_chan(-int_chan)");
+   Run_Asynch;
+
+   (*Redeclaring a channel implicitly clears it*)
+   Declare_channel ("int_chan", "integer/integer");
+   Load "tests/fun_chan_simple.cp";
+(*   Eval "fun_chan_simp2(-int_chan)";
+   Eval "fun_chan_simp1(int_chan)";
+*)
+(*
+   Asynch_Eval "fun_chan_simp1(int_chan)";
+   Asynch_Eval "fun_chan_simp2(-int_chan)";
+   Run_Asynch;
+*)
+(*   Eval "fun_chan_simp2(-int_chan)";*)
+   Clear_Asynch_Eval;
+
+   Asynch_Eval ("t4", "fun_chan_simp1(int_chan)");
+   Asynch_Eval ("t5", "fun_chan_simp2(-int_chan)");
+   Asynch_Eval ("t7", "fun_chan_simp1(int_chan)");
+
+   Asynch_Eval ("t4.a", "fun_chan_simp1(int_chan)");
+   Asynch_Eval ("t5.a", "fun_chan_simp2(-int_chan)");
+   Asynch_Eval ("t7.a", "fun_chan_simp1(int_chan)");
+
+   Asynch_Eval ("t6", "? int_chan");
+   Asynch_Eval ("t6.b", "? int_chan");
+(*   Asynch_Eval ("t6.c", "? int_chan");*)
+   Asynch_Eval ("t8", "int_chan ! 1");
+   Asynch_Eval ("t9", "int_chan ! 2");
+   Asynch_Eval ("t10", "int_chan ! 3");
+   Asynch_Eval ("t11", "int_chan ! 4");
+   Asynch_Eval ("t12", "int_chan ! 5");
+(*   Asynch_Eval "int_chan ! 6";*)
+(*   Asynch_Eval "int_chan ! ? int_chan";*)
+   Run_Asynch;
 
    Load "tests/fun_call.cp";
    Eval "fun_call_f2(6)";

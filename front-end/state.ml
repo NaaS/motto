@@ -84,9 +84,9 @@ let forget_label_in_identifier_kind (ik : identifier_kind) =
   | Channel_Name
   | Map_Name -> ik
   | Disjunct tv ->
-    Disjunct (Crisp_syntax.forget_label tv)
+    Disjunct (forget_label tv)
   | Field tv ->
-    Field (Crisp_syntax.forget_label tv)
+    Field (forget_label tv)
 
 (*scope contains the query_kind*)
 let check_identifier_kind scope result_kind =

@@ -21,4 +21,5 @@ ocamlbuild -cflag -g -lflag -g -tag thread -use-ocamlfind -use-menhir \
   -I runtime \
   -I syntax \
   -I il \
+  -I tests/runtime \
   ${TARGET}

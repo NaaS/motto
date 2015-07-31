@@ -8,9 +8,9 @@ open Runtime_data
 open Crisp_syntax
 
 let _ = run [
-   Load "tests/simple_function.cp";
-   Load "tests/maps_iterations2.cp";
-   (*Load "tests/simple_function.bad.cp";*)
+   Load "tests/flick_code/simple_function.cp";
+   Load "tests/flick_code/maps_iterations2.cp";
+   (*Load "tests/flick_code/simple_function.bad.cp";*)
    Declare_value ("zoo", "100");
    Set ("zoo", "200");
    Eval "zoo * 200";
@@ -80,7 +80,7 @@ let _ = run [
    Q_channel ("somechan", Incoming, None, "1000");
    Eval "<? somechan, ? somechan, ? somechan>";
 
-   Load "tests/records.cp";
+   Load "tests/flick_code/records.cp";
    Eval "{ test = 3, a2 = True, b3 = <1, False, [3]>}";
    Q_channel ("somechan", Incoming, None, "5");
    Q_channel ("somechan", Incoming, None, "15");
@@ -100,26 +100,26 @@ let _ = run [
    Q_channel ("somechan", Incoming, None, "1115");
    Eval "[? somechan, ? somechan, let x = ? somechan, ? somechan - x]";
 
-   Load "tests/variants.cp";
+   Load "tests/flick_code/variants.cp";
 
 (*FIXME test case-of, update, update-indexable, and indexable-projection
         wiring up processes with channels
         channel arrays
 *)
 
-   Load "tests/factorial.cp";
+   Load "tests/flick_code/factorial.cp";
    Eval "factorial (5)";
 
    Asynch_Eval ("t1", "?somechan");
    Run_Asynch;
 
-   Load "tests/print.cp";
+   Load "tests/flick_code/print.cp";
    Asynch_Eval ("t2", "metaprint (<>)");
    Asynch_Eval ("t3", "somechan ! True");
    Run_Asynch;
 
    Declare_channel ("unitchan", "<>/<>");
-   Load "tests/process_pair.cp";
+   Load "tests/flick_code/process_pair.cp";
 (* FIXME this still doesn't work well
    Q_channel ("unitchan", Incoming, None, "<>");
    Asynch_Eval "unitchan ! <>";
@@ -130,7 +130,7 @@ let _ = run [
 
    Declare_channel ("int_chan", "integer/integer");
    Q_channel ("int_chan", Incoming, None, "640");
-   Load "tests/fun_chan.cp";
+   Load "tests/flick_code/fun_chan.cp";
    (*NOTE that things block if we swap the next two lines.*)
    Eval "fun_chan(int_chan)";
    Eval "fun_chan(-int_chan)";
@@ -141,7 +141,7 @@ let _ = run [
 
    (*Redeclaring a channel implicitly clears it*)
    Declare_channel ("int_chan", "integer/integer");
-   Load "tests/fun_chan_simple.cp";
+   Load "tests/flick_code/fun_chan_simple.cp";
 (*   Eval "fun_chan_simp2(-int_chan)";
    Eval "fun_chan_simp1(int_chan)";
 *)
@@ -173,7 +173,7 @@ let _ = run [
 (*   Asynch_Eval "int_chan ! ? int_chan";*)
    Run_Asynch;
 
-   Load "tests/fun_call.cp";
+   Load "tests/flick_code/fun_call.cp";
    Eval "fun_call_f2(6)";
 
    MI (Show_symbol_table None);

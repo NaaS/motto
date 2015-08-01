@@ -32,7 +32,7 @@ and eval_monad =
   | Bind of eval_monad * bind_kind
     (*A process never terminates -- it will be reduced to its body followed by
       itself again*)
-  | Process of string * string * expression
+  | Process of string * expression
 
 type work_item_name = string
 type work_item = work_item_name * eval_monad
@@ -47,7 +47,7 @@ let rec evalm_to_string : eval_monad -> string = function
      bk_to_string bk ^ ")"
   | Bind (m, bk) -> "Bind (" ^ evalm_to_string m ^ ", " ^
      bk_to_string bk ^ ")"
-  | Process (inst, clas, _) -> "Process " ^ inst ^ " (" ^ clas ^ ")"
+  | Process (name, _) -> "Process " ^ name
 
 (*FIXME bad style*)
 let expect_value m =
@@ -114,8 +114,9 @@ and run normalise st ctxt (work_list : work_item list)
     | Bind (em, Id) ->
       let em', ctxt' = evaluate_em normalise em st ctxt in
       (el, (name, em') :: wl, ctxt')
-    | Process (inst, clas, e) ->
+    | Process (name', e) ->
       begin
+        assert (name = name');
         let em, ctxt' = normalise st ctxt e in
         let em' =
           (*This describes the semantics of "Process": when its body is fully

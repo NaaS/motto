@@ -120,13 +120,12 @@ let _ = run [
 
    Declare_channel ("unitchan", "<>/<>");
    Load "tests/flick_code/process_pair.cp";
-(* FIXME this still doesn't work well
+
    Q_channel ("unitchan", Incoming, None, "<>");
-   Asynch_Eval "unitchan ! <>";
-   Instantiate_Process ("p1", "P1", [(Incoming, "unitchan")], []);
-   Instantiate_Process ("p2", "P2", [(Outgoing, "unitchan")], []);
+   Asynch_Eval ("kick_off", "unitchan ! <>");
+   Instantiate_Process ("p1", "P1(unitchan)");
+   Instantiate_Process ("p2", "P2(-unitchan)");
    Run_Asynch;
-*)
 
    Declare_channel ("int_chan", "integer/integer");
    Q_channel ("int_chan", Incoming, None, "640");

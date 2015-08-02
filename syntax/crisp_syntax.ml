@@ -330,7 +330,7 @@ and expression =
            this will result in processes blocking if they attempt to send to a full channel.*)
   | Send of channel_inverted * channel_identifier * expression
   | Receive of channel_inverted * channel_identifier
-  (*FIXME need a Peek expression*)
+  | Peek of channel_inverted * channel_identifier
   (*Send and receive between two channels*)
 (*
   | Exchange of expression * expression (*FIXME can Exchange be decomposed into
@@ -527,6 +527,8 @@ and expression_to_string indent = function
      expression_to_string 0 e
   | Receive (inv, chan_id) ->
     indn indent ^ "? " ^ channel_identifier_to_string chan_id
+  | Peek (inv, chan_id) ->
+    indn indent ^ "?? " ^ channel_identifier_to_string chan_id
 
   | Str s -> "\"" ^ s ^ "\""
   | Meta_quoted mis ->

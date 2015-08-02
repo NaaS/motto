@@ -722,7 +722,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         (*FIXME give more info*)
         raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in
     (ty, st)
-  | Receive (inv, (c_name, idx_opt)) ->
+  | Receive (inv, (c_name, idx_opt))
+  | Peek (inv, (c_name, idx_opt)) ->
     let chan_ty, _ =
       let chan_e =
         match idx_opt with

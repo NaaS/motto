@@ -172,5 +172,6 @@ rule main = parse
 
   | "!" {BANG}
   | "?" {QUESTION}
+  | "??" {QUESTIONQUESTION}
 
 (*FIXME string primitives as keywords -- e.g., concat, etc*)

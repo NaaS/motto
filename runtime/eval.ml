@@ -649,7 +649,36 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
       (return_eval v, ctxt')
     with
-    | Empty_Channel _(*FIXME was ctxt, but should ignore any changes done to the context*) ->
+    | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
+      (retry e, ctxt)
+    end
+  | Peek (inv, chan_ident) ->
+    begin
+    let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+      match dir with
+      | Incoming ->
+        if not inv then
+          match incoming with
+          | v :: _ -> incoming, outgoing, v, ctxt
+          | [] -> raise (Empty_Channel ctxt)
+        else
+          raise (Eval_Exc ("Unexpected direction: inverted Peek only works in the outgoing direction", Some e, None))
+      | Outgoing ->
+        if not inv then
+          raise (Eval_Exc ("Unexpected direction: Peek only works in the incoming direction", Some e, None))
+        else
+          match outgoing with
+          | v :: _ -> incoming, outgoing, v, ctxt
+          | [] -> raise (Empty_Channel ctxt) in
+    try
+      let v, ctxt' =
+        channel_fun_ident chan_ident
+          (if not inv then "peek" else "inverted peek")
+          (if not inv then Incoming else Outgoing)
+          (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
+      (return_eval v, ctxt')
+    with
+    | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
       (retry e, ctxt)
     end
 

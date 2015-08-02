@@ -115,6 +115,7 @@
 
 %token BANG
 %token QUESTION
+%token QUESTIONQUESTION
 
 (*Names*)
 (*
@@ -154,6 +155,7 @@
 %nonassoc PERIODPERIOD
 %nonassoc TYPED
 %nonassoc QUESTION
+%nonassoc QUESTIONQUESTION
 %right BANG
 
 %start <Crisp_syntax.source_file_contents> source_file_contents
@@ -698,6 +700,9 @@ expression:
   | QUESTION; c = specific_channel
     (*NOTE by default channels are not inverted, thus the "false" below.*)
     {Crisp_syntax.Receive (false, c)}
+  | QUESTIONQUESTION; c = specific_channel
+    (*NOTE by default channels are not inverted, thus the "false" below.*)
+    {Crisp_syntax.Peek (false, c)}
 
   (*FIXME we're missing operations on strings: substring, concat, etc*)
   | str = STRING

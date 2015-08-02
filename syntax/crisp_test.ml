@@ -162,6 +162,7 @@ let string_of_token = function
 
   | BANG -> "BANG"
   | QUESTION -> "QUESTION"
+  | QUESTIONQUESTION -> "QUESTIONQUESTION"
 ;;
 
 let test filepath =

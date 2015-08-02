@@ -349,7 +349,8 @@ let rec contains_hole : expression -> bool = function
       | None -> false
       | Some idx -> contains_hole idx in
     b || contains_hole e
-  | Receive (_, (_, idx_opt)) ->
+  | Receive (_, (_, idx_opt))
+  | Peek (_, (_, idx_opt)) ->
     begin
     match idx_opt with
     | None -> false
@@ -495,6 +496,8 @@ let rec fill_hole (contents : expression) (e : expression) : expression =
     Send (inv, (c_name, General.bind_opt (fun x -> Some (f x)) None idx_opt), f e)
   | Receive (inv, (c_name, idx_opt)) ->
     Receive (inv, (c_name, General.bind_opt (fun x -> Some (f x)) None idx_opt))
+  | Peek (inv, (c_name, idx_opt)) ->
+    Peek (inv, (c_name, General.bind_opt (fun x -> Some (f x)) None idx_opt))
 (*
   | Exchange (e1, e2) ->
     Exchange (f e1, f e2)
@@ -565,6 +568,17 @@ let rec subst_var (v : string) (u : expression) (e : expression) : expression =
         | _ -> failwith "Channel name cannot be an arbitrary expression"
       else c_name, inv in
     Receive (inv',
+             (c_name', General.bind_opt (fun idx ->
+                Some (subst_var v u idx)) None idx_opt))
+  | Peek (inv, (c_name, idx_opt)) ->
+    let c_name', inv' =
+      if v = c_name then
+        match u with
+        | Variable x -> x, inv
+        | InvertedVariable x -> x, not inv
+        | _ -> failwith "Channel name cannot be an arbitrary expression"
+      else c_name, inv in
+    Peek (inv',
              (c_name', General.bind_opt (fun idx ->
                 Some (subst_var v u idx)) None idx_opt))
 
@@ -688,7 +702,8 @@ let rec bound_vars (e : expression) (acc : label list) : label list =
       |> bound_vars e2 in
     General.bind_opt (fun (_, e) -> bound_vars e acc') acc' labelled_e_opt
 
-  | Receive (_, (_, idx_opt)) ->
+  | Receive (_, (_, idx_opt))
+  | Peek (_, (_, idx_opt)) ->
     General.bind_opt (fun e -> bound_vars e acc) acc idx_opt
   | Send (_, (_, idx_opt), e') ->
     General.bind_opt (fun e -> bound_vars e acc) acc idx_opt

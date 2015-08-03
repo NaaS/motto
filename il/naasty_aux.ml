@@ -349,24 +349,28 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
   | GotoLabel lbl ->
     indn indent ^ "goto " ^ lbl ^ terminal
   | WriteToChan (var, chan) ->
-    let varTyp =
+    let (varTyp,st) =
       match st_opt with
       | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int var)
       | Some st ->
         match lookup_symbol_type var (Term Value) st with
         | None -> failwith ("Variable type not found in symbol table: " ^ string_of_int var)
-        | Some ty -> ty
+        | Some ty -> (ty,st) in
+    let my_task = List.find (fun (x : Task_model.task) -> x.task_id = st.current_task) st.task_graph.tasks in
+    let chan_index = Task_model.find_output_channel my_task chan 
     in "te= NaasData::write_to_channel<" ^ string_of_naasty_type ~st_opt no_indent varTyp ^ ">(" ^
-       id_name st_opt var   ^ "outputs[" ^ "chan as integer" ^ 
+       id_name st_opt var   ^ "outputs[" ^ string_of_int chan_index ^ 
         "],&size_written);\nif (!te.isOK()) {\n\treturn te;\n}"
    | ConsumeChan (chan) ->
-    let chanTyp =
+    let (chanTyp,st) =
       match st_opt with
       | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int chan)
       | Some st ->
         match lookup_symbol_type chan (Term Value) st with
         | None -> failwith ("Channel type not found in symbol table: " ^ string_of_int chan)
-        | Some ty -> ty  in
+        | Some ty -> (ty,st)  in
+    let my_task = List.find (fun (x : Task_model.task) -> x.task_id = st.current_task) st.task_graph.tasks in
+    let chan_index = Task_model.find_input_channel my_task chan in
     let upChanType =
         match chanTyp with
         | Chan_Type (_, _, chanDir, ct) -> 
@@ -374,7 +378,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
           ct
         | _ -> failwith ("Expected channel type: " ^ string_of_int chan)
     in "te= NaasData::consume_channel<" ^ string_of_naasty_type ~st_opt no_indent upChanType ^ 
-          "> (inputs[" ^ "chan as integer" ^ "],&size);"
+          "> (inputs[" ^ string_of_int chan_index ^ "],&size);"
           
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent naasty_function =
   let arg_types_s =

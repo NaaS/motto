@@ -22,6 +22,8 @@ type chan_type =
   | Socket (*FIXME encode socket metadata -- address and port?*)
   | Type (*FIXME encode type data*)
 
+type chan_id = int
+
 (*NOTE a channel's id consists of its offset in input_chans or
        output_chans*)
 type chan_offset = int
@@ -29,7 +31,7 @@ type chan_offset = int
 type chan =
   {
     chan_type : chan_type;
-    chan_id : int;
+    chan_id : chan_id;
     (*FIXME incomplete?*)
   }
 
@@ -75,4 +77,4 @@ let find_output_channel task channel =
     | hd :: tl when elt = hd.chan_id -> acc (* match *)
     | hd :: tl -> find_it elt (acc + 1) tl (* non-match *)
     | _ -> failwith ("Cannot find input_channel in channel list for task") (* end of list *)
-  in find_it channel 0 task.output_chans  
+  in find_it channel 0 task.output_chans

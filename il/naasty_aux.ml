@@ -427,6 +427,7 @@ let extend_scope_unsafe (scope : scope) (st : state) ?src_ty_opt:(src_ty_opt = N
        source_type = src_ty_opt;
        naasty_type = ty_opt';
        identifier_kind = ik;
+       channel_id = None;
      } in
      { st with
        term_symbols = (id, st.next_symbol, metadata) :: st.term_symbols;

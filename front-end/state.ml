@@ -45,6 +45,13 @@ type term_symbol_metadata =
     source_type : type_value option;
     naasty_type : naasty_type option;
     identifier_kind : identifier_kind;
+
+    (*If the symbol is a channel name, then here we keep the (unique)
+      channel identifier it maps to. This mapping is defined by the task
+      graph generation. The chan_id is used to work out the channel offset
+      within a task. The channel offset identifies a channel in the ICL
+      runtime.*)
+    channel_id : Task_model.chan_id option
   }
 
 type state =

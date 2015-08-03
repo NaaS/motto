@@ -57,6 +57,16 @@ type state =
          functions and processes.
        bool indicates whether it's a function or a process.*)
     crisp_funs : (function_name * (bool * function_type)) list;
+
+    (*FIXME perhaps a different state table should be used during translation,
+            rather than have a single state table used for almost everything the
+            compiler does.*)
+    (*current_task and task_graph carry information using which we can
+      resolve references to channels (in the resulting process topology)
+      in a way that's understandable to the ICL runtime (i.e., as offsets in an
+      array of channels).*)
+    current_task : Task_model.task_id;
+    task_graph : Task_model.task_graph;
   }
 
 let initial_state =
@@ -66,6 +76,12 @@ let initial_state =
     type_symbols = [];
     term_symbols = [];
     crisp_funs = [];
+    current_task = -1; (*FIXME create a constant, say Task_model.no_task*)
+    task_graph =
+      (*FIXME create a constant, say Task_model.empty_graph;
+              or accept the graph (and current_task) as a parameter
+              to initial_state*)
+      { Task_model.tasks = []; Task_model.connections = [] };
   }
 
 type scope =

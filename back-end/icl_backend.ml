@@ -78,16 +78,19 @@ let translate_function_compilation_unit (st : state)
   Naasty_project.compilation_unit list * state =
   fold_map ([], st)
     (fun (st' : state) (flick_f : Crisp_syntax.toplevel_decl) ->
-       let name = "functions"(*FIXME extract name?*) in
+       let name = "function_" ^ Crisp_syntax_aux.name_of_function flick_f in
        let (translated, st'') =
          if !Config.cfg.Config.translate then
            Translation.naasty_of_flick_program ~st:st' [flick_f]
          else ([], st') in
        ({Naasty_project.name = name;
          Naasty_project.unit_type = Naasty_project.Cpp;
-         Naasty_project.inclusions = (*FIXME*)
+         Naasty_project.inclusions = (*FIXME incomplete*)
            ["<stdlib.h>"];
-         Naasty_project.content = translated
+         Naasty_project.content =
+           (*FIXME we probably want to include the declarations of functions
+                   that are called from this function*)
+           translated
         }, (*FIXME generate header file together with this .cpp*)
         st''))
     functions_unit.Crisp_project.content

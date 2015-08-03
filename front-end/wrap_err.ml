@@ -65,6 +65,22 @@ let wrap (f : 'a -> 'b) (x : 'a) : 'b =
            true st)
     end;
     exit 1
+  | Inliner.Inliner_Exc (msg, st_opt) ->
+    begin
+    if not !cfg.unexceptional then
+      let st_s =
+        match st_opt with
+        | None -> "(no state info)"
+        | Some st ->
+          "state :\n" ^
+          State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
+           true st in
+      print_endline
+       ("Inlining error: " ^ msg ^ "\n" ^
+(*FIXME        "in file " ^ source_file ^ "\n" ^*)
+        st_s)
+    end;
+    exit 1
   | e ->
     if !cfg.unexceptional then exit 1
     else raise e

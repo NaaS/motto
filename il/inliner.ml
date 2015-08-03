@@ -13,6 +13,8 @@ open State
 open Naasty_aux
 
 
+exception Inliner_Exc of string * state option
+
 (*
   Table of identifiers, the number of times they are assigned to in this
   scope and child scopes, and, if the value of that field is 1, then we could
@@ -53,10 +55,10 @@ let rec count_var_references_in_naasty_expr (st : state)
           { entry with ref_count = entry.ref_count + 1 }
         else entry) table
     else
-      failwith ("Undeclared variable: " ^ string_of_int no_idx_entries ^
+      raise (Inliner_Exc ("Undeclared variable: " ^ string_of_int no_idx_entries ^
                 " records for the same idx " ^
                 string_of_int idx ^ " -- variable " ^
-                resolve_idx (Term Value) no_prefix (Some st) idx)
+                resolve_idx (Term Value) no_prefix (Some st) idx, Some st))
   | Int_Value _
   | Bool_Value _ -> table
   | Not e
@@ -143,7 +145,7 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
     begin
     match idx_of_naasty_type ty with
     | None ->
-      failwith "Declaration must contain an identifier name, not just mention a type!"
+      raise (Inliner_Exc ("Declaration must contain an identifier name, not just mention a type!" , Some st))
     | Some idx ->
       let no_idx_entries =
         List.fold_right (fun (entry : inliner_table_entry) acc ->
@@ -163,13 +165,13 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
         List.map (fun (entry : inliner_table_entry) ->
           if entry.id = idx then
             if entry.initialisation <> None then
-              failwith "Variable has already been initialised"
+              raise (Inliner_Exc ("Variable has already been initialised", Some st))
             else
               { entry with update_count = entry.update_count + 1;
                            initialisation = expr_opt }
           else entry) table
       else
-        failwith "Impossible: multiple records for the same idx"
+        raise (Inliner_Exc ("Impossible: multiple records for the same idx", Some st))
     end
 
   | Assign (Var idx, expr) ->
@@ -182,16 +184,16 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
       List.map (fun (entry : inliner_table_entry) ->
         if entry.id = idx then
           if entry.initialisation <> None then
-            failwith "Variable has already been initialised"
+            raise (Inliner_Exc ("Variable has already been initialised", Some st))
           else
             { entry with update_count = entry.update_count + 1;
                          assignment = Some expr }
         else entry) table
     else
-      failwith ("Impossible: " ^ string_of_int no_idx_entries ^
+      raise (Inliner_Exc ("Impossible: " ^ string_of_int no_idx_entries ^
                 " records for the same idx " ^
                 string_of_int idx ^ " -- variable " ^
-                resolve_idx (Term Value) no_prefix (Some st) idx)
+                resolve_idx (Term Value) no_prefix (Some st) idx, Some st))
 
   | Increment (idx, expr) ->
     let no_idx_entries =
@@ -200,21 +202,21 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
     assert (no_idx_entries >= 0);
     (*We MUST have at least initialised this variable*)
     if no_idx_entries = 0 then
-      failwith "Uninitialised variable"
+      raise (Inliner_Exc ("Uninitialised variable", Some st))
     else if no_idx_entries = 1 then
       (*Increment times we've assigned to this idx*)
       List.map (fun (entry : inliner_table_entry) ->
         if entry.id = idx then
           if entry.initialisation <> None then
-            failwith "Variable has already been initialised"
+            raise (Inliner_Exc ("Variable has already been initialised", Some st))
           else
             { entry with update_count = entry.update_count + 1;
                          assignment = Some (Plus (Var idx, expr)) }
         else entry) table
     else
-      failwith ("Impossible: multiple records for the same idx " ^
+      raise (Inliner_Exc ("Impossible: multiple records for the same idx " ^
                 string_of_int idx ^ " -- variable " ^
-                resolve_idx (Term Value) no_prefix (Some st) idx)
+                resolve_idx (Term Value) no_prefix (Some st) idx, Some st))
 
   | Commented (stmt', _) ->
     inliner_analysis st stmt' ctxt_acc table
@@ -307,9 +309,9 @@ let inliner_to_subst (table : inliner_table_entry list) : substitution =
   | (entry :: rest) ->
     (*NOTE here could assert that update_count and ref_count are both =1*)
     if List.mem_assoc entry.id acc then
-      failwith "Substitution variable appears more than once in the substitution"
+      raise (Inliner_Exc ("Substitution variable appears more than once in the substitution", None))
     else if entry.assignment = None then
-      failwith "Nothing to substitute"
+      raise (Inliner_Exc ("Nothing to substitute", None))
     else
       inliner_to_subst' rest ((entry.id, the entry.assignment) :: acc)
   in inliner_to_subst' table []
@@ -438,8 +440,8 @@ let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = false)
   | Return e_opt ->
     Return (bind_opt (fun e -> Some (subst_expr subst e)) None e_opt)
   | _ ->
-    failwith ("Unsupported subst to inline: " ^
-              string_of_naasty_statement no_indent stmt)
+    raise (Inliner_Exc ("Unsupported subst to inline: " ^
+              string_of_naasty_statement no_indent stmt, None))
 
 (*Inline variables (that are to be substituted for) within a substitution*)
 (*NOTE the order of subst shouldn't matter, because we keep iterating until all
@@ -450,7 +452,7 @@ let rec inline_substvars_in_subst ?st_opt:(st_opt : state option = None) (subst_
   | [] -> subst_acc
   | (id, definiens) :: rest ->
     if List.mem_assoc id subst_acc then
-      failwith "Substitution variable appears more than once in the substitution"
+      raise (Inliner_Exc ("Substitution variable appears more than once in the substitution", st_opt))
     else
        let is_ground =
          Identifier_Set.exists (fun ident ->
@@ -497,7 +499,7 @@ let rec erase_vars (stmt : naasty_statement) (idents : identifier list) : naasty
     begin
     match idx_of_naasty_type ty with
     | None ->
-      failwith "Declaration must contain an identifier name, not just mention a type!"
+      raise (Inliner_Exc ("Declaration must contain an identifier name, not just mention a type!", None))
     | Some idx ->
       if List.mem idx idents then Skip else stmt
     end

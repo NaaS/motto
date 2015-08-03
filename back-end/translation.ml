@@ -16,8 +16,8 @@ let require_annotations = false
 let unidir_chan_receive_suffix = "_receive_"
 let unidir_chan_send_suffix = "_send_"
 
-exception Translation_type of string * type_value
-exception Translation_expr of string * expression
+exception Translation_Type_Exc of string * type_value
+exception Translation_Expr_Exc of string * expression option * state
 
 (*default_label is used when translating type declarations*)
 let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = None)
@@ -108,7 +108,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
         (Int_Type (label_opt', default_int_metadata), st)
       else
         if type_ann = [] then
-          raise (Translation_type ("No annotation given", ty))
+          raise (Translation_Type_Exc ("No annotation given", ty))
         else
           let (label_opt', st') = check_and_generate_name ik label_opt in
           let metadata =
@@ -243,6 +243,7 @@ let extend_local_names (local_name_map : (label * label) list) (ik : identifier_
    Returned: sts_acc sequentially composed with the translated e,
              possibly extended ctxt_acc,
              possibly extended assign_acc,
+             possibly extended local_name_map, (this is extended by LocalDef)
              possibly extended st
 *)
 let rec naasty_of_flick_expr (st : state) (e : expression)
@@ -251,10 +252,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
           (assign_acc : identifier list) : (naasty_statement *
                                             identifier list (*ctxt_acc*) *
                                             identifier list (*assign_acc*) *
+                                            (label * label) list (*local_name_map*) *
                                             state) =
-  let check_and_resolve_name identifier =
+  let check_and_resolve_name st identifier =
     match lookup_name (Term Undetermined) st identifier with
-    | None -> failwith ("Undeclared identifier: " ^ identifier)
+    | None ->
+      raise (Translation_Expr_Exc ("Undeclared identifier: " ^ identifier, None, st))
     | Some i -> i in
   match e with
   | Variable value_name ->
@@ -269,19 +272,21 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         Commented (Skip, "Evaluated variable " ^ expression_to_string no_indent e)
       in (mk_seq sts_acc translated, ctxt_acc,
           [](*since assign_acc=[] to start with*),
+          local_name_map,
           st)
     else
       let translated =
         try_local_name value_name local_name_map
-        |> check_and_resolve_name
+        |> check_and_resolve_name st
         |> (fun x -> Var x) (*whither eta?*)
         |> lift_assign assign_acc
         |> Naasty_aux.concat
       in (mk_seq sts_acc translated, ctxt_acc,
           [](*Having assigned to assign_accs, we can forget them.*),
+          local_name_map,
           st)
   | Seq (e1, e2) ->
-    let (sts_acc', ctxt_acc', assign_acc', st') =
+    let (sts_acc', ctxt_acc', assign_acc', local_name_map', st') =
       (*We give the evaluation of e1 an empty assign_acc, since the assign_acc
         we received is intended for e2.*)
       naasty_of_flick_expr st e1 local_name_map sts_acc ctxt_acc []
@@ -289,7 +294,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       assert (assign_acc' = []); (*We shouldn't be getting anything to assign
                                    from e1, particularly as we gave it an empty
                                    assign_acc*)
-      naasty_of_flick_expr st' e2 local_name_map sts_acc' ctxt_acc' assign_acc
+      naasty_of_flick_expr st' e2 local_name_map' sts_acc' ctxt_acc' assign_acc
 
   | True
   | False ->
@@ -299,7 +304,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       in
       (*having assigned to assign_acc, we've done our duty, so we return an
         empty assign_acc*)
-      (mk_seq sts_acc translated, ctxt_acc, [], st)
+      (mk_seq sts_acc translated, ctxt_acc, [], local_name_map, st)
   | And (e1, e2)
   | Or (e1, e2)
   | Equals (e1, e2) (*FIXME if e1 and e2 are strings then need to use strcmp.
@@ -335,12 +340,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         in int_ty, int_ty
       | _ -> failwith "Impossible" in
     let (_, e1_result_idx, st') = mk_fresh (Term Value) ~ty_opt:(Some ty1) "x_" 0 st in
-    let (sts_acc', ctxt_acc', assign_acc', st'') =
+    let (sts_acc', ctxt_acc', assign_acc', _, st'') =
       naasty_of_flick_expr st' e1 local_name_map sts_acc (e1_result_idx :: ctxt_acc)
         [e1_result_idx] in
     let (_, e2_result_idx, st''') =
       mk_fresh (Term Value) ~ty_opt:(Some ty2) "x_" e1_result_idx st'' in
-    let (sts_acc'', ctxt_acc'', assign_acc'', st4) =
+    let (sts_acc'', ctxt_acc'', assign_acc'', _, st4) =
       naasty_of_flick_expr st''' e2 local_name_map sts_acc' (e2_result_idx :: ctxt_acc')
         [e2_result_idx] in
     let translated =
@@ -374,7 +379,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     in
     assert (assign_acc' = []);
     assert (assign_acc'' = []);
-    (mk_seq sts_acc'' nstmt, ctxt_acc'', [], st4)
+    (mk_seq sts_acc'' nstmt, ctxt_acc'', [], local_name_map, st4)
   | Not e'
   | Abs e' ->
     let ty =
@@ -389,7 +394,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                                               uses?*))
       | _ -> failwith "Impossible" in
     let (_, e_result_idx, st') = mk_fresh (Term Value) ~ty_opt:(Some ty) "x_" 0 st in
-    let (sts_acc', ctxt_acc', assign_acc', st'') =
+    let (sts_acc', ctxt_acc', assign_acc', _, st'') =
       naasty_of_flick_expr st' e' local_name_map sts_acc (e_result_idx :: ctxt_acc)
         [e_result_idx] in
     let translated =
@@ -404,7 +409,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       |> Naasty_aux.concat
     in
     assert (assign_acc' = []);
-    (mk_seq sts_acc' not_nstmt, ctxt_acc', [], st'')
+    (mk_seq sts_acc' not_nstmt, ctxt_acc', [], local_name_map, st'')
 
   | Int i ->
     let translated = Int_Value i in
@@ -412,7 +417,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       lift_assign assign_acc translated
       |> Naasty_aux.concat
     in
-    (mk_seq sts_acc nstmt, ctxt_acc, [], st)
+    (mk_seq sts_acc nstmt, ctxt_acc, [], local_name_map, st)
 
   | Iterate (label, range_e, acc_opt, body_e, unordered) ->
     assert (not unordered); (*FIXME currently only supporting ordered iteration*)
@@ -446,10 +451,10 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         (*Since this is a newly-declared variable, make sure it's fresh.*)
         let (_, acc_label_idx, st') =
           mk_fresh (Term Value) ~ty_opt:(Some acc_init_ty) (acc_label ^ "_") 0 st in
-        let translate_initialisation =
+        let (sts_acc, ctxt_acc, assign_acc, _, st) =
           naasty_of_flick_expr st' acc_init local_name_map sts_acc
             (acc_label_idx :: ctxt_acc) [acc_label_idx] in
-        (translate_initialisation,
+        ((sts_acc, ctxt_acc, assign_acc, st),
          extend_local_names local_name_map Value acc_label acc_label_idx st',
          Some acc_label_idx) in
     assert (assign_acc' = []);
@@ -466,14 +471,14 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | IntegerRange (from_e, until_e)->
         let (_, from_idx, st'') =
           mk_fresh (Term Value) ~ty_opt:(Some int_ty) "from_" 0 st' in
-        let (sts_acc'', ctxt_acc'', assign_acc'', st''') =
+        let (sts_acc'', ctxt_acc'', assign_acc'', _, st''') =
           naasty_of_flick_expr st'' from_e local_name_map sts_acc'
             (from_idx :: ctxt_acc') [from_idx] in
         assert (assign_acc'' = []);
 
         let (_, to_idx, st4) =
           mk_fresh (Term Value) ~ty_opt:(Some int_ty) "to_" 0 st''' in
-        let (sts_acc''', ctxt_acc''', assign_acc''', st5) =
+        let (sts_acc''', ctxt_acc''', assign_acc''', _, st5) =
           naasty_of_flick_expr st4 until_e local_name_map sts_acc''
             (to_idx :: ctxt_acc'') [to_idx] in
         assert (assign_acc''' = []);
@@ -504,7 +509,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | Some acc_label_idx ->
         Assign (Var acc_label_idx, Var body_result_idx) in
 
-    let (body, ctxt_acc''', assign_acc''', st4) =
+    let (body, ctxt_acc''', assign_acc''', _, st4) =
       naasty_of_flick_expr st''' body_e local_name_map''
         Skip (*At the start of the translation, the body is completely empty,
                thus Skip.*)
@@ -522,7 +527,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
     let for_stmt =
       For ((idx_ty, condition, increment), mk_seq body tail_statement) in
-    (Naasty_aux.concat [sts_acc''; for_stmt; nstmt], ctxt_acc''', [], st4)
+    (Naasty_aux.concat [sts_acc''; for_stmt; nstmt], ctxt_acc''', [],
+     local_name_map, st4)
 
   | Crisp_syntax.ITE (be, e1, e2_opt) -> 
      (*FIXME: if are expressions, so they should assume the value of either the then or the else branch, so 
@@ -532,23 +538,24 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
        branch to unity by using the one-handed If (If1) in NaaSty.*)
     let (_, cond_result_idx, st_before_cond) =
       mk_fresh (Term Value) ~ty_opt:(Some (Bool_Type None)) "ifcond_" 0 st in
-    let (sts_acc_cond, ctxt_acc_cond, assign_acc_cond, st_cond) =
+    let (sts_acc_cond, ctxt_acc_cond, assign_acc_cond, _, st_cond) =
       naasty_of_flick_expr st_before_cond be local_name_map sts_acc (cond_result_idx :: ctxt_acc) [cond_result_idx] in
     assert (assign_acc_cond = []); (* We shouldn't get anything back to assign to *)
     let (_, if_result_idx, st_before_then) =
       (*FIXME here we use Int_Type, but this should be inferred from the if
         expression*)
       mk_fresh (Term Value) ~ty_opt:(Some (Int_Type (None, default_int_metadata))) "ifresult_" 0 st_cond in
-    let (then_block, ctxt_acc_then, assign_acc_then, st_then) = 
+    let (then_block, ctxt_acc_then, assign_acc_then, _, st_then) =
       naasty_of_flick_expr st_before_then e1 local_name_map Skip (if_result_idx :: ctxt_acc_cond) [if_result_idx] in
-    let (else_block, ctxt_acc_else, assign_acc_else, st_else) = 
+    let (else_block, ctxt_acc_else, assign_acc_else, _, st_else) =
       naasty_of_flick_expr st_then (the(*FIXME we assume the value's there*) e2_opt) local_name_map Skip ctxt_acc_then [if_result_idx] in
     let translated = 
       Naasty.If (Var cond_result_idx, then_block, else_block) in
     let nstmt =
       lift_assign assign_acc (Var if_result_idx)
       |> Naasty_aux.concat in
-    (Naasty_aux.concat [sts_acc_cond; translated; nstmt], ctxt_acc_else, assign_acc_else, st_else);
+    (Naasty_aux.concat [sts_acc_cond; translated; nstmt], ctxt_acc_else,
+     assign_acc_else, local_name_map, st_else);
 
   | IPv4_address (oct1, oct2, oct3, oct4) ->
     let addr =
@@ -558,7 +565,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       lift_assign assign_acc translated
       |> Naasty_aux.concat
     in
-    (mk_seq sts_acc nstmt, ctxt_acc, [], st)
+    (mk_seq sts_acc nstmt, ctxt_acc, [], local_name_map, st)
   | Int_to_address e
   | Address_to_int e ->
     (*We store IPv4 addresses as ints, therefore the conversion doesn't do anything.*)
@@ -581,7 +588,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       List.fold_right (fun (e, ty) (result_indices, sts_acc, ctxt_acc, assign_acc, st) ->
         let (naasty_ty, st') = naasty_of_flick_type st ty in
         let (_, e_result_idx, st'') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "funarg_" 0 st' in
-        let (sts_acc', ctxt_acc', assign_acc', st''') =
+        let (sts_acc', ctxt_acc', assign_acc', _, st''') =
           naasty_of_flick_expr st'' e local_name_map sts_acc (e_result_idx :: ctxt_acc)
             [e_result_idx] in
         (e_result_idx :: result_indices, sts_acc', ctxt_acc', assign_acc', st'''))
@@ -591,12 +598,13 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let parameters = List.map (fun x -> Var x)(*whither eta?*) result_indices in
     let translated =
       try_local_name function_name local_name_map
-      |> check_and_resolve_name
+      |> check_and_resolve_name st'
       |> (fun x -> Call_Function (x, parameters))
       |> lift_assign assign_acc
       |> Naasty_aux.concat
     in (mk_seq sts_acc' translated, ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
+        local_name_map,
         st')
 
   | LocalDef ((name, ty_opt), e) ->
@@ -609,10 +617,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         (int_ty, st)
       | Some ty -> naasty_of_flick_type st ty in
       let (_, name_idx, st'') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) name 0 st' in
-      let (sts_acc', ctxt_acc', assign_acc', st''') =
+      let (sts_acc', ctxt_acc', assign_acc', _, st''') =
         naasty_of_flick_expr st'' e local_name_map sts_acc (name_idx :: ctxt_acc)
           [name_idx] in
       assert (assign_acc' = []);
+      let local_name_map' =
+        extend_local_names local_name_map Value name name_idx st''' in
       (*The recursive call to naasty_of_flick_expr takes care of assigning to
         name_idx. Now we take care of assigning name_idx to assign_acc.*)
       let translated =
@@ -620,6 +630,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         |> Naasty_aux.concat
       in (mk_seq sts_acc' translated, ctxt_acc',
           [](*Having assigned to assign_accs, we can forget them.*),
+          local_name_map',
           st''')
 
   | Update (value_name, expression) ->
@@ -637,7 +648,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | None -> failwith ("Could not find type declared for " ^ value_name)
       | Some ty -> ty in
 *)
-    let (sts_acc', ctxt_acc', assign_acc', st') =
+    let (sts_acc', ctxt_acc', assign_acc', _, st') =
       naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc [name_idx] in
     assert (assign_acc' = []);
     (*The recursive call to naasty_of_flick_expr takes care of assigning to
@@ -647,6 +658,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       |> Naasty_aux.concat
     in (mk_seq sts_acc' translated, ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
+        local_name_map,
         st')
 
   | TupleValue es ->
@@ -672,7 +684,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
           (*FIXME use type inference*)
           Int_Type (None, default_int_metadata) in
         let (_, e_result_idx, st') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "tuplefield_" 0 st in
-        let (sts_acc', ctxt_acc', assign_acc', st'') =
+        let (sts_acc', ctxt_acc', assign_acc', _, st'') =
           naasty_of_flick_expr st' e local_name_map sts_acc (e_result_idx :: ctxt_acc)
             [e_result_idx] in
         (e_result_idx :: result_indices, sts_acc', ctxt_acc', assign_acc', st''))
@@ -692,6 +704,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         (*add declaration for the fresh name we have for this tuple instance*)
         tuple_instance_idx :: ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
+        local_name_map,
         st')
 
   | TypeAnnotation (e, _) ->
@@ -771,7 +784,7 @@ let unidirect_channel (st : state) (Channel (channel_type, channel_name)) : naas
 let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
       (waiting : Naasty.identifier list) (init_statmt : naasty_statement)
       (flick_body : Crisp_syntax.expression) (st : state) =
-  let (body, ctxt', waiting', st') =
+  let (body, ctxt', waiting', _(*FIXME do we care about local_name_map' ?*), st') =
     naasty_of_flick_expr st flick_body [](*local_name_map is local to function
                                            blocks, so we start out with an empty
                                            map when translating a function block.*)

@@ -47,6 +47,24 @@ let wrap (f : 'a -> 'b) (x : 'a) : 'b =
         rtv_s)
     end;
     exit 1
+  | Translation.Translation_Expr_Exc (msg, e_opt, st) ->
+    begin
+    if not !cfg.unexceptional then
+      let e_s =
+        match e_opt with
+        | None -> ""
+        | Some e ->
+          "at expression:" ^ Crisp_syntax.expression_to_string
+                               Crisp_syntax.min_indentation e ^ "\n" in
+      print_endline
+       ("Translation error: " ^ msg ^ "\n" ^
+(*FIXME        "in file " ^ source_file ^ "\n" ^*)
+        e_s ^
+        "state :\n" ^
+        State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
+           true st)
+    end;
+    exit 1
   | e ->
     if !cfg.unexceptional then exit 1
     else raise e

@@ -467,7 +467,7 @@ let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_val
           Declaration (param_data_ty (Some dataI),
                        Some (Cast (param_data_ty None, Var channelI)));
           Assign (Dereference (Var bytes_readI),
-                  RecordProjection
+                  Field_In_Record
                     (Dereference (Var dataI),
                      Call_Function (get_channel_lenI, [])));
 

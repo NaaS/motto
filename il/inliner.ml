@@ -76,7 +76,7 @@ let rec count_var_references_in_naasty_expr (st : state)
   | Quotient (e1, e2)
   | GEq (e1, e2)
   | Gt (e1, e2)
-  | RecordProjection (e1, e2)
+  | Field_In_Record (e1, e2)
   | LEq (e1, e2) ->
     count_var_references_in_naasty_expr st e1 table
     |> count_var_references_in_naasty_expr st e2
@@ -275,7 +275,7 @@ let rec naasty_expression_weight = function
   | Quotient (e1, e2)
   | GEq (e1, e2)
   | Gt (e1, e2)
-  | RecordProjection (e1, e2)
+  | Field_In_Record (e1, e2)
   | LEq (e1, e2) ->
     naasty_expression_weight e1 +
     naasty_expression_weight e2 + 1
@@ -359,7 +359,7 @@ let rec free_vars (expr : naasty_expression) (acc : Identifier_Set.t) : Identifi
   | Quotient (e1, e2)
   | GEq (e1, e2)
   | Gt (e1, e2)
-  | RecordProjection (e1, e2)
+  | Field_In_Record (e1, e2)
   | LEq (e1, e2) ->
     List.fold_right free_vars [e1; e2] acc
 
@@ -392,7 +392,7 @@ let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_ex
   | GEq (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> GEq (e1', e2'))
   | Gt (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Gt (e1', e2'))
   | Dereference e -> unary_op_inst e (fun e' -> Dereference e')
-  | RecordProjection (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> RecordProjection (e1', e2'))
+  | Field_In_Record (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Field_In_Record (e1', e2'))
   | Address_of e -> unary_op_inst e (fun e' -> Address_of e')
   | LEq (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> LEq (e1', e2'))
 

@@ -86,7 +86,7 @@ type naasty_expression =
   | Gt of naasty_expression * naasty_expression
   | Cast of naasty_type * naasty_expression
   | Dereference of naasty_expression
-  | RecordProjection of naasty_expression * naasty_expression
+  | Field_In_Record of naasty_expression * naasty_expression
   | Address_of of naasty_expression
   | LEq of naasty_expression * naasty_expression
   | ArrayElement of naasty_expression * naasty_expression

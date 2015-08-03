@@ -228,14 +228,14 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | Cast (ty, e) ->
     "(" ^ string_of_naasty_type no_indent ~st_opt ty ^ ")" ^
     "(" ^ string_of_naasty_expression ~st_opt e ^ ")"
-  | RecordProjection (Dereference record_ref, field) ->
+  | Field_In_Record (Dereference record_ref, field) ->
     (*NOTE this syntactic sugaring is handled directly*)
     "(" ^ string_of_naasty_expression ~st_opt record_ref ^ ")" ^
     "->" ^
     "(" ^ string_of_naasty_expression ~st_opt field ^ ")"
   | Dereference e ->
     "*" ^ "(" ^ string_of_naasty_expression ~st_opt e ^ ")"
-  | RecordProjection (record, field) ->
+  | Field_In_Record (record, field) ->
     "(" ^ string_of_naasty_expression ~st_opt record ^ ")" ^
     "." ^
     "(" ^ string_of_naasty_expression ~st_opt field ^ ")"
@@ -632,7 +632,7 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
       instantiate_expression fresh names st' e
     in (Cast (ty', e'), st'')
   | Dereference e -> unary_op_inst e (fun e' -> Dereference e')
-  | RecordProjection (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> RecordProjection (e1', e2'))
+  | Field_In_Record (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Field_In_Record (e1', e2'))
   | Address_of e -> unary_op_inst e (fun e' -> Address_of e')
   | ArrayElement (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> ArrayElement (e1', e2'))
   | Left_shift (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Left_shift (e1', e2'))
@@ -776,9 +776,9 @@ let rec concat (sts : naasty_statement list) : naasty_statement =
 let rec nested_fields (field_idents : identifier list) : naasty_expression =
   match field_idents with
   | [field; record] ->
-    RecordProjection (Dereference (Var record), Var field)
+    Field_In_Record (Dereference (Var record), Var field)
   | field :: rest ->
     let record = nested_fields rest in
-    RecordProjection (Dereference record, Var field)
+    Field_In_Record (Dereference record, Var field)
   | _ ->
     failwith "There needs to be at least one record and one field: field_idents needs to contain at least two items."

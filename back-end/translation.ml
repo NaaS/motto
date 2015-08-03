@@ -727,7 +727,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         (e_result_idx :: ctxt_acc) [e_result_idx] in
     assert (assign_acc' = []);
     let translated =
-      Naasty.RecordProjection (Var e_result_idx, Var name_idx)
+      Naasty.Field_In_Record (Var e_result_idx, Var name_idx)
       |> lift_assign assign_acc
       |> Naasty_aux.concat
     in (Naasty_aux.concat [sts_acc'; translated],

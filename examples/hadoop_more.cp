@@ -6,7 +6,7 @@ type k_v = record
 
 process Wc_node : (k_v/- x, k_v/- y, -/k_v z) # * k_v occurrences missing "type" prefix
   # Instead of "vs" could have pattern matching, to give v1 and v2
-  let vs = peek_all ([x, y])
+  let vs = peek_all ([x, y]) # let [v1,v2] <= [x,y]
   let v1 = vs[0] # * check if can project from lists like this
   let v2 = vs[1]
 

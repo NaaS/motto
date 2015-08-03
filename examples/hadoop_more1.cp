@@ -48,7 +48,8 @@ fun Wc_node : (x : type k_v, y : type k_v, z : type k_v) -> ()
     send (z, consume (y))
   else:
 #    z ! v1 with value = v1.value + v2.value
-    send (z, 5) # need record update
+#    send (z, 5) # need record update
+    send (z, v1 with value = v1.value + v2.value)
 #    ? x
 #    ? y
     consume (x)

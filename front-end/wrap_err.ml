@@ -65,7 +65,7 @@ let wrap (f : 'a -> 'b) (x : 'a) : 'b =
            true st)
     end;
     exit 1
-  | Inliner.Inliner_Exc (msg, st_opt) ->
+  | Inliner.Inliner_Exc (msg, st_opt, stmt_opt) ->
     begin
     if not !cfg.unexceptional then
       let st_s =
@@ -75,9 +75,15 @@ let wrap (f : 'a -> 'b) (x : 'a) : 'b =
           "state :\n" ^
           State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
            true st in
+      let stmt_s =
+        match stmt_opt with
+        | None -> ""
+        | Some stmt ->
+          "at statement:" ^ Naasty_aux.string_of_naasty_statement ~st_opt Naasty_aux.no_indent stmt ^ "\n" in
       print_endline
        ("Inlining error: " ^ msg ^ "\n" ^
 (*FIXME        "in file " ^ source_file ^ "\n" ^*)
+        stmt_s ^
         st_s)
     end;
     exit 1

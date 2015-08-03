@@ -31,7 +31,7 @@ let write_files (ol : output_location) (file_contents : (string * string) list) 
           Directory dir
       end
   in
-  List.fold_right (fun (filename, contents) _ ->
+  List.iter (fun (filename, contents) ->
     match output with
       Stdout ->
         print_endline ("<<Starting " ^ filename);
@@ -42,4 +42,4 @@ let write_files (ol : output_location) (file_contents : (string * string) list) 
         output_string channel contents;
         close_out channel
     | No_output -> ())
-    file_contents ()
+    file_contents

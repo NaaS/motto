@@ -712,6 +712,31 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
            parameter of TypeAnnotation*)
     naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc assign_acc
 
+  | RecordProjection (e, label) ->
+    let naasty_ty =
+      (*FIXME use type inference*)
+      Int_Type (None, default_int_metadata) in
+    let name_idx =
+      match lookup_name (Term Undetermined) st label with
+      | None -> failwith ("Could not find previous declaration of " ^ label)
+      | Some idx -> idx in
+    let (_, e_result_idx, st') =
+      mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "record_" 0 st in
+    let (sts_acc', ctxt_acc', assign_acc', _, st'') =
+      naasty_of_flick_expr st' e local_name_map sts_acc
+        (e_result_idx :: ctxt_acc) [e_result_idx] in
+    assert (assign_acc' = []);
+    let translated =
+      Naasty.RecordProjection (Var e_result_idx, Var name_idx)
+      |> lift_assign assign_acc
+      |> Naasty_aux.concat
+    in (Naasty_aux.concat [sts_acc'; translated],
+        (*add declaration for the fresh name we have for this tuple instance*)
+        ctxt_acc',
+        [](*Having assigned to assign_accs, we can forget them.*),
+        local_name_map,
+        st'')
+
 (*TODO
    list related, but constant:
    | Str s ->
@@ -719,7 +744,6 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
    record-relate:
    Record
-   RecordProjection
    RecordUpdate
 
    disjunction

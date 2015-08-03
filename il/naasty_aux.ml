@@ -276,8 +276,11 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | Bool_Value (b) -> 
     string_of_bool b
   | Abs (e) ->
-     "abs(" ^ string_of_naasty_expression ~st_opt e ^ ")" 
-
+    "abs(" ^ string_of_naasty_expression ~st_opt e ^ ")" 
+  | Mod (e1,e2) ->
+    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") % (" ^
+    string_of_naasty_expression ~st_opt e2 ^ ")"
+    
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
           ?print_semicolon:(print_semicolon : bool = true) indent statement =
   let terminal =
@@ -324,7 +327,6 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
   | Break -> indn indent ^ "break" ^ terminal
   | Continue -> indn indent ^ "continue" ^ terminal
 (*
-  | WriteToChan of identifier * identifier
   | PeekChan of identifier
 	| ConsumeChan of identifier
 	| ForwardChan of identifier * identifier
@@ -346,7 +348,34 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     string_of_naasty_statement ~st_opt no_indent stmt ^ terminal
   | GotoLabel lbl ->
     indn indent ^ "goto " ^ lbl ^ terminal
-
+  | WriteToChan (var, chan) ->
+    let varTyp =
+      match st_opt with
+      | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int var)
+      | Some st ->
+        match lookup_symbol_type var (Term Value) st with
+        | None -> failwith ("Variable type not found in symbol table: " ^ string_of_int var)
+        | Some ty -> ty
+    in "te= NaasData::write_to_channel<" ^ string_of_naasty_type ~st_opt no_indent varTyp ^ ">(" ^
+       id_name st_opt var   ^ "outputs[" ^ "chan as integer" ^ 
+        "],&size_written);\nif (!te.isOK()) {\n\treturn te;\n}"
+   | ConsumeChan (chan) ->
+    let chanTyp =
+      match st_opt with
+      | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int chan)
+      | Some st ->
+        match lookup_symbol_type chan (Term Value) st with
+        | None -> failwith ("Channel type not found in symbol table: " ^ string_of_int chan)
+        | Some ty -> ty  in
+    let upChanType =
+        match chanTyp with
+        | Chan_Type (_, _, chanDir, ct) -> 
+          assert(chanDir = Input); 
+          ct
+        | _ -> failwith ("Expected channel type: " ^ string_of_int chan)
+    in "te= NaasData::consume_channel<" ^ string_of_naasty_type ~st_opt no_indent upChanType ^ 
+          "> (inputs[" ^ "chan as integer" ^ "],&size);"
+          
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent naasty_function =
   let arg_types_s =
    List.map (string_of_naasty_type ~st_opt indent) naasty_function.arg_tys

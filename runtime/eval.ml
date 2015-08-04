@@ -586,6 +586,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       return_eval e', ctxt'''), ctxt'
 
   | IndexableProjection (v, idx) ->
+    (*FIXME how to initialise dictionaries etc in the simulator?*)
     let dict = get_dictionary e v ctxt in
 
     let idx_v, ctxt' = evaluate st ctxt idx in

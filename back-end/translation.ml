@@ -16,8 +16,12 @@ let require_annotations = false
 let unidir_chan_receive_suffix = "_receive_"
 let unidir_chan_send_suffix = "_send_"
 
+type local_name_map = (label * label) list
+
 exception Translation_Type_Exc of string * type_value
-exception Translation_Expr_Exc of string * expression option * state
+exception Translation_Expr_Exc of
+    string * expression option * local_name_map option *
+    naasty_statement option * state
 
 (*default_label is used when translating type declarations*)
 let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = None)
@@ -206,13 +210,13 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
 (*If the name exists in the name mapping, then map it, otherwise leave the name
   as it is*)
 let try_local_name (l : label)
-      (local_name_map : (label * label) list) : label =
+      (local_name_map : local_name_map) : label =
   try List.assoc l local_name_map
   with Not_found -> l
 (*Add a local name: a mapping from a programmer-chosen name (within this scope)
   to the name that the compiler decided to use for this. The latter may be
   based on the former, but could be different in order to deal with shadowing.*)
-let extend_local_names (local_name_map : (label * label) list) (ik : identifier_kind)
+let extend_local_names (local_name_map : local_name_map) (ik : identifier_kind)
       (name : label) (name' : identifier) (st : state) : (label * label) list =
   (name, resolve_idx (Term ik) no_prefix (Some st) name') :: local_name_map
 
@@ -247,18 +251,20 @@ let extend_local_names (local_name_map : (label * label) list) (ik : identifier_
              possibly extended st
 *)
 let rec naasty_of_flick_expr (st : state) (e : expression)
-          (local_name_map : (label * label) list)
+          (local_name_map : local_name_map)
           (sts_acc : naasty_statement) (ctxt_acc : identifier list)
           (assign_acc : identifier list) : (naasty_statement *
                                             identifier list (*ctxt_acc*) *
                                             identifier list (*assign_acc*) *
-                                            (label * label) list (*local_name_map*) *
+                                            local_name_map *
                                             state) =
   let check_and_resolve_name st identifier =
     match lookup_name (Term Undetermined) st identifier with
     | None ->
-      raise (Translation_Expr_Exc ("Undeclared identifier: " ^ identifier, None, st))
+      raise (Translation_Expr_Exc ("Undeclared identifier: " ^ identifier,
+                                   Some e, Some local_name_map, Some sts_acc, st))
     | Some i -> i in
+  try
   match e with
   | Variable value_name ->
     if assign_acc = [] then
@@ -809,6 +815,42 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
    Exchange
 *)
 (*  | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string no_indent e, e))*)
+  with
+  | Translation_Expr_Exc (msg, e_opt, lnm_opt, sts_acc_opt, st') ->
+    (*FIXME code based on that in Wrap_err*)
+    begin
+    if not !Config.cfg.Config.unexceptional then
+      let e_s =
+        match e_opt with
+        | None -> ""
+        | Some e ->
+          "at expression:" ^ Crisp_syntax.expression_to_string
+                               Crisp_syntax.min_indentation e ^ "\n" in
+      let local_name_map_s =
+        match lnm_opt with
+        | None -> ""
+        | Some lnm ->
+          List.map (fun (l1, l2) -> l1 ^ " |-> " ^ l2) lnm
+          |> Debug.print_list "  " in
+      let sts_acc_s =
+        match sts_acc_opt with
+        | None -> ""
+        | Some sts_acc ->
+          "having so far translated:" ^
+            string_of_naasty_statement ~st_opt:(Some st')
+            2 sts_acc in
+      print_endline
+       ("Translation error: " ^ msg ^ "\n" ^
+        e_s ^
+        "local_name_map : " ^ local_name_map_s ^ "\n" ^
+        sts_acc_s ^
+        "state :\n" ^
+        State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
+          true st')
+    else ();
+    raise (Translation_Expr_Exc ("(contained in)", Some e, Some local_name_map,
+                                 Some sts_acc, st))
+    end
 
 (*Split a (possibly bidirectional) Crisp channel into a collection of
   unidirectional NaaSty channels.*)
@@ -848,11 +890,9 @@ let unidirect_channel (st : state) (Channel (channel_type, channel_name)) : naas
   also be regarded to be function bodies.*)
 let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
       (waiting : Naasty.identifier list) (init_statmt : naasty_statement)
-      (flick_body : Crisp_syntax.expression) (st : state) =
+      (flick_body : Crisp_syntax.expression) (local_name_map : local_name_map) (st : state) =
   let (body, ctxt', waiting', _(*FIXME do we care about local_name_map' ?*), st') =
-    naasty_of_flick_expr st flick_body [](*local_name_map is local to function
-                                           blocks, so we start out with an empty
-                                           map when translating a function block.*)
+    naasty_of_flick_expr st flick_body local_name_map
       init_statmt ctxt waiting in
   (*There shouldn't be any more waiting variables at this point, they should
     all have been assigned something.*)
@@ -881,12 +921,27 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
             function body*)
     let ((chans, arg_tys), res_tys) =
       Crisp_syntax_aux.extract_function_types fn_decl.fn_params in
-    let (n_arg_tys, st') =
-      let standard_types, st' =
-        fold_map ([], st) naasty_of_flick_type arg_tys in
+    (*local_name_map is local to function
+     blocks, so we start out with an empty
+     map when translating a function block.*)
+    let local_name_map = [] in
+    let (n_arg_tys, local_name_map, st') =
+      let standard_types, (st', local_name_map) =
+        fold_map ([], (st, local_name_map)) (fun (st, local_name_map) ty ->
+          let l =
+            match Crisp_syntax_aux.label_of_type ty with
+            | None ->
+              raise (Translation_Type_Exc ("Expected type to have label", ty))
+            | Some l -> l in
+          let naasty_ty, st = naasty_of_flick_type st ty in
+          let id, st' =
+            extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty)
+              ~ty_opt:(Some naasty_ty) l(*"fun_param_"*) in
+          let lnm' = extend_local_names local_name_map Value l id st' in
+          naasty_ty, (st', lnm')) arg_tys in
       let channel_types, st'' =
-        fold_map ([], st') unidirect_channel chans in
-      (List.flatten channel_types @ standard_types, st'') in
+        fold_map ([], st') unidirect_channel chans (*FIXME thread local_name_map*) in
+      (List.flatten channel_types @ standard_types, local_name_map, st'') in
     let (n_res_ty, st'') =
       match res_tys with
       | [] -> (Unit_Type, st')
@@ -911,20 +966,21 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
         let init_assign_acc = [] in
         let body', st4 =
           naasty_of_flick_function_expr_body init_ctxt init_assign_acc init_statmt
-            fn_expr_body st'' in
+            fn_expr_body local_name_map st'' in
         let body'' =
           (*Add "Return" to end of function body*)
           Seq (body', Return None)
         in (body'', st4)
       else
-        let (_, result_idx, st''') = mk_fresh (Term Value) ~ty_opt:(Some n_res_ty) "x_" 0 st'' in
+        let (_, result_idx, st''') =
+          mk_fresh (Term Value) ~ty_opt:(Some n_res_ty) "result_" 0 st'' in
         (*Add type declaration for result_idx, which should be the same as res_ty
           since result_idx will carry the value that's computed in this function.*)
         let init_ctxt = [result_idx] in
         let init_assign_acc = [result_idx] in
         let body', st4 =
           naasty_of_flick_function_expr_body init_ctxt init_assign_acc init_statmt
-            fn_expr_body st''' in
+            fn_expr_body local_name_map st''' in
         let body'' =
           assert (n_res_ty <> Unit_Type); (*Unit functions should have been
                                             handled in a different branch.*)

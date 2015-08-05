@@ -47,7 +47,7 @@ let wrap (f : 'a -> 'b) (x : 'a) : 'b =
         rtv_s)
     end;
     exit 1
-  | Translation.Translation_Expr_Exc (msg, e_opt, st) ->
+  | Translation.Translation_Expr_Exc (msg, e_opt, local_name_map_opt, sts_acc_opt, st) ->
     begin
     if not !cfg.unexceptional then
       let e_s =
@@ -56,10 +56,25 @@ let wrap (f : 'a -> 'b) (x : 'a) : 'b =
         | Some e ->
           "at expression:" ^ Crisp_syntax.expression_to_string
                                Crisp_syntax.min_indentation e ^ "\n" in
+      let local_name_map_s =
+        match local_name_map_opt with
+        | None -> ""
+        | Some lnm ->
+          List.map (fun (l1, l2) -> l1 ^ " |-> " ^ l2) lnm
+          |> Debug.print_list "  " in
+      let sts_acc_s =
+        match sts_acc_opt with
+        | None -> ""
+        | Some sts_acc ->
+          "having so far translated:" ^
+            Naasty_aux.string_of_naasty_statement ~st_opt:(Some st)
+            2 sts_acc in
       print_endline
        ("Translation error: " ^ msg ^ "\n" ^
 (*FIXME        "in file " ^ source_file ^ "\n" ^*)
         e_s ^
+        "local_name_map : " ^ local_name_map_s ^ "\n" ^
+        sts_acc_s ^
         "state :\n" ^
         State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
            true st)

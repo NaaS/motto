@@ -947,7 +947,10 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           let _, id, st' =
             mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) l 0 st in
           let lnm' = extend_local_names local_name_map Value l id st' in
-          naasty_ty, (st', lnm')) arg_tys in
+          let naasty_ty' =
+            set_empty_identifier naasty_ty
+            |> update_empty_identifier id in
+          naasty_ty', (st', lnm')) arg_tys in
       let channel_types, st'' =
         fold_map ([], st') unidirect_channel chans (*FIXME thread local_name_map*) in
       (List.flatten channel_types @ standard_types, local_name_map, st'') in
@@ -1008,16 +1011,14 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
             arg_tys = n_arg_tys;
             ret_ty = n_res_ty;
             body =
-              (*Initialise table for the inliner.
+              (*Initialise table for the inliner and for variable erasure.
                 Mention the parameters in the initial table*)
               let init_table =
-                if !Config.cfg.Config.disable_inlining then []
-                else
-                  (*Initialise some data that might be needed during the final
-                    passes (inlining and variable erasure)*)
-                  let arg_idxs = List.map (fun x ->
-                    idx_of_naasty_type x
-                    |> the) n_arg_tys in
+                (*Initialise some data that might be needed during the final
+                  passes (inlining and variable erasure)*)
+                let arg_idxs = List.map (fun x ->
+                  idx_of_naasty_type x
+                  |> the) n_arg_tys in
                   Inliner.init_table arg_idxs in
 
               let inlined_body init_table st body =

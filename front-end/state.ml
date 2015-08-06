@@ -167,8 +167,8 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
                 false
               end
             else
-              raise (State_Exc ("Identifier kind in symbol table for '" ^ Debug.stringify x ^
-                        " cannot be undetermined"))
+              raise (State_Exc ("Identifier kind in symbol table for '" ^
+                                Debug.stringify x ^ " cannot be undetermined"))
           else if filter_scope then
             query_kind = Undetermined || query_kind = result_kind
           else if query_kind <> Undetermined && query_kind <> result_kind then
@@ -191,7 +191,11 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
       | _ ->
         if unexceptional then None
         else
-          raise (State_Exc ("Found multiple resolvants for symbol " ^ Debug.stringify id))
+          let ys_s =
+            List.map (fun (_, y, _) -> Debug.stringify_int y) l'
+            |> String.concat ", " in
+          raise (State_Exc ("Found multiple resolvants for symbol " ^
+                            Debug.stringify id ^ ": " ^ ys_s ^ "."))
 
 (*For simplicity (and to defend against the possibility that identifiers and
   type identifiers occupy the same namespace) the lookup is made on both

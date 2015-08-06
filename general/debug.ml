@@ -16,3 +16,7 @@ let print_list indentation l =
 let stringify (x : 'a) : string =
   assert (Obj.tag (Obj.repr x) = Obj.string_tag);
   Obj.magic x
+
+let stringify_int (x : 'a) : string =
+  assert (Obj.tag (Obj.repr x) = Obj.int_tag);
+  string_of_int (Obj.magic x)

@@ -259,11 +259,19 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                                             local_name_map *
                                             state) =
   let check_and_resolve_name st identifier =
-    match lookup_name (Term Undetermined) st identifier with
-    | None ->
-      raise (Translation_Expr_Exc ("Undeclared identifier: " ^ identifier,
-                                   Some e, Some local_name_map, Some sts_acc, st))
-    | Some i -> i in
+    try
+      begin
+        match lookup_name (Term Undetermined) st identifier with
+        | None ->
+          raise (Translation_Expr_Exc ("Undeclared identifier: " ^ identifier,
+                                       Some e, Some local_name_map, Some sts_acc, st))
+        | Some i -> i
+      end
+    with
+    | State_Exc s ->
+      raise (Translation_Expr_Exc ("State_Exc: " ^ s,
+                                   Some e, Some local_name_map, Some sts_acc,
+                                   st)) in
   try
   match e with
   | Variable value_name ->
@@ -843,7 +851,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
        ("Translation error: " ^ msg ^ "\n" ^
         e_s ^
         "local_name_map : " ^ local_name_map_s ^ "\n" ^
-        sts_acc_s ^
+        sts_acc_s ^ "\n" ^
         "state :\n" ^
         State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
           true st')
@@ -902,8 +910,10 @@ let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
       let ty =
         match lookup_symbol_type idx (Term Value)(*all ctxt symbols are term-level*)
                 st' with
-        | None -> failwith ("Couldn't resolve type of ctxt idx " ^
-                            string_of_int idx)
+        | None ->
+          raise (Translation_Expr_Exc ("Couldn't resolve type of ctxt idx " ^
+                             string_of_int idx, Some flick_body,
+                             Some local_name_map, Some init_statmt, st'))
         | Some ty -> ty
       in mk_seq (Declaration (ty, None)) stmt) ctxt' body
   in (body', st')
@@ -934,9 +944,8 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
               raise (Translation_Type_Exc ("Expected type to have label", ty))
             | Some l -> l in
           let naasty_ty, st = naasty_of_flick_type st ty in
-          let id, st' =
-            extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty)
-              ~ty_opt:(Some naasty_ty) l(*"fun_param_"*) in
+          let _, id, st' =
+            mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) l 0 st in
           let lnm' = extend_local_names local_name_map Value l id st' in
           naasty_ty, (st', lnm')) arg_tys in
       let channel_types, st'' =
@@ -999,14 +1008,17 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
             arg_tys = n_arg_tys;
             ret_ty = n_res_ty;
             body =
-              (*Initialise some data that might be needed during the final
-                passes (inlining and variable erasure)*)
-              let arg_idxs = List.map (fun x ->
-                idx_of_naasty_type x
-                |> the) n_arg_tys in
               (*Initialise table for the inliner.
                 Mention the parameters in the initial table*)
-              let init_table = Inliner.init_table arg_idxs in
+              let init_table =
+                if !Config.cfg.Config.disable_inlining then []
+                else
+                  (*Initialise some data that might be needed during the final
+                    passes (inlining and variable erasure)*)
+                  let arg_idxs = List.map (fun x ->
+                    idx_of_naasty_type x
+                    |> the) n_arg_tys in
+                  Inliner.init_table arg_idxs in
 
               let inlined_body init_table st body =
                 if !Config.cfg.Config.disable_inlining then body

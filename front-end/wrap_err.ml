@@ -74,7 +74,7 @@ let wrap (f : 'a -> 'b) (x : 'a) : 'b =
 (*FIXME        "in file " ^ source_file ^ "\n" ^*)
         e_s ^
         "local_name_map : " ^ local_name_map_s ^ "\n" ^
-        sts_acc_s ^
+        sts_acc_s ^ "\n" ^
         "state :\n" ^
         State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
            true st)

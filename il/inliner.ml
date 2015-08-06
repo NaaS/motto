@@ -56,7 +56,7 @@ let rec count_var_references_in_naasty_expr (st : state)
         else entry) table
     else
       raise (Inliner_Exc ("Undeclared variable: " ^ string_of_int no_idx_entries ^
-                " records for the same idx " ^
+                " records for the idx " ^
                 string_of_int idx ^ " -- variable " ^
                 resolve_idx (Term Value) no_prefix (Some st) idx,
               Some st, Some (St_of_E expr)))
@@ -197,7 +197,7 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
         else entry) table
     else
       raise (Inliner_Exc ("Impossible: " ^ string_of_int no_idx_entries ^
-                " records for the same idx " ^
+                " records for the idx " ^
                 string_of_int idx ^ " -- variable " ^
                 resolve_idx (Term Value) no_prefix (Some st) idx,
                Some st, Some stmt))

@@ -280,7 +280,13 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = f
   | Mod (e1,e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") % (" ^
     string_of_naasty_expression ~st_opt e2 ^ ")"
-    
+  | Record_Value fields ->
+    let fields_s =
+      List.map (fun (id, e) ->
+       "." ^ id_name st_opt id ^ " = " ^ string_of_naasty_expression ~st_opt e) fields
+       |> String.concat ", " in
+    "{" ^ fields_s ^ "}"
+
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
           ?print_semicolon:(print_semicolon : bool = true) indent statement =
   let terminal =

@@ -27,28 +27,33 @@ fun Wc_node : (x : type k_v, y : type k_v, z : type k_v) -> ()
 #  let v2 = vs[1]
   let v1 = peek (x)
   let v2 = peek (y)
+
+#  if v1 > v2:
+#    <>
+#  else: <>
+
   if v1.key = 0-1 and v2.key = 0-1: # * i think "-" cannot be prefix
 #    z ! ? x
 #    ? y
     send (z, consume (x))
     consume (y)
-    <>
+#    <>
   else: if v1.key = 0-1:
 #    z ! ? y
     send (z, consume (y))
-    <>
+#    <>
   else: if v2.key = 0-1:
 #    z ! ? x
     send (z, consume (x))
-    <>
+#    <>
   else: if v1.key < v2.key:
 #    z ! ? x
     send (z, consume (x))
-    <>
+#    <>
   else: if v2.key < v1.key:
 #    z ! ? y
     send (z, consume (y))
-    <>
+#    <>
   else:
 #    z ! v1 with value = v1.value + v2.value
 #    send (z, 5) # need record update
@@ -58,7 +63,7 @@ fun Wc_node : (x : type k_v, y : type k_v, z : type k_v) -> ()
     consume (x)
     consume (y)
 
-    # NOTE experimental area
-    #x := y
-    let v = x
-    <> #x # FIXME should be <>
+#    # NOTE experimental area
+#    #x := y
+#    let v = x
+#    <> #x # FIXME should be <>

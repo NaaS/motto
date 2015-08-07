@@ -55,11 +55,20 @@ let rec count_var_references_in_naasty_expr (st : state)
           { entry with ref_count = entry.ref_count + 1 }
         else entry) table
     else
-      raise (Inliner_Exc ("Undeclared variable: " ^ string_of_int no_idx_entries ^
-                " records for the idx " ^
-                string_of_int idx ^ " -- variable '" ^
-                resolve_idx (Term Undetermined) no_prefix (Some st) idx ^ "'",
-              Some st, Some (St_of_E expr)))
+      (*It's OK for something to have 0 references, as long as it's of
+        the right identifier_kind: Field, say.*)
+      let label = resolve_idx (Term Undetermined) no_prefix (Some st) idx in
+      let md =
+        match lookup_term_data (Term Undetermined) st.term_symbols label with
+        | None -> failwith "Impossible"
+        | Some (_, md) -> md in
+      if ik_is_field md.identifier_kind then table
+      else
+        raise (Inliner_Exc ("Undeclared variable: " ^
+                            string_of_int no_idx_entries ^
+                            " records for the idx " ^
+                            string_of_int idx ^ " -- variable '" ^ label ^ "'",
+                            Some st, Some (St_of_E expr)))
 
   | Int_Value _
   | Bool_Value _ -> table

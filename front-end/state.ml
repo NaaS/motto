@@ -40,6 +40,10 @@ let string_of_identifier_kind ?summary_types:(summary_types : bool = false) = fu
   | Channel_Name -> "Channel_Name"
   | Map_Name -> "Map_Name"
 
+let ik_is_field = function
+  | Field _ -> true
+  | _ -> false
+
 type term_symbol_metadata =
   {
     source_type : type_value option;

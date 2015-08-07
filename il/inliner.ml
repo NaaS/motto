@@ -87,6 +87,9 @@ let rec count_var_references_in_naasty_expr (st : state)
   | Call_Function (_ (*ignore function identifier*), exprs) ->
     List.fold_right (fun expr acc ->
       count_var_references_in_naasty_expr st expr acc) exprs table
+  | Record_Value fields ->
+    List.fold_right (fun (_, e) table_acc ->
+      count_var_references_in_naasty_expr st e table_acc) fields table
 
 let rec count_var_references_in_naasty_stmt (st : state)
   (stmt : naasty_statement) (table : inliner_table_entry list) : inliner_table_entry list =
@@ -292,6 +295,9 @@ let rec naasty_expression_weight = function
     naasty_expression_weight e2 + 1
   | Call_Function (_, exprs) ->
     List.fold_right (fun expr acc -> acc + naasty_expression_weight expr) exprs 1
+  | Record_Value fields ->
+    List.fold_right (fun (_, e) weight_acc ->
+      naasty_expression_weight e + weight_acc) fields 1
 
 let inliner_table_entry_weight entry =
   bind_opt naasty_expression_weight 0 entry.initialisation +
@@ -374,6 +380,9 @@ let rec free_vars (expr : naasty_expression) (acc : Identifier_Set.t) : Identifi
   | Field_In_Record (e1, e2)
   | LEq (e1, e2) ->
     List.fold_right free_vars [e1; e2] acc
+  | Record_Value fields ->
+    List.fold_right (fun (_, e) acc ->
+      free_vars e acc) fields acc
 
 let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_expression =
   let unary_op_inst e f = f (subst_expr subst e) in
@@ -407,6 +416,10 @@ let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_ex
   | Field_In_Record (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Field_In_Record (e1', e2'))
   | Address_of e -> unary_op_inst e (fun e' -> Address_of e')
   | LEq (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> LEq (e1', e2'))
+  | Record_Value fields ->
+    let fields' = List.map (fun (i, e) ->
+      (i, subst_expr subst e)) fields in
+    Record_Value fields'
 
 let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = false)
           (subst : substitution) (stmt : naasty_statement) : naasty_statement =

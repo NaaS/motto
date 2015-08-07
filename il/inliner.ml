@@ -57,8 +57,8 @@ let rec count_var_references_in_naasty_expr (st : state)
     else
       raise (Inliner_Exc ("Undeclared variable: " ^ string_of_int no_idx_entries ^
                 " records for the idx " ^
-                string_of_int idx ^ " -- variable " ^
-                resolve_idx (Term Undetermined) no_prefix (Some st) idx,
+                string_of_int idx ^ " -- variable '" ^
+                resolve_idx (Term Undetermined) no_prefix (Some st) idx ^ "'",
               Some st, Some (St_of_E expr)))
 
   | Int_Value _

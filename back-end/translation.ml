@@ -719,7 +719,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         tuple_instance_idx :: ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
-        st')
+        st''')
 
   | TypeAnnotation (e, _) ->
     (*NOTE could translate this into an explicit type-case, using the second

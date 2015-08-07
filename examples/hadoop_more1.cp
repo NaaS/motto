@@ -11,13 +11,13 @@ type k_v : record
 
 #fun peek : (type k_v/- c) -> (type k_v)
 #  ? c # should be a peek -- not a receive
-fun peek : (c : type k_v) -> (type k_v)
-  c
-fun send : (c : type k_v, x : type k_v) -> ()
-  c
-  x # FIXME
-fun consume : (c : type k_v) -> (type k_v)
-  c
+fun peek : (c''' : type k_v) -> (type k_v)
+  c'''
+fun send : (c'' : type k_v, x' : type k_v) -> ()
+  c''
+  x' # FIXME
+fun consume : (c' : type k_v) -> (type k_v)
+  c'
 
 #fun Wc_node : (type k_v/- x, type k_v/- y, -/type k_v z) -> ()
 fun Wc_node : (x : type k_v, y : type k_v, z : type k_v) -> ()
@@ -32,20 +32,23 @@ fun Wc_node : (x : type k_v, y : type k_v, z : type k_v) -> ()
 #    ? y
     send (z, consume (x))
     consume (y)
-
+    <>
   else: if v1.key = 0-1:
 #    z ! ? y
     send (z, consume (y))
+    <>
   else: if v2.key = 0-1:
 #    z ! ? x
     send (z, consume (x))
-
+    <>
   else: if v1.key < v2.key:
 #    z ! ? x
     send (z, consume (x))
+    <>
   else: if v2.key < v1.key:
 #    z ! ? y
     send (z, consume (y))
+    <>
   else:
 #    z ! v1 with value = v1.value + v2.value
 #    send (z, 5) # need record update
@@ -54,4 +57,8 @@ fun Wc_node : (x : type k_v, y : type k_v, z : type k_v) -> ()
 #    ? y
     consume (x)
     consume (y)
-    x # FIXME should be <>
+
+    # NOTE experimental area
+    #x := y
+    let v = x
+    <> #x # FIXME should be <>

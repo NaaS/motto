@@ -600,8 +600,14 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (*Translate each function argument as an expression.*)
     let (result_indices, sts_acc', ctxt_acc', _, st') =
       List.fold_right (fun (e, ty) (result_indices, sts_acc, ctxt_acc, assign_acc, st) ->
-        let (naasty_ty, st') = naasty_of_flick_type st ty in
-        let (_, e_result_idx, st'') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "funarg_" 0 st' in
+        let (naasty_ty, st') =
+          naasty_of_flick_type st ty
+             (*We need to do this step otherwise the variable will get declared
+               with the name of the formal parameter, when we want it declared
+               with the name of the fresh variable that we create next.*)
+          |> apfst Naasty_aux.set_empty_identifier in
+        let (_, e_result_idx, st'') =
+          mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "funarg_" 0 st' in
         let (sts_acc', ctxt_acc', assign_acc', _, st''') =
           naasty_of_flick_expr st'' e local_name_map sts_acc (e_result_idx :: ctxt_acc)
             [e_result_idx] in

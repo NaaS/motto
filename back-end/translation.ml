@@ -695,7 +695,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         Record_Type (tuple_instance_ty_idx, component_tys) in
     let (_, tuple_instance_idx, st'') =
       update_symbol_type tuple_instance_ty_idx tuple_instance_ty Type st'
-      |> mk_fresh (Term Value) ~ty_opt:(Some tuple_instance_ty) "tuple_" 0 in
+      |> mk_fresh (Term Value)
+           ~ty_opt:(Some (UserDefined_Type (None, tuple_instance_ty_idx))) "tuple_" 0 in
 
     (*NOTE this bit is similar to part of Function_Call*)
     let (result_indices, sts_acc', ctxt_acc', _, st''') =
@@ -722,7 +723,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       |> Naasty_aux.concat
     in (Naasty_aux.concat [sts_acc'; tuple; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
-        tuple_instance_idx :: ctxt_acc',
+        tuple_instance_idx :: (*tuple_instance_ty_idx :: FIXME tuple type
+                                declaration isn't being included anywhere*) ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
         st''')

@@ -192,7 +192,7 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
         if unexceptional then None
         else
           let ys_s =
-            List.map (fun (_, y, _) -> Debug.stringify_int y) l'
+            List.map (fun (_, y, _) -> Debug.stringify y) l'
             |> String.concat ", " in
           raise (State_Exc ("Found multiple resolvants for symbol " ^
                             Debug.stringify id ^ ": " ^ ys_s ^ "."))

@@ -14,9 +14,8 @@ let print_list indentation l =
   type. I use it in instances when x is already a string, so the runtime system
   shouldn't have to do anything.*)
 let stringify (x : 'a) : string =
-  assert (Obj.tag (Obj.repr x) = Obj.string_tag);
-  Obj.magic x
-
-let stringify_int (x : 'a) : string =
-  assert (Obj.tag (Obj.repr x) = Obj.int_tag);
-  string_of_int (Obj.magic x)
+  if Obj.tag (Obj.repr x) = Obj.string_tag then
+    Obj.magic x
+  else if Obj.tag (Obj.repr x) = Obj.int_tag then
+    string_of_int (Obj.magic x)
+  else failwith "stringify over unknown type"

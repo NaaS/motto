@@ -617,12 +617,20 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let result_indices = List.rev result_indices in
 
     let parameters = List.map (fun x -> Var x)(*whither eta?*) result_indices in
+
     let translated =
-      try_local_name function_name local_name_map
-      |> check_and_resolve_name st'
-      |> (fun x -> Call_Function (x, parameters))
-      |> lift_assign assign_acc
-      |> Naasty_aux.concat
+      let translated_expression =
+        try_local_name function_name local_name_map
+        |> check_and_resolve_name st'
+        |> (fun x -> Call_Function (x, parameters)) in
+      (*In case assign_acc = [], we still want the function to be called,
+        otherwise we'll get bugs because programmer-intended side-effects
+        don't get done.*)
+      if assign_acc = [] then
+        St_of_E translated_expression
+      else
+        lift_assign assign_acc translated_expression
+        |> Naasty_aux.concat
     in (mk_seq sts_acc' translated, ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,

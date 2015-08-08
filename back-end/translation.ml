@@ -612,7 +612,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
           naasty_of_flick_expr st'' e local_name_map sts_acc (e_result_idx :: ctxt_acc)
             [e_result_idx] in
         (e_result_idx :: result_indices, sts_acc', ctxt_acc', assign_acc', st'''))
-        (List.combine arg_expressions arg_tys) ([], sts_acc, ctxt_acc, assign_acc, st) in
+        (List.combine arg_expressions arg_tys |> List.rev)
+        ([], sts_acc, ctxt_acc, assign_acc, st) in
     let result_indices = List.rev result_indices in
 
     let parameters = List.map (fun x -> Var x)(*whither eta?*) result_indices in

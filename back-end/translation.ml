@@ -250,6 +250,9 @@ let extend_local_names (local_name_map : local_name_map) (ik : identifier_kind)
              possibly extended local_name_map, (this is extended by LocalDef)
              possibly extended st
 *)
+(*FIXME fix the lift_assign idiom, to make sure that if assign_acc=[] then we
+        still get the expression evaluated, since we potentially have
+        side-effects in sub-expressions.*)
 let rec naasty_of_flick_expr (st : state) (e : expression)
           (local_name_map : local_name_map)
           (sts_acc : naasty_statement) (ctxt_acc : identifier list)

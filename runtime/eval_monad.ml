@@ -101,7 +101,7 @@ and evaluate_em normalise (m : eval_monad) st ctxt : eval_monad * runtime_ctxt =
 and run normalise st ctxt (work_list : work_item list)
    : finished_work_item list * work_item list * runtime_ctxt =
   List.fold_right (fun (name, m) (el, wl, ctxt) ->
-    if !Config.cfg.Config.debug then
+    if !Config.cfg.Config.verbosity > 0 then
       print_endline ("Running " ^ name ^ ": " ^ evalm_to_string m);
     match m with
     | Value e ->
@@ -134,7 +134,7 @@ and run normalise st ctxt (work_list : work_item list)
 
 (*Iterate on the work-list until everything's been evaluated*)
 and run_until_done normalise st ctxt (work_list : work_item list) results =
-  if !Config.cfg.Config.debug then
+  if !Config.cfg.Config.verbosity > 0 then
     begin
     print_endline ("work_list:" ^
                    Debug.print_list "  " (List.map (fun (name, m) ->

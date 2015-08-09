@@ -21,7 +21,7 @@ type configuration =
     disable_inlining : bool;
     (*Disable the erasure of declarations and assignments of unread variables*)
     disable_var_erasure : bool;
-    debug : bool;
+    verbosity : int;
     parser_test_files : string list;
     parser_test_dirs : string list;
     translate : bool; (*FIXME this is a crude flag indicating whether we want to
@@ -50,7 +50,7 @@ let cfg : configuration ref = ref {
   include_directories = [];
   disable_inlining = false;
   disable_var_erasure = false;
-  debug = false;
+  verbosity = 0;
   parser_test_files = [];
   parser_test_dirs = [];
   translate = false;

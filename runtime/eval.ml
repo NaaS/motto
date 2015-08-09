@@ -507,7 +507,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
               Crisp_syntax_aux.subst_var v arg body)
               (List.combine formal_arg_names normal_arg_es) body in
 
-          if !Config.cfg.Config.debug then
+          if !Config.cfg.Config.verbosity > 0 then
             begin
               print_endline "Function application. Arguments:";
               List.combine formal_arg_names normal_arg_es

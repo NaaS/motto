@@ -242,7 +242,7 @@ let front_end ?st:(st : state = initial_state) (cfg : Config.configuration ref) 
   |> apfst check_distinct_parameter_names
   |> apsnd split_declaration_kinds
   |> (fun ((st, p) as data) ->
-    (if !Config.cfg.Config.debug then
+    (if !Config.cfg.Config.verbosity > 0 then
        State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types) true st
        |> print_endline;
        data))

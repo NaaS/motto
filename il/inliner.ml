@@ -490,7 +490,8 @@ let rec inline_substvars_in_subst ?st_opt:(st_opt : state option = None) (subst_
        let is_ground =
          Identifier_Set.exists (fun ident ->
            List.exists (fun (id', _) ->
-             (if !Config.cfg.Config.debug then print_endline (string_of_int id' ^ " ?= " ^ string_of_int ident);
+             (if !Config.cfg.Config.verbosity > 1 then
+                print_endline (string_of_int id' ^ " ?= " ^ string_of_int ident);
               id' = ident)) (rest @ subst_acc))
            (free_vars definiens Identifier_Set.empty)
          |> not in
@@ -499,7 +500,7 @@ let rec inline_substvars_in_subst ?st_opt:(st_opt : state option = None) (subst_
            if is_ground then definiens
            else subst_expr (rest @ subst_acc) definiens in
          let _ =
-           if !Config.cfg.Config.debug then
+           if !Config.cfg.Config.verbosity > 1 then
              print_endline ("def " ^ string_of_int id ^ " " ^
                             string_of_bool is_ground ^ " : " ^
                             string_of_naasty_expression ~st_opt definiens ^ " ~~> " ^
@@ -560,7 +561,7 @@ let mk_subst st init_table body =
     |> variables_to_be_inlined
     |> List.sort inliner_table_entry_order in
   let _ =
-    if !Config.cfg.Config.debug then
+    if !Config.cfg.Config.verbosity > 0 then
       List.iter (fun entry ->
         inliner_table_entry_to_string ~st_opt:(Some st) entry
         |> print_endline) table
@@ -569,13 +570,15 @@ in
   |> (fun subst ->
         subst_to_string ~st_opt:(Some st) subst
         |> (fun s ->
-          if !Config.cfg.Config.debug then print_endline ("Pre-substitution: " ^ s));
+          if !Config.cfg.Config.verbosity > 0 then
+            print_endline ("Pre-substitution: " ^ s));
         List.rev subst)
   |> inline_substvars_in_subst ~st_opt:(Some st) []
   |> (fun subst ->
         subst_to_string ~st_opt:(Some st) subst
         |> (fun s ->
-          if !Config.cfg.Config.debug then print_endline ("Substitution: " ^ s));
+          if !Config.cfg.Config.verbosity > 0 then
+            print_endline ("Substitution: " ^ s));
         subst)
 
 let mk_erase_ident_list st init_table body : identifier list =

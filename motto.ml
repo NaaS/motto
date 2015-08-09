@@ -54,7 +54,9 @@ let rec param_table : param_entry list =
     { key = "--debug_output";
       parameter_desc = "";
       action = (fun () ->
-        cfg := { !cfg with debug = true });
+        if !cfg.verbosity < 1 then
+          (*FIXME there isn't yet a compiler switch to get more verbose output*)
+          cfg := { !cfg with verbosity = 1; });
       desc = "Show lots of internal information during compilation";};
     { key = "-q";
       parameter_desc = "";

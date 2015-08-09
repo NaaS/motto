@@ -16,13 +16,14 @@ let write_files (ol : output_location) (file_contents : (string * string) list) 
       begin
         match dir with
           _ when Sys.file_exists dir && not (Sys.is_directory dir) ->
-          print_endline (dir ^ " already exists, and is not a directory, printing to stdout");
+          print_endline (dir ^ " already exists, and is not a directory. Printing to stdout");
           Stdout
         | _ when Sys.file_exists dir ->
           begin
-            print_string ("directory " ^ dir ^ " already exists, overwrite files in it [Y/n]?");
+            print_string ("Directory " ^ dir ^
+                          " already exists. Overwrite files in it [y/N]?");
             match read_line () with
-              "Y" | "y" | "" -> Directory dir
+              "Y" | "y" -> Directory dir
             | _ -> Stdout
           end
         | _ ->

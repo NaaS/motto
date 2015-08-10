@@ -449,10 +449,16 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
               | None ->
                 (*FIXME give more info*)
                 let ty_s = type_value_to_string true false min_indentation ty in
-                raise (Type_Inference_Exc ("Expected type to be labelled: " ^ ty_s ^ " within " ^ record_ty_s, e, st))
+                raise (Type_Inference_Exc ("Expected type to be labelled: " ^
+                                           ty_s ^ " within " ^ record_ty_s, e, st))
               | Some lbl ->
                 lbl = label &&
-                (forget_label field_ty = forget_label ty || field_ty = Undefined)) field_tys in
+                (*FIXME using forget_type_annotation might be too aggressive.
+                    perhaps a better approach would be to match on type
+                    annotations first, rather than ignore them.*)
+                (forget_type_annotation (forget_label field_ty) =
+                 forget_type_annotation (forget_label ty) ||
+                 field_ty = Undefined)) field_tys in
           if not field_exists_in_record then
             raise (Type_Inference_Exc ("Label '" ^ label ^
                                        "' doesn't belong to a field in record", e, st))

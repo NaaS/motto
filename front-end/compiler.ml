@@ -91,7 +91,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
             Naasty_aux.extend_scope_unsafe (Term Function_Name) st ~ty_opt:None(*FIXME put function's type here?*)
                               fn_name
           else
-            failwith ("Function name " ^ fn_name ^ " isn't fresh.") in
+            failwith ("Function name '" ^ fn_name ^ "' isn't fresh.") in
 
         let _ =
           let ((chans, arg_tys), ret_tys) =
@@ -111,7 +111,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
               failwith ("Types don't check in function '" ^ fn_name ^ "'. Expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
         (*NOTE order of declarations isn't preserved within term_symbols*)
         st'
-      | Some (_, _) -> failwith ("Function " ^ fn_name ^ " declared more than once")
+      | Some (_, _) -> failwith ("Function '" ^ fn_name ^ "' declared more than once")
       end
     | Type {type_name; type_value} ->
       let st' =
@@ -123,7 +123,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
               if Naasty_aux.is_fresh name st then
                 Naasty_aux.extend_scope_unsafe (Term ik) st ~src_ty_opt:(Some ty) ~ty_opt:None name
               else
-                failwith ("Constant " ^ name ^ " isn't fresh.") in
+                failwith ("Constant '" ^ name ^ "' isn't fresh.") in
             (*NOTE order of declarations isn't preserved within term_symbols*)
             st') consts st in
       let nst_ty, st'' =
@@ -154,7 +154,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
               ~ty_opt:None(*FIXME put process's type here?*)
                               process_name
           else
-            failwith ("Process name " ^ process_name ^ " isn't fresh.") in
+            failwith ("Process name '" ^ process_name ^ "' isn't fresh.") in
 
         let _ =
           let ((chans, arg_tys), ret_tys) =
@@ -172,7 +172,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
               failwith ("Types don't check in process '" ^ process_name ^ "'. Expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
         (*NOTE order of declarations isn't preserved within term_symbols*)
         st'
-      | Some (_, _) -> failwith ("Process " ^ process_name ^ " declared more than once")
+      | Some (_, _) -> failwith ("Process '" ^ process_name ^ "' declared more than once")
       end
 
 
@@ -227,7 +227,7 @@ let check_distinct_parameter_names (st : state) : state =
         | Some label ->
           if List.exists (fun lbl -> lbl = label) acc then
             (*This is the problem that this analysis is designed to catch.*)
-            failwith (thing ^ " " ^ function_name ^ " has two parameters called " ^ label)
+            failwith (thing ^ " '" ^ function_name ^ "' has two parameters called '" ^ label ^ "'.")
           else label :: acc) (channel_names @ arg_names) [])) st.crisp_funs
     end
   in st

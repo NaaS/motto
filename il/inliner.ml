@@ -554,17 +554,23 @@ let rec erase_vars (stmt : naasty_statement) (idents : identifier list) : naasty
     If1 (cond, stmt'')
   | _ -> stmt
 
+let table_to_string st table : string =
+  List.map (fun entry ->
+    inliner_table_entry_to_string ~st_opt:(Some st) entry) table
+  |> Debug.print_list "  "(*FIXME const*)
+
 let mk_subst st init_table body =
   let table =
     inliner_analysis st body [] init_table
     |> count_var_references_in_naasty_stmt st body
     |> variables_to_be_inlined
     |> List.sort inliner_table_entry_order in
+
   let _ =
     if !Config.cfg.Config.verbosity > 0 then
-      List.iter (fun entry ->
-        inliner_table_entry_to_string ~st_opt:(Some st) entry
-        |> print_endline) table
+      table_to_string st table
+      |> (fun s -> print_endline ("Inliner table:" ^ s))
+
 in
   inliner_to_subst table
   |> (fun subst ->

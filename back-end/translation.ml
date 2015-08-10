@@ -1041,6 +1041,11 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                   |> the) n_arg_tys in
                   Inliner.init_table arg_idxs in
 
+              let _ =
+                if !Config.cfg.Config.verbosity > 0 then
+                  Inliner.table_to_string st5 init_table
+                  |> (fun s -> print_endline ("Initial inliner table:" ^ s)) in
+
               let inlined_body init_table st body =
                 if !Config.cfg.Config.disable_inlining then body
                 else

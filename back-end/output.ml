@@ -20,8 +20,8 @@ let write_files (ol : output_location) (file_contents : (string * string) list) 
           Stdout
         | _ when Sys.file_exists dir ->
           begin
-            print_string ("Directory " ^ dir ^
-                          " already exists. Overwrite files in it [y/N]?");
+            print_string ("Directory '" ^ dir ^
+                          "' already exists. Overwrite files in it [y/N]?");
             match read_line () with
               "Y" | "y" -> Directory dir
             | _ -> Stdout

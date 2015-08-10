@@ -15,7 +15,7 @@ fun peek : (c''' : type k_v) -> (type k_v)
   c'''
 fun send : (c'' : type k_v, x' : type k_v) -> ()
   c''
-  x' # FIXME
+  <> #x' # FIXME
 fun consume : (c' : type k_v) -> (type k_v)
   c'
 
@@ -37,7 +37,7 @@ fun Wc_node : (x : type k_v, y : type k_v, z : type k_v) -> ()
 #    ? y
     send (z, consume (x))
     consume (y)
-#    <>
+    <>
   else: if v1.key = 0-1:
 #    z ! ? y
     send (z, consume (y))
@@ -62,8 +62,9 @@ fun Wc_node : (x : type k_v, y : type k_v, z : type k_v) -> ()
 #    ? y
     consume (x)
     consume (y)
+    <>
 
 #    # NOTE experimental area
 #    #x := y
 #    let v = x
-#    <> #x # FIXME should be <>
+  <> #x # FIXME should be <>

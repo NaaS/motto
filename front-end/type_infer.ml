@@ -454,7 +454,8 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
                 lbl = label &&
                 (forget_label field_ty = forget_label ty || field_ty = Undefined)) field_tys in
           if not field_exists_in_record then
-            raise (Type_Inference_Exc ("Label " ^ label ^ " doesn't belong to a field in record", e, st))
+            raise (Type_Inference_Exc ("Label '" ^ label ^
+                                       "' doesn't belong to a field in record", e, st))
         | _ ->
           (*FIXME give more info*)
           raise (Type_Inference_Exc ("Expected record type", e, st)) in

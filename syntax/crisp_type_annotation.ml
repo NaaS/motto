@@ -36,6 +36,7 @@ type type_annotation_kind =
   | Ann_BinaryExp of type_annotation_op * type_annotation_kind * type_annotation_kind
 
 type type_annotation = (string * type_annotation_kind) list
+let empty_type_annotation : type_annotation = []
 
 let hadoop_vint_ann_key = "hadoop_vint"
 let true_ann_value = Ann_Ident "true"

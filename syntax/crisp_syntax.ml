@@ -686,3 +686,28 @@ let rec forget_label (ty : type_value) =
   | Undefined
   | ChanType _
   | IPv4Address _ -> ty
+
+(*Erases type annotation, making it easier to compare two types.
+  NOTE you might need to erase or match type label values too.*)
+let rec forget_type_annotation (ty : type_value) =
+  match ty with
+  | String (label_opt, _) -> String (label_opt, empty_type_annotation)
+  | Integer (label_opt, _) -> Integer (label_opt, empty_type_annotation)
+  | Boolean (label_opt, _) -> Boolean (label_opt, empty_type_annotation)
+  | RecordType (label_opt, tys, _) ->
+    (*NOTE we must not erase field names, so we don't recurse on tys*)
+    RecordType (label_opt, tys, empty_type_annotation)
+  | List (label_opt, ty, dep_idx_opt, _) ->
+    List (label_opt, forget_type_annotation ty, dep_idx_opt, empty_type_annotation)
+  | Tuple (label_opt, tys) ->
+    Tuple (label_opt, List.map forget_type_annotation tys)
+  | Dictionary (label_opt, idx_ty, ty) ->
+    Dictionary (label_opt, forget_type_annotation idx_ty, forget_type_annotation ty)
+  | Reference (label_opt, ty) ->
+    Reference (label_opt, forget_type_annotation ty)
+  | UserDefinedType (_, _)
+  | Disjoint_Union (_, _) (*NOTE we must not erase field names, so we don't recurse on tys*)
+  | Empty
+  | Undefined
+  | ChanType _
+  | IPv4Address _ -> ty

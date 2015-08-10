@@ -1056,11 +1056,17 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                   (*Do the inlining*)
                   |> Inliner.subst_stmt subst in
 
-              let var_erased_body init_table st body =
+              (*Iteratively delete variables that are never read, but
+                don't delete what's assigned to them if it may contain
+                side-effects*)
+              let rec var_erased_body init_table st body =
                 if !Config.cfg.Config.disable_var_erasure then body
                 else
-                  Inliner.mk_erase_ident_list st init_table body
-                  |> Inliner.erase_vars body
+                  let body' =
+                    Inliner.mk_erase_ident_list st init_table body
+                    |> Inliner.erase_vars body in
+                  if body = body' then body
+                  else var_erased_body init_table st body'
 
               in
                 inlined_body init_table st5 body''

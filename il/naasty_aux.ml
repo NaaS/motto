@@ -822,3 +822,46 @@ let rec nested_fields (field_idents : identifier list) : naasty_expression =
     Field_In_Record (Dereference record, Var field)
   | _ ->
     failwith "There needs to be at least one record and one field: field_idents needs to contain at least two items."
+
+(*Checks if an expression contains a Functor_App. This is used by the inliner
+  to avoid removing function applications, in case we're relying on their
+  side-effects.
+  NOTE a better approach would involve checking inside those functions to
+       see whether we might actually have side-effects.
+*)
+let rec contains_functor_app : naasty_expression -> bool = function
+  | Call_Function (_, _) -> true
+  | Var _
+  | Int_Value _
+  | Char_Value _
+  | Bool_Value _
+  | PeekChan _ -> false
+  | Array_Value es ->
+    List.fold_right (fun e acc ->
+      acc || contains_functor_app e) es false
+  | Record_Value fields ->
+    List.fold_right (fun (_, e) acc ->
+      acc || contains_functor_app e) fields false
+  | Union_Value (_, e)
+  | Not e
+  | Abs e
+  | Dereference e
+  | Address_of e
+  | Cast (_, e) -> contains_functor_app e
+  | And (e1, e2)
+  | Or (e1, e2)
+  | Plus (e1, e2)
+  | Equals (e1, e2)
+  | Lt (e1, e2)
+  | Minus (e1, e2)
+  | Times (e1, e2)
+  | Mod (e1, e2)
+  | Quotient (e1, e2)
+  | GEq (e1, e2)
+  | Gt (e1, e2)
+  | Field_In_Record (e1, e2)
+  | LEq (e1, e2)
+  | ArrayElement (e1, e2)
+  | Left_shift (e1, e2)
+  | Right_shift (e1, e2) ->
+    contains_functor_app e1 || contains_functor_app e2

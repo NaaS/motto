@@ -540,8 +540,18 @@ let rec erase_vars (stmt : naasty_statement) (idents : identifier list) : naasty
     end
   | Seq (stmt1, stmt2) ->
     mk_seq (erase_vars stmt1 idents) (erase_vars stmt2 idents)
-  | Assign (Var id, _) ->
-    if List.mem id idents then Skip else stmt
+  | Assign (Var id, e) ->
+    if List.mem id idents then
+      match e with
+      | Var _ -> Skip
+      | _ ->
+        (*As an overapproximation, retain any expressions containing function
+          calls in case they include side-effects*)
+        (*FIXME include other side-effecting primitives, such as anything that
+                involves static variables or channels*)
+        if contains_functor_app e then St_of_E e
+        else Skip
+    else stmt
   | For ((ty, cond, inc), body) ->
     let body' = erase_vars body idents in
     For ((ty, cond, inc), body')

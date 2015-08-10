@@ -31,7 +31,11 @@ let expand_includes (include_directories : string list) (p : Crisp_syntax.progra
 (*blob here is either function or process, as long as they both return a single
   thing. in the case of process it doesn't matter, since nothing is ever returned*)
 let type_check_blob (st : State.state) (chans : channel list)
-      (args : type_value list) (ret : type_value) (pb : process_body) : (bool * (type_value * type_value)) =
+      (args : type_value list) (ret : type_value) (pb : process_body) :
+  (bool(*true if type-check succeeds*) *
+   (*if type check fails, then this pair of types specifies what was expected
+     and what was found instead*)
+   (type_value * type_value)) =
   let st' =
     List.fold_right (fun ((Channel (ct, name)) : channel) (st : state) ->
         let scope = Term Channel_Name in
@@ -104,7 +108,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
             | (false, (expected_ty, actual_ty)) ->
               let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
               let actual_ty_s = type_value_to_string true false min_indentation actual_ty in
-              failwith ("Types don't check in " ^ fn_name ^ " expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
+              failwith ("Types don't check in function '" ^ fn_name ^ "'. Expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
         (*NOTE order of declarations isn't preserved within term_symbols*)
         st'
       | Some (_, _) -> failwith ("Function " ^ fn_name ^ " declared more than once")
@@ -165,7 +169,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
             | (false, (expected_ty, actual_ty)) ->
               let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
               let actual_ty_s = type_value_to_string true false min_indentation actual_ty in
-              failwith ("Types don't check in " ^ process_name ^ " expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
+              failwith ("Types don't check in process '" ^ process_name ^ "'. Expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
         (*NOTE order of declarations isn't preserved within term_symbols*)
         st'
       | Some (_, _) -> failwith ("Process " ^ process_name ^ " declared more than once")

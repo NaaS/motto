@@ -71,7 +71,10 @@ let rec count_var_references_in_naasty_expr (st : state)
                             Some st, Some (St_of_E expr)))
 
   | Int_Value _
-  | Bool_Value _ -> table
+  | Bool_Value _
+  | PeekChan _ ->
+    (*NOTE i'm assuming that channels will be ignored by this analysis*)
+    table
   | Not e
   | Abs e
   | Dereference e
@@ -134,6 +137,12 @@ let rec count_var_references_in_naasty_stmt (st : state)
   | Continue
   | Skip -> table
   | Commented (stmt, _) -> count_var_references_in_naasty_stmt st stmt table
+
+  (*Channel-related statements.
+    NOTE i'm assuming that channels will be ignored by this analysis*)
+  | WriteToChan (_, _)
+  | ConsumeChan _
+  | ForwardChan (_, _) -> table
 
 let inliner_table_entry_to_string ?st_opt:((st_opt : state option) = None)
       (entry : inliner_table_entry) =
@@ -429,6 +438,8 @@ let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_ex
     let fields' = List.map (fun (i, e) ->
       (i, subst_expr subst e)) fields in
     Record_Value fields'
+  (*FIXME i'm assuming that there is nothing to substitute for in channel statements*)
+  | PeekChan _ -> expr
 
 let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = false)
           (subst : substitution) (stmt : naasty_statement) : naasty_statement =
@@ -471,6 +482,12 @@ let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = false)
     If1 (cond', stmt'')
   | Return e_opt ->
     Return (bind_opt (fun e -> Some (subst_expr subst e)) None e_opt)
+
+  (*FIXME i'm assuming that there is nothing to substitute for in channel statements*)
+  | WriteToChan (_, _)
+  | ConsumeChan _
+  | ForwardChan (_, _) -> stmt
+
   | _ ->
     raise (Inliner_Exc ("Unsupported subst to inline: " ^
               string_of_naasty_statement no_indent stmt, None, Some stmt))

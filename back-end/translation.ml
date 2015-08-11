@@ -842,6 +842,16 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
    Receive
    Exchange
 *)
+  | Receive (channel_inverted, channel_identifier) -> (*FIXME incorrect!*)
+    (*FIXME add "te" declaration, unless it already exists in ctxt_acc*)
+    let translated = ConsumeChan 0
+    in (Naasty_aux.concat [sts_acc; translated],
+        (*add declaration for the fresh name we have for this tuple instance*)
+        ctxt_acc,
+        [](*Having assigned to assign_accs, we can forget them.*),
+        local_name_map,
+        st)
+
   | _ -> raise (Translation_Expr_Exc ("TODO: " ^ expression_to_string no_indent e,
                                       Some e, Some local_name_map, Some sts_acc, st))
   with

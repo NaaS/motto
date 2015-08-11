@@ -842,7 +842,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
    Receive
    Exchange
 *)
-(*  | _ -> raise (Translation_expr ("TODO: " ^ expression_to_string no_indent e, e))*)
+  | _ -> raise (Translation_Expr_Exc ("TODO: " ^ expression_to_string no_indent e,
+                                      Some e, Some local_name_map, Some sts_acc, st))
   with
   | Translation_Expr_Exc (msg, e_opt, lnm_opt, sts_acc_opt, st') ->
     (*FIXME code based on that in Wrap_err*)

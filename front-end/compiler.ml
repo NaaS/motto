@@ -243,6 +243,7 @@ let front_end ?st:(st : state = initial_state) (cfg : Config.configuration ref) 
   expand_includes !cfg.Config.include_directories program
   |> selfpair
   |> apfst (collect_decl_info st)
+  |> apfst build_graph 
   |> apfst check_distinct_parameter_names
   |> apsnd split_declaration_kinds
   |> (fun ((st, p) as data) ->

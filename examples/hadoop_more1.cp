@@ -20,7 +20,7 @@ fun consume : (c' : type k_v) -> (type k_v)
   c'
 
 #fun Wc_node : (type k_v/- x, type k_v/- y, -/type k_v z) -> ()
-fun Wc_node : (x : type k_v, y : type k_v, z : type k_v) -> ()
+fun Wc_node : (type k_v/- chan; x : type k_v, y : type k_v, z : type k_v) -> ()
   # Instead of "vs" could have pattern matching, to give v1 and v2
 #  let vs = peek_all () #([x, y])
 #  let v1 = vs[0] # * check if can project from lists like this
@@ -34,7 +34,7 @@ fun Wc_node : (x : type k_v, y : type k_v, z : type k_v) -> ()
 
   if v1.key = 0-1 and v2.key = 0-1: # * i think "-" cannot be prefix
 #    z ! ? x
-#    ? y
+    ? chan 
     send (z, consume (x))
     consume (y)
     <>

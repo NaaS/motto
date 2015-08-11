@@ -842,9 +842,15 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
    Receive
    Exchange
 *)
-  | Receive (channel_inverted, channel_identifier) -> (*FIXME incorrect!*)
+  | Receive (channel_inverted, channel_identifier) -> 
     (*FIXME add "te" declaration, unless it already exists in ctxt_acc*)
-    let translated = ConsumeChan 0
+    let (chan_name,_) = channel_identifier in 
+    let real_name = chan_name ^ "_receive_0" in  (*FIXME hack because channel nname is wrong*)
+    let chan_id = lookup_name (Term (*Channel_Name*) Value) st real_name in
+    let translated = match chan_id with
+    | Some ch -> ConsumeChan ch
+    | None -> raise (Translation_Expr_Exc ("Could not find channel id " ^ chan_name ^ " in lookup", 
+      Some e, Some local_name_map, None, st))
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
         ctxt_acc,

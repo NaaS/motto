@@ -5,7 +5,8 @@
 
 type task_type =
   | Input
-  | Processing
+  | ManyToOne
+  | AnyToOne
   | Output
 
 (*FIXME need inference to determine Task subclass? e.g., Many2One*)
@@ -13,10 +14,7 @@ type task_type =
         additional methods/members, each kind of class represented here must be
         associated with whatever additional methods/members/constructor
         parameters that class expects.*)
-type task_class =
-  | Many2One
-  | Task
-  (*FIXME incomplete*)
+type task_class = int
 
 type chan_type =
   | Socket (*FIXME encode socket metadata -- address and port?*)
@@ -30,7 +28,7 @@ type chan_offset = int
 (*NOTE channels in libNaaS are unidirectional*)
 type chan =
   {
-    chan_type : chan_type;
+    (*chan_type : chan_type;*)
     chan_id : chan_id;
     (*FIXME incomplete?*)
   }
@@ -42,8 +40,8 @@ type task =
     task_id : task_id; (*NOTE must be unique*)
     task_type : task_type;
     task_class : task_class;
-    input_chans : chan list;
-    output_chans : chan list;
+    input_chans : chan_id list;
+    output_chans : chan_id list;
     process : Crisp_syntax.process;
   }
 
@@ -60,21 +58,22 @@ type task_graph =
   {
     tasks : task list;
     connections : connection list;
+    task_classes : task_class list;
   }
 
 (* Take a task and an integer representing a channel id and return the position of*)
 (* the channel id in the array of input channels*)
 let find_input_channel task channel =
   let rec find_it elt acc = function
-    | hd :: tl when elt = hd.chan_id -> acc (* match *)
+    | hd :: tl when elt = hd -> acc (* match *)
     | hd :: tl -> find_it elt (acc + 1) tl (* non-match *)
-    | _ -> failwith ("Cannot find input_channel in channel list for task") (* end of list *)
+    | _ -> failwith ("Cannot find input_channel " ^ string_of_int channel ^ " in channel list for task") (* end of list *)
   in find_it channel 0 task.input_chans 
     
   
 let find_output_channel task channel =
   let rec find_it elt acc = function
-    | hd :: tl when elt = hd.chan_id -> acc (* match *)
+    | hd :: tl when elt = hd -> acc (* match *)
     | hd :: tl -> find_it elt (acc + 1) tl (* non-match *)
-    | _ -> failwith ("Cannot find output_channel in channel list for task") (* end of list *)
+    | _ -> failwith ("Cannot find output_channel " ^ string_of_int channel ^ " in channel list for task") (* end of list *)
   in find_it channel 0 task.output_chans

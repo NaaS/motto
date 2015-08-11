@@ -372,18 +372,21 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
       match st_opt with
       | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int chan)
       | Some st ->
-        match lookup_symbol_type chan (Term Value) st with
+        match lookup_symbol_type chan (Term (*Channel_Name*) Value) st with  (*FIXME should be channel_name*)
         | None -> failwith ("Channel type not found in symbol table: " ^ string_of_int chan)
         | Some ty -> (ty,st)  in
     let my_task = List.find (fun (x : Task_model.task) -> x.task_id = st.current_task) st.task_graph.tasks in
-    let chan_index = Task_model.find_input_channel my_task chan in
+    let chan_index = Task_model.find_input_channel my_task chan (*in
     let upChanType =
         match chanTyp with
         | Chan_Type (_, _, chanDir, ct) -> 
           assert(chanDir = Input); 
           ct
-        | _ -> failwith ("Expected channel type: " ^ string_of_int chan)
+        | _ -> failwith ("Expected channel type for idx " ^ string_of_int chan ^ " but found " ^
+          string_of_naasty_type ~st_opt:(Some st) 0 chanTyp)
     in "te= NaasData::consume_channel<" ^ string_of_naasty_type ~st_opt no_indent upChanType ^ 
+          "> (inputs[" ^ string_of_int chan_index ^ "],&size);"*)
+    in "te= NaasData::consume_channel<" ^ string_of_naasty_type ~st_opt no_indent chanTyp ^ 
           "> (inputs[" ^ string_of_int chan_index ^ "],&size);"
           
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent naasty_function =

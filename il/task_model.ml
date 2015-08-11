@@ -76,5 +76,5 @@ let find_output_channel task channel =
   let rec find_it elt acc = function
     | hd :: tl when elt = hd.chan_id -> acc (* match *)
     | hd :: tl -> find_it elt (acc + 1) tl (* non-match *)
-    | _ -> failwith ("Cannot find input_channel in channel list for task") (* end of list *)
+    | _ -> failwith ("Cannot find output_channel in channel list for task") (* end of list *)
   in find_it channel 0 task.output_chans

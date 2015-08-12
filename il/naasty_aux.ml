@@ -200,11 +200,11 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
     begin
       match is_array with
       | true ->
-        "std::vector<TaskBuffer *> &" ^
+        "std::vector<Buffer *> &" ^
         bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
       | false ->
-        "TaskBuffer &"(*FIXME check syntax -- i'm not sure we have singleton
-                         channels in the C++ implementation examples*) ^
+        "Buffer &"(*FIXME change syntax -- we don't have singleton
+                          channels in the C++ implementation examples*) ^
         bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
     end
 

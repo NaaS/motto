@@ -441,7 +441,9 @@ let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_ex
   (*FIXME i'm assuming that there is nothing to substitute for in channel statements*)
   | PeekChan _ -> expr
 
-let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = false)
+(*FIXME not sure there's any good reason why subst_assignee should be set to
+  "false"*)
+let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = true)
           (subst : substitution) (stmt : naasty_statement) : naasty_statement =
   match stmt with
   | Skip

@@ -209,6 +209,7 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
     end
 
 let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = function
+  | Minus (Int_Value 0, Int_Value n) -> "(-" ^ string_of_int n ^ ")"
   | Int_Value i -> string_of_int i
   | Plus (e1, e2) ->
     "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") + (" ^

@@ -208,85 +208,128 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
         bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
     end
 
-let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None) = function
-  | Minus (Int_Value 0, Int_Value n) -> "(-" ^ string_of_int n ^ ")"
-  | Int_Value i -> string_of_int i
-  | Plus (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") + (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Var id -> id_name st_opt id
-  | Call_Function (id, es) ->
-    let arg_s =
-      List.map (string_of_naasty_expression ~st_opt) es
-      |> String.concat ", " in
-    id_name st_opt id ^ " (" ^ arg_s ^ ")"
-  | GEq (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") >= (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Gt (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") > (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Cast (ty, e) ->
-    "(" ^ string_of_naasty_type no_indent ~st_opt ty ^ ")" ^
-    "(" ^ string_of_naasty_expression ~st_opt e ^ ")"
-  | Field_In_Record (Dereference record_ref, field) ->
-    (*NOTE this syntactic sugaring is handled directly*)
-    "(" ^ string_of_naasty_expression ~st_opt record_ref ^ ")" ^
-    "->" ^
-    "(" ^ string_of_naasty_expression ~st_opt field ^ ")"
-  | Dereference e ->
-    "*" ^ "(" ^ string_of_naasty_expression ~st_opt e ^ ")"
-  | Field_In_Record (record, field) ->
-    "(" ^ string_of_naasty_expression ~st_opt record ^ ")" ^
-    "." ^
-    "(" ^ string_of_naasty_expression ~st_opt field ^ ")"
-  | Address_of e ->
-    "&(" ^ string_of_naasty_expression ~st_opt e ^ ")"
-  | And (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") && (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Or (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") || (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Not e ->
-    "!(" ^ string_of_naasty_expression ~st_opt e ^ ")"
-  | Equals (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") == (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Lt (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") < (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Minus (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") - (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Times (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") * (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | LEq (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") <= (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | ArrayElement (arr, idx) ->
-    string_of_naasty_expression ~st_opt arr ^ "[" ^
-    string_of_naasty_expression ~st_opt idx ^ "]"
-  | Left_shift (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") << (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
+let rec size_of_naasty_expression : naasty_expression -> int = function
+  | Minus (Int_Value 0, Int_Value _)
+  | Var _
+  | Int_Value _
+  | Char_Value _
+  | Bool_Value _
+  | Array_Value _
+  | Record_Value _
+  | Union_Value _
+  | Call_Function (_, _)
+  | Field_In_Record (_, _)
+  | PeekChan _ -> 1
+  | Dereference e
+  | Address_of e
+  | Cast (_, e)
+  | Not e
+  | Abs e -> 1 + size_of_naasty_expression e
+  | And (e1, e2)
+  | Or (e1, e2)
+  | Plus (e1, e2)
+  | Equals (e1, e2)
+  | Lt (e1, e2)
+  | Minus (e1, e2)
+  | Times (e1, e2)
+  | Mod (e1, e2)
+  | Quotient (e1, e2)
+  | GEq (e1, e2)
+  | Gt (e1, e2)
+  | LEq (e1, e2)
+  | ArrayElement (e1, e2)
+  | Left_shift (e1, e2)
   | Right_shift (e1, e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") >> (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Bool_Value (b) -> 
-    string_of_bool b
-  | Abs (e) ->
-    "abs(" ^ string_of_naasty_expression ~st_opt e ^ ")" 
-  | Mod (e1,e2) ->
-    "(" ^ string_of_naasty_expression ~st_opt e1 ^ ") % (" ^
-    string_of_naasty_expression ~st_opt e2 ^ ")"
-  | Record_Value fields ->
-    let fields_s =
-      List.map (fun (id, e) ->
-       "." ^ id_name st_opt id ^ " = " ^ string_of_naasty_expression ~st_opt e) fields
-       |> String.concat ", " in
-    "{" ^ fields_s ^ "}"
+    1 + size_of_naasty_expression e1 + size_of_naasty_expression e2
+
+let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
+          (e : naasty_expression) : string * bool(*if bracketed*) =
+  let e_s =  
+    match e with
+    | Minus (Int_Value 0, Int_Value n) -> "-" ^ string_of_int n
+    | Int_Value i -> string_of_int i
+    | Plus (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " + " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Var id -> id_name st_opt id
+    | Call_Function (id, es) ->
+      let arg_s =
+        List.map (string_of_naasty_expression ~st_opt) es
+        |> List.map fst
+        |> String.concat ", " in
+      id_name st_opt id ^ " (" ^ arg_s ^ ")"
+    | GEq (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " >= " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Gt (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " > " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Cast (ty, e) ->
+      "(" ^ string_of_naasty_type no_indent ~st_opt ty ^ ")" ^
+      fst (string_of_naasty_expression ~st_opt e)
+    | Field_In_Record (Dereference record_ref, field) ->
+      (*NOTE this syntactic sugaring is handled directly*)
+      fst (string_of_naasty_expression ~st_opt record_ref) ^
+      "->" ^
+      fst (string_of_naasty_expression ~st_opt field)
+    | Dereference e ->
+      "*" ^ fst (string_of_naasty_expression ~st_opt e)
+    | Field_In_Record (record, field) ->
+      fst (string_of_naasty_expression ~st_opt record) ^
+      "." ^
+      fst (string_of_naasty_expression ~st_opt field)
+    | Address_of e ->
+      "&" ^ fst (string_of_naasty_expression ~st_opt e)
+    | And (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " && " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Or (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " || " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Not e ->
+      "!" ^ fst (string_of_naasty_expression ~st_opt e)
+    | Equals (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " == " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Lt (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " < " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Minus (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " - " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Times (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " * " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | LEq (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " <= " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | ArrayElement (arr, idx) ->
+      fst (string_of_naasty_expression ~st_opt arr) ^ "[" ^
+      fst (string_of_naasty_expression ~st_opt idx) ^ "]"
+    | Left_shift (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " << " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Right_shift (e1, e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " >> " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Bool_Value (b) -> 
+      string_of_bool b
+    | Abs (e) ->
+      "abs (" ^ fst (string_of_naasty_expression ~st_opt e) ^ ")" 
+    | Mod (e1,e2) ->
+      fst (string_of_naasty_expression ~st_opt e1) ^ " % " ^
+      fst (string_of_naasty_expression ~st_opt e2)
+    | Record_Value fields ->
+      let fields_s =
+        List.map (fun (id, e) ->
+          "." ^ id_name st_opt id ^ " = " ^
+          fst (string_of_naasty_expression ~st_opt e)) fields
+         |> String.concat ", " in
+      "{" ^ fields_s ^ "}" in
+  if size_of_naasty_expression e = 1 then
+    e_s, false
+  else
+    "(" ^ e_s ^ ")", true
 
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
           ?print_semicolon:(print_semicolon : bool = true) indent statement =
@@ -299,27 +342,33 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     let definition =
       match e_opt with
       | None -> ""
-      | Some e -> " = " ^ string_of_naasty_expression ~st_opt e
+      | Some e -> " = " ^ fst (string_of_naasty_expression ~st_opt e)
     in string_of_naasty_type ~st_opt indent ty ^ definition ^ terminal
   | Seq (stmt1, stmt2) ->
     string_of_naasty_statement ~st_opt indent stmt1 ^ "\n" ^
     string_of_naasty_statement ~st_opt indent stmt2
   | Assign (lvalue, e) ->
-    indn indent ^ string_of_naasty_expression ~st_opt lvalue ^ " = " ^
-    string_of_naasty_expression ~st_opt e ^ terminal
+    indn indent ^ fst (string_of_naasty_expression ~st_opt lvalue) ^ " = " ^
+    fst (string_of_naasty_expression ~st_opt e) ^ terminal
   | Increment (id, e) ->
     indn indent ^ id_name st_opt id ^ " += " ^
-    string_of_naasty_expression ~st_opt e ^ terminal
+    fst (string_of_naasty_expression ~st_opt e) ^ terminal
   | For ((id, condition, increment), body) ->
     (*FIXME check if the target syntax is correct*)
     indn indent ^ "for (" ^
     string_of_naasty_type ~st_opt no_indent id ^ "; " ^
-    string_of_naasty_expression ~st_opt condition ^ "; " ^
+    fst (string_of_naasty_expression ~st_opt condition) ^ "; " ^
     string_of_naasty_statement ~st_opt no_indent ~print_semicolon:false increment ^ ") {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) body ^
     "\n" ^ indn indent ^ "}"
   | If (e, stmt1, stmt2) ->
-    indn indent ^ "if (" ^ string_of_naasty_expression ~st_opt e ^ ") {\n" ^
+    let cond_s =
+      match string_of_naasty_expression ~st_opt e with
+      | s, true -> s
+      | s, false ->
+        (*Ensure that condition is bracketed*)
+        "(" ^ s ^ ")" in
+    indn indent ^ "if " ^ cond_s ^ " {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
     "\n" ^
     indn indent ^ "} else {\n" ^
@@ -327,7 +376,13 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     "\n" ^
     indn indent ^ "}"
   | If1 (e, stmt1) ->
-    indn indent ^ "if (" ^ string_of_naasty_expression ~st_opt e ^ ") {\n" ^
+    let cond_s =
+      match string_of_naasty_expression ~st_opt e with
+      | s, true -> s
+      | s, false ->
+        (*Ensure that condition is bracketed*)
+        "(" ^ s ^ ")" in
+    indn indent ^ "if " ^ cond_s ^ " {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
     "\n" ^
     indn indent ^ "}"
@@ -339,7 +394,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
 	| ForwardChan of identifier * identifier
 *)
   | Return e_opt ->
-    let f e = " " ^ "(" ^ string_of_naasty_expression ~st_opt e ^ ")" in
+    let f e = " " ^ fst (string_of_naasty_expression ~st_opt e) in
     indn indent ^ "return" ^  bind_opt f "" e_opt ^ terminal
   | Skip -> indn indent ^ "/*skip*/"
   | Commented (Skip, comment) ->
@@ -349,7 +404,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     (*First print the statement, then the comment*)
     string_of_naasty_statement ~st_opt indent stmt ^ " // " ^ comment
   | St_of_E e ->
-    indn indent ^ string_of_naasty_expression ~st_opt e ^ terminal
+    indn indent ^ fst (string_of_naasty_expression ~st_opt e) ^ terminal
   | Label (lbl, stmt) ->
     indn indent ^ lbl ^ ": " ^
     string_of_naasty_statement ~st_opt no_indent stmt ^ terminal

@@ -152,9 +152,11 @@ let inliner_table_entry_to_string ?st_opt:((st_opt : state option) = None)
   "parameter=" ^ string_of_bool entry.parameter ^ "; " ^
   "update_count=" ^ string_of_int entry.update_count ^ "; " ^
   "ref_count=" ^ string_of_int entry.ref_count ^ "; " ^
-  "initialisation=" ^ bind_opt (string_of_naasty_expression ~st_opt) "<None>"
+  "initialisation=" ^
+  bind_opt (fun e -> fst (string_of_naasty_expression ~st_opt e)) "<None>"
     entry.initialisation ^ "; " ^
-  "assignment=" ^ bind_opt (string_of_naasty_expression ~st_opt) "<None>"
+  "assignment=" ^
+  bind_opt (fun e -> fst (string_of_naasty_expression ~st_opt e)) "<None>"
     entry.assignment
 
 (*Removes redundant definitions that are introduced in a profligate manner by
@@ -522,8 +524,8 @@ let rec inline_substvars_in_subst ?st_opt:(st_opt : state option = None) (subst_
            if !Config.cfg.Config.verbosity > 1 then
              print_endline ("def " ^ string_of_int id ^ " " ^
                             string_of_bool is_ground ^ " : " ^
-                            string_of_naasty_expression ~st_opt definiens ^ " ~~> " ^
-                            string_of_naasty_expression ~st_opt definiens') in
+                            fst (string_of_naasty_expression ~st_opt definiens) ^ " ~~> " ^
+                            fst (string_of_naasty_expression ~st_opt definiens')) in
          (id, definiens') in
        let subst' =
          (*Update the substitution*)
@@ -541,7 +543,7 @@ let subst_to_string ?st_opt:((st_opt : state option) = None)
   let body =
     List.map (fun (id, expr) ->
     "(" ^ string_of_int id ^ ", " ^
-    string_of_naasty_expression ~st_opt expr ^ ")") subst
+    fst (string_of_naasty_expression ~st_opt expr) ^ ")") subst
   in "[" ^ String.concat "; " body ^ "]"
 
 (*Erase declarations and assignments to inlined variables.

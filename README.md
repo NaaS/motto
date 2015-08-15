@@ -1,8 +1,4 @@
-Implementation of the [crisp](https://github.com/NaaS/admin/wiki/crisp) language idea,
-but simplified as described in
-[Flick](https://github.com/NaaS/system/tree/master/crisp/flick).
-
-# Flick in funf minuten
+# Getting going
 Take a look at this [example](https://github.com/NaaS/system/blob/master/crisp/runtime_test.ml)
 of using the scriptable runtime. (If you have the time, it's not difficult to
 turn this into an _interactive_ runtime -- i.e., a "toplevel" or Read-Eval-Print Loop, a.k.a., "REPL".)
@@ -63,3 +59,9 @@ $ ./motto.byte -q --infer_type "(| E |)"
 where `E` is an expression.
 
 To run the type checker on regression tests, see the [test_type_checker.sh](https://github.com/NaaS/system/blob/master/crisp/scripts/test_type_checker.sh) script.
+
+# Background
+
+This implements the [crisp](https://github.com/NaaS/admin/wiki/crisp) language idea,
+but simplified as described in
+[Flick](https://github.com/NaaS/system/tree/master/crisp/flick).

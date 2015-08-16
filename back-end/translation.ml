@@ -843,20 +843,34 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
    Exchange
 *)
   | Receive (channel_inverted, channel_identifier) -> 
-    (*FIXME add "te" declaration, unless it already exists in ctxt_acc*)
+    (*Add "te" declaration, unless it already exists in ctxt_acc*)
+    let taskevent_ty, te, st' =
+      match lookup_name Type st "TaskEvent", lookup_name (Term Value) st "te" with
+      | Some ty, Some te -> ty, te, st
+      | None, None ->
+        (*Declare them both*)
+        let (type_id, st') = Naasty_aux.extend_scope_unsafe Type st "TaskEvent" in
+        let (var_id, st'') =
+          Naasty_aux.extend_scope_unsafe (Term Value) st'
+            ~ty_opt:(Some (UserDefined_Type (None, type_id))) "te" in
+        type_id, var_id, st''
+      | _, _ -> failwith "Impossible: 'TaskEvent' type and 'te' variable not both declared" in
+    let ctxt_acc' =
+      if List.mem te ctxt_acc then ctxt_acc else te :: ctxt_acc in
     let (chan_name,_) = channel_identifier in 
     let real_name = chan_name ^ "_receive_0" in  (*FIXME hack because channel nname is wrong*)
     let chan_id = lookup_name (Term (*Channel_Name*) Value) st real_name in
-    let translated = match chan_id with
-    | Some ch -> ConsumeChan ch
-    | None -> raise (Translation_Expr_Exc ("Could not find channel id " ^ chan_name ^ " in lookup", 
-      Some e, Some local_name_map, None, st))
+    let translated =
+      match chan_id with
+     | Some ch -> ConsumeChan ch
+     | None -> raise (Translation_Expr_Exc ("Could not find channel id " ^ chan_name ^ " in lookup", 
+                                            Some e, Some local_name_map, None, st))
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
-        ctxt_acc,
+        ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
-        st)
+        st')
 
   | _ -> raise (Translation_Expr_Exc ("TODO: " ^ expression_to_string no_indent e,
                                       Some e, Some local_name_map, Some sts_acc, st))
@@ -1042,12 +1056,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       | None ->
         failwith ("Function name " ^ fn_decl.fn_name ^ " not found in symbol table.")
       | Some (idx, _) -> (idx, st4) in
-      (* Add in a declaration for "TaskEvent te" *)
-    let (typeid,st6) = Naasty_aux.extend_scope_unsafe Type st5 "TaskEvent" in
-    let (varid,st7) = Naasty_aux.extend_scope_unsafe (Term Value) st6 "te" in
-    let taskevent_te = UserDefined_Type(Some varid, typeid) in
-    let body''' = Seq (Declaration (taskevent_te, None), body'') in (
-     Fun_Decl
+    (Fun_Decl
           {
             id = fn_idx;
             arg_tys = n_arg_tys;
@@ -1065,7 +1074,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
 
               let _ =
                 if !Config.cfg.Config.verbosity > 0 then
-                  Inliner.table_to_string st7 init_table
+                  Inliner.table_to_string st5 init_table
                   |> (fun s -> print_endline ("Initial inliner table:" ^ s)) in
 
               let inlined_body init_table st body =
@@ -1090,10 +1099,10 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                   if body = body' then body
                   else var_erased_body init_table st body'
               in
-                inlined_body init_table st7 body'''
-                |> var_erased_body init_table st7
+                inlined_body init_table st5 body''
+                |> var_erased_body init_table st5
           },
-        st7)
+        st5)
 
   | Process process ->
     (*A process could be regarded as a unit-returning function that is evaluated

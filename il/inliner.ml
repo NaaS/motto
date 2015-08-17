@@ -336,22 +336,6 @@ let inliner_table_entry_order entry1 entry2 =
 
 type substitution = (identifier * naasty_expression) list
 
-(*Generate substitution from inliner_table_entry*)
-let inliner_to_subst (table : inliner_table_entry list) : substitution =
-  let rec inliner_to_subst' (table : inliner_table_entry list) (acc : substitution) : substitution =
-  match table with
-  | [] -> acc
-  | (entry :: rest) ->
-    (*NOTE here could assert that update_count and ref_count are both =1*)
-    if List.mem_assoc entry.id acc then
-      raise (Inliner_Exc ("Substitution variable appears more than once in the substitution",
-                          None, None))
-    else if entry.assignment = None then
-      raise (Inliner_Exc ("Nothing to substitute", None, None))
-    else
-      inliner_to_subst' rest ((entry.id, the entry.assignment) :: acc)
-  in inliner_to_subst' table []
-
 module Identifier_Set = Set.Make(
  struct
    type t = identifier
@@ -403,6 +387,34 @@ let rec free_vars (expr : naasty_expression) (acc : Identifier_Set.t) : Identifi
   | Record_Value fields ->
     List.fold_right (fun (_, e) acc ->
       free_vars e acc) fields acc
+
+(*Generate substitution from inliner_table_entry.
+  NOTE we carry out an occurs-check to avoid an infinite loop due
+       to replacing a variable with an expression containing that
+       variable, and then replacing that variable with...*)
+let inliner_to_subst (table : inliner_table_entry list) : substitution =
+  let rec inliner_to_subst' (table : inliner_table_entry list) (acc : substitution) : substitution =
+  match table with
+  | [] -> acc
+  | (entry :: rest) ->
+    (*NOTE here could assert that update_count and ref_count are both =1*)
+    if List.mem_assoc entry.id acc then
+      raise (Inliner_Exc ("Substitution variable appears more than once in the substitution",
+                          None, None))
+    else if entry.assignment = None then
+      raise (Inliner_Exc ("Nothing to substitute", None, None))
+    else
+      let assignment = the entry.assignment in
+      let occurs_check =
+        free_vars assignment Identifier_Set.empty
+        |> Identifier_Set.exists (fun elt -> elt = entry.id) in
+      if occurs_check then
+        (*NOTE we silently avoid the substitution, since it would result
+               in a non-terminating computation downstream.*)
+        inliner_to_subst' rest acc
+      else
+        inliner_to_subst' rest ((entry.id, the entry.assignment) :: acc)
+  in inliner_to_subst' table []
 
 let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_expression =
   let unary_op_inst e f = f (subst_expr subst e) in

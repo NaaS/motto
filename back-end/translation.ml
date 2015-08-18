@@ -849,11 +849,17 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let size, st'' =
       Naasty_aux.add_symbol "size" (Term Value)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st' in
+    let inputs, st'' =
+      Naasty_aux.add_symbol "inputs" (Term Value)
+        (*FIXME "inputs" should have some array type*)
+        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st'' in
     let ctxt_acc' =
       if List.mem te ctxt_acc then ctxt_acc else te :: ctxt_acc in
     (*FIXME code style here sucks*)
     let ctxt_acc' =
       if List.mem size ctxt_acc then ctxt_acc else size :: ctxt_acc' in
+    let ctxt_acc' =
+      if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc' in
     let (chan_name,_) = channel_identifier in 
     let real_name = chan_name ^ "_receive_0" in  (*FIXME hack because channel nname is wrong*)
     let chan_id = lookup_name (Term (*Channel_Name*) Value) st'' real_name in
@@ -880,7 +886,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 *)
     let translated =
       Assign (Var te,
-              Call_Function (1, [Var te; Address_of (Var size)]))
+              Call_Function (1, [ArrayElement (Var inputs, Int_Value 0);
+                                 Address_of (Var size)]))
 
 (*
 (*FIXME calculate channel offset*)

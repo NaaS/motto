@@ -240,10 +240,16 @@ let rec size_of_naasty_expression : naasty_expression -> int = function
   | GEq (e1, e2)
   | Gt (e1, e2)
   | LEq (e1, e2)
-  | ArrayElement (e1, e2)
   | Left_shift (e1, e2)
   | Right_shift (e1, e2) ->
     1 + size_of_naasty_expression e1 + size_of_naasty_expression e2
+  | ArrayElement (e1, e2) ->
+    let e1_size = size_of_naasty_expression e1 in
+    let e2_size = size_of_naasty_expression e2 in
+    if e1_size = e2_size && e1_size = 1 then
+      1
+    else
+      1 + e1_size + e2_size
 
 let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
           (e : naasty_expression) : string * bool(*if bracketed*) =

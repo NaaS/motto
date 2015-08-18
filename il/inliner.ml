@@ -93,7 +93,8 @@ let rec count_var_references_in_naasty_expr (st : state)
   | GEq (e1, e2)
   | Gt (e1, e2)
   | Field_In_Record (e1, e2)
-  | LEq (e1, e2) ->
+  | LEq (e1, e2)
+  | ArrayElement (e1, e2) ->
     count_var_references_in_naasty_expr st e1 table
     |> count_var_references_in_naasty_expr st e2
   | Call_Function (_ (*ignore function identifier*), exprs) ->
@@ -454,6 +455,7 @@ let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_ex
     Record_Value fields'
   (*FIXME i'm assuming that there is nothing to substitute for in channel statements*)
   | PeekChan _ -> expr
+  | ArrayElement (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> ArrayElement (e1', e2'))
 
 (*FIXME not sure there's any good reason why subst_assignee should be set to
   "false"*)

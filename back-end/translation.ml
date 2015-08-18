@@ -853,6 +853,13 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       Naasty_aux.add_symbol "inputs" (Term Value)
         (*FIXME "inputs" should have some array type*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st'' in
+    let consume_channel, st'' =
+      (*FIXME should name-spacing ("NaasData") be hardcoded like this, or
+              should it be left variable then resolved at compile time?*)
+      (*FIXME how to specify the type parameter? ("BLA")*)
+      Naasty_aux.add_symbol "NaasData::consume_channel<BLA>" (Term Value)
+        (*FIXME "consume_channel" should have some function type*)
+        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st'' in
     let ctxt_acc' =
       if List.mem te ctxt_acc then ctxt_acc else te :: ctxt_acc in
     (*FIXME code style here sucks*)
@@ -881,21 +888,15 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         | Some ty -> (ty,st)  in
     let my_task = List.find (fun (x : Task_model.task) -> x.task_id = st.current_task) st.task_graph.tasks in
     let chan_index = Task_model.find_input_channel my_task chan in
-
-    let translated =
 *)
     let translated =
       Assign (Var te,
-              Call_Function (1, [ArrayElement (Var inputs, Int_Value 0);
-                                 Address_of (Var size)]))
+              Call_Function (consume_channel,
+                             [ArrayElement (Var inputs, Int_Value 0);
+                              Address_of (Var size)]))
 
-(*
 (*FIXME calculate channel offset*)
 (*FIXME where does "size" come from?*)
-                       Call_Function (consume_channel, [size])
-      of identifier * naasty_expression list
-*)
-
 (*FIXME batch all channels into two channel arrays: one for inputs, and one for outputs*)
 
     in (Naasty_aux.concat [sts_acc; translated],

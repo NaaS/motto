@@ -924,3 +924,27 @@ let rec contains_functor_app : naasty_expression -> bool = function
   | Left_shift (e1, e2)
   | Right_shift (e1, e2) ->
     contains_functor_app e1 || contains_functor_app e2
+
+(*Add a symbol (to a given scope) unless it's already been added to the given scope*)
+let add_symbol (label : label) (scope : scope) (st : state) : int * state =
+  match lookup_name scope st label with
+  | Some id -> id, st
+  | None ->
+    (*Declare the symbol*)
+    extend_scope_unsafe scope st label
+
+(*Like add_symbol, but also ensures that its type is added (as a user-defined
+  type)*)
+let add_typed_symbol (typ_name : label) (term_name : label) (st : state) : int * int * state =
+  match lookup_name Type st typ_name, lookup_name (Term Value) st term_name with
+  | Some ty, Some te -> ty, te, st
+  | None, None ->
+    (*Declare them both*)
+    let (type_id, st') = extend_scope_unsafe Type st typ_name in
+    let (var_id, st'') =
+      extend_scope_unsafe (Term Value) st'
+        ~ty_opt:(Some (UserDefined_Type (None, type_id))) term_name in
+    type_id, var_id, st''
+  | _, _ ->
+    failwith ("Impossible: '" ^ typ_name ^ "' type and '" ^ term_name ^
+              "' variable not both declared")

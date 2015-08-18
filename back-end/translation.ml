@@ -844,27 +844,44 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 *)
   | Receive (channel_inverted, channel_identifier) -> 
     (*Add "te" declaration, unless it already exists in ctxt_acc*)
-    let taskevent_ty, te, st' =
-      match lookup_name Type st "TaskEvent", lookup_name (Term Value) st "te" with
-      | Some ty, Some te -> ty, te, st
-      | None, None ->
-        (*Declare them both*)
-        let (type_id, st') = Naasty_aux.extend_scope_unsafe Type st "TaskEvent" in
-        let (var_id, st'') =
-          Naasty_aux.extend_scope_unsafe (Term Value) st'
-            ~ty_opt:(Some (UserDefined_Type (None, type_id))) "te" in
-        type_id, var_id, st''
-      | _, _ -> failwith "Impossible: 'TaskEvent' type and 'te' variable not both declared" in
+    let taskevent_ty, te, st' = Naasty_aux.add_typed_symbol "TaskEvent" "te" st in
     let ctxt_acc' =
       if List.mem te ctxt_acc then ctxt_acc else te :: ctxt_acc in
     let (chan_name,_) = channel_identifier in 
     let real_name = chan_name ^ "_receive_0" in  (*FIXME hack because channel nname is wrong*)
     let chan_id = lookup_name (Term (*Channel_Name*) Value) st real_name in
+(*
     let translated =
       match chan_id with
      | Some ch -> ConsumeChan ch
      | None -> raise (Translation_Expr_Exc ("Could not find channel id " ^ chan_name ^ " in lookup", 
-                                            Some e, Some local_name_map, None, st))
+                                            Some e, Some local_name_map, None, st)) in
+*)
+
+(*
+    let (chanTyp,st) =
+      match st_opt with
+      | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int chan)
+      | Some st ->
+        match lookup_symbol_type chan (Term (*Channel_Name*) Value) st with  (*FIXME should be channel_name*)
+        | None -> failwith ("Channel type not found in symbol table: " ^ string_of_int chan)
+        | Some ty -> (ty,st)  in
+    let my_task = List.find (fun (x : Task_model.task) -> x.task_id = st.current_task) st.task_graph.tasks in
+    let chan_index = Task_model.find_input_channel my_task chan in
+
+    let translated =
+*)
+    let translated = Assign (Var te, Call_Function (1, [Var te]))
+
+(*
+(*FIXME calculate channel offset*)
+(*FIXME where does "size" come from?*)
+                       Call_Function (consume_channel, [size])
+      of identifier * naasty_expression list
+*)
+
+(*FIXME batch all channels into two channel arrays: one for inputs, and one for outputs*)
+
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
         ctxt_acc',

@@ -844,7 +844,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 *)
   | Receive (channel_inverted, channel_identifier) -> 
     (*Add "te" declaration, unless it already exists in ctxt_acc*)
-    let taskevent_ty, te, st' = Naasty_aux.add_typed_symbol "TaskEvent" "te" st in
+    let taskevent_ty, te, st' =
+      Naasty_aux.add_usertyped_symbol "TaskEvent" "te" st in
     let ctxt_acc' =
       if List.mem te ctxt_acc then ctxt_acc else te :: ctxt_acc in
     let (chan_name,_) = channel_identifier in 

@@ -926,16 +926,18 @@ let rec contains_functor_app : naasty_expression -> bool = function
     contains_functor_app e1 || contains_functor_app e2
 
 (*Add a symbol (to a given scope) unless it's already been added to the given scope*)
-let add_symbol (label : label) (scope : scope) (st : state) : int * state =
+let add_symbol (label : label) (scope : scope)
+      ?ty_opt:(ty_opt : naasty_type option = None)
+      (st : state) : int * state =
   match lookup_name scope st label with
   | Some id -> id, st
   | None ->
     (*Declare the symbol*)
-    extend_scope_unsafe scope st label
+    extend_scope_unsafe ~ty_opt scope st label
 
 (*Like add_symbol, but also ensures that its type is added (as a user-defined
   type)*)
-let add_typed_symbol (typ_name : label) (term_name : label) (st : state) : int * int * state =
+let add_usertyped_symbol (typ_name : label) (term_name : label) (st : state) : int * int * state =
   match lookup_name Type st typ_name, lookup_name (Term Value) st term_name with
   | Some ty, Some te -> ty, te, st
   | None, None ->

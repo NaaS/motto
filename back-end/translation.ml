@@ -846,11 +846,17 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (*Add "te" declaration, unless it already exists in ctxt_acc*)
     let taskevent_ty, te, st' =
       Naasty_aux.add_usertyped_symbol "TaskEvent" "te" st in
+    let size, st'' =
+      Naasty_aux.add_symbol "size" (Term Value)
+        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st' in
     let ctxt_acc' =
       if List.mem te ctxt_acc then ctxt_acc else te :: ctxt_acc in
+    (*FIXME code style here sucks*)
+    let ctxt_acc' =
+      if List.mem size ctxt_acc then ctxt_acc else size :: ctxt_acc' in
     let (chan_name,_) = channel_identifier in 
     let real_name = chan_name ^ "_receive_0" in  (*FIXME hack because channel nname is wrong*)
-    let chan_id = lookup_name (Term (*Channel_Name*) Value) st real_name in
+    let chan_id = lookup_name (Term (*Channel_Name*) Value) st'' real_name in
 (*
     let translated =
       match chan_id with
@@ -872,7 +878,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
     let translated =
 *)
-    let translated = Assign (Var te, Call_Function (1, [Var te]))
+    let translated =
+      Assign (Var te,
+              Call_Function (1, [Var te; Address_of (Var size)]))
 
 (*
 (*FIXME calculate channel offset*)
@@ -888,7 +896,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
-        st')
+        st'')
 
   | _ -> raise (Translation_Expr_Exc ("TODO: " ^ expression_to_string no_indent e,
                                       Some e, Some local_name_map, Some sts_acc, st))

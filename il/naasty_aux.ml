@@ -221,7 +221,10 @@ let rec size_of_naasty_expression : naasty_expression -> int = function
   | Field_In_Record (_, _)
   | PeekChan _ -> 1
   | Dereference e
-  | Address_of e
+  | Address_of e ->
+    (*No need to add 1 to the size, otherwise we'll always have
+      brackets around simple expressions like "&size"*)
+    size_of_naasty_expression e
   | Cast (_, e)
   | Not e
   | Abs e -> 1 + size_of_naasty_expression e

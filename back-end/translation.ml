@@ -888,11 +888,20 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         | Some ty -> (ty,st)  in
     let my_task = List.find (fun (x : Task_model.task) -> x.task_id = st.current_task) st.task_graph.tasks in
     let chan_index = Task_model.find_input_channel my_task chan in
+    in "te= NaasData::consume_channel<" ^ string_of_naasty_type ~st_opt no_indent chanTyp ^
+          "> (inputs[" ^ string_of_int chan_index ^ "],&size);"
 *)
+(*
+    FIXME incomplete
+    let chan_offset = (transfer code from Naasty_aux printing to here)
+    (*FIXME It looks like i can remove channel primitives from the IL*)
+*)
+    let chan_offset = 1 in
+
     let translated =
       Assign (Var te,
               Call_Function (consume_channel,
-                             [ArrayElement (Var inputs, Int_Value 0);
+                             [ArrayElement (Var inputs, Int_Value chan_offset);
                               Address_of (Var size)]))
 
 (*FIXME calculate channel offset*)

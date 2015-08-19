@@ -218,8 +218,7 @@ let rec size_of_naasty_expression : naasty_expression -> int = function
   | Record_Value _
   | Union_Value _
   | Call_Function (_, _, _)
-  | Field_In_Record (_, _)
-  | PeekChan _ -> 1
+  | Field_In_Record (_, _) -> 1
   | Dereference e
   | Address_of e ->
     (*No need to add 1 to the size, otherwise we'll always have
@@ -434,47 +433,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     string_of_naasty_statement ~st_opt no_indent stmt ^ terminal
   | GotoLabel lbl ->
     indn indent ^ "goto " ^ lbl ^ terminal
-  | WriteToChan (var, chan) ->
-(*FIXME it seems that channel-related IL primitives, and all their handling, is
-        redundant because channel-related Flick primitives are being translated into
-        function calls*)
-    let (varTyp,st) =
-      match st_opt with
-      | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int var)
-      | Some st ->
-        match lookup_symbol_type var (Term Value) st with
-        | None -> failwith ("Variable type not found in symbol table: " ^ string_of_int var)
-        | Some ty -> (ty,st) in
-    let my_task = List.find (fun (x : Task_model.task) -> x.task_id = st.current_task) st.task_graph.tasks in
-    let chan_index = Task_model.find_output_channel my_task chan 
-    in "te= NaasData::write_to_channel<" ^ string_of_naasty_type ~st_opt no_indent varTyp ^ ">(" ^
-       id_name st_opt var   ^ "outputs[" ^ string_of_int chan_index ^ 
-        "],&size_written);\nif (!te.isOK()) {\n\treturn te;\n}"
-   | ConsumeChan (chan) ->
-(*FIXME it seems that channel-related IL primitives, and all their handling, is
-        redundant because channel-related Flick primitives are being translated into
-        function calls*)
-    let (chanTyp,st) =
-      match st_opt with
-      | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int chan)
-      | Some st ->
-        match lookup_symbol_type chan (Term (*Channel_Name*) Value) st with  (*FIXME should be channel_name*)
-        | None -> failwith ("Channel type not found in symbol table: " ^ string_of_int chan)
-        | Some ty -> (ty,st)  in
-    let my_task = List.find (fun (x : Task_model.task) -> x.task_id = st.current_task) st.task_graph.tasks in
-    let chan_index = Task_model.find_input_channel my_task chan (*in
-    let upChanType =
-        match chanTyp with
-        | Chan_Type (_, _, chanDir, ct) -> 
-          assert(chanDir = Input); 
-          ct
-        | _ -> failwith ("Expected channel type for idx " ^ string_of_int chan ^ " but found " ^
-          string_of_naasty_type ~st_opt:(Some st) 0 chanTyp)
-    in "te= NaasData::consume_channel<" ^ string_of_naasty_type ~st_opt no_indent upChanType ^ 
-          "> (inputs[" ^ string_of_int chan_index ^ "],&size);"*)
-    in "te= NaasData::consume_channel<" ^ string_of_naasty_type ~st_opt no_indent chanTyp ^ 
-          "> (inputs[" ^ string_of_int chan_index ^ "],&size);"
-          
+
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent naasty_function =
   let arg_types_s =
    List.map (string_of_naasty_type ~st_opt indent) naasty_function.arg_tys
@@ -839,22 +798,6 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
     in (St_of_E e', st')
   | Break -> (Break, st)
   | Continue -> (Continue, st)
-  | WriteToChan (chan_id, var_id) ->
-    let chan_id', st' =
-      substitute fresh names false chan_id st chan_id (fun x -> x) in
-    let var_id', st'' =
-      substitute fresh names false var_id st' var_id (fun x -> x)
-    in (WriteToChan (chan_id', var_id'), st'')
-  | ConsumeChan (chan_id) ->
-    let chan_id', st' =
-      substitute fresh names false chan_id st chan_id (fun x -> x) 
-    in (ConsumeChan (chan_id'), st')
-  | ForwardChan (chan_in, chan_out) ->
-    let chan_in', st' =
-      substitute fresh names false chan_in st chan_in (fun x -> x) in
-    let chan_out', st'' =
-      substitute fresh names false chan_out st' chan_out (fun x -> x)
-    in (ForwardChan (chan_in', chan_out'), st'')
   | For ((id, condition, increment), body) ->
     let id', st' = instantiate_type fresh names st id in
     let (condition', st'') = instantiate_expression fresh names st' condition in
@@ -933,8 +876,7 @@ let rec contains_functor_app : naasty_expression -> bool = function
   | Var _
   | Int_Value _
   | Char_Value _
-  | Bool_Value _
-  | PeekChan _ -> false
+  | Bool_Value _ -> false
   | Array_Value es ->
     List.fold_right (fun e acc ->
       acc || contains_functor_app e) es false

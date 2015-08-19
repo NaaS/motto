@@ -62,7 +62,10 @@ type naasty_type =
   | Chan_Type of identifier option * bool(*if this is an array of channels*) *
                  chan_direction * naasty_type
 
-type naasty_expression =
+type template_parameter =
+  | Type_Parameter of naasty_type
+  | Term_Parameter of naasty_expression
+and naasty_expression =
   | Var of identifier
   | Int_Value of int
   | Char_Value of int
@@ -81,7 +84,7 @@ type naasty_expression =
   | Mod of naasty_expression * naasty_expression
   | Quotient of naasty_expression * naasty_expression
   | Abs of naasty_expression
-  | Call_Function of identifier * naasty_expression list
+  | Call_Function of identifier * template_parameter list * naasty_expression list
   | GEq of naasty_expression * naasty_expression
   | Gt of naasty_expression * naasty_expression
   | Cast of naasty_type * naasty_expression

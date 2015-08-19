@@ -217,7 +217,7 @@ let rec size_of_naasty_expression : naasty_expression -> int = function
   | Array_Value _
   | Record_Value _
   | Union_Value _
-  | Call_Function (_, _)
+  | Call_Function (_, _, _)
   | Field_In_Record (_, _)
   | PeekChan _ -> 1
   | Dereference e
@@ -251,7 +251,15 @@ let rec size_of_naasty_expression : naasty_expression -> int = function
     else
       1 + e1_size + e2_size
 
-let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
+let rec string_of_template_parameter ?st_opt:((st_opt : state option) = None)
+          (tp : template_parameter) : string =
+  match tp with
+  | Type_Parameter ty ->
+    string_of_naasty_type ~st_opt 0 ty
+  | Term_Parameter e ->
+    string_of_naasty_expression ~st_opt e
+    |> fst
+and string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
           (e : naasty_expression) : string * bool(*if bracketed*) =
   let e_s =  
     match e with
@@ -261,12 +269,19 @@ let rec string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
       fst (string_of_naasty_expression ~st_opt e1) ^ " + " ^
       fst (string_of_naasty_expression ~st_opt e2)
     | Var id -> id_name st_opt id
-    | Call_Function (id, es) ->
+    | Call_Function (id, template_params, es) ->
+      let template_params_s =
+        if template_params = [] then ""
+        else
+          let body =
+          List.map (string_of_template_parameter ~st_opt) template_params
+          |> String.concat ", "
+          in "<" ^ body ^  ">" in
       let arg_s =
         List.map (string_of_naasty_expression ~st_opt) es
         |> List.map fst
         |> String.concat ", " in
-      id_name st_opt id ^ " (" ^ arg_s ^ ")"
+      id_name st_opt id ^ template_params_s ^ " (" ^ arg_s ^ ")"
     | GEq (e1, e2) ->
       fst (string_of_naasty_expression ~st_opt e1) ^ " >= " ^
       fst (string_of_naasty_expression ~st_opt e2)
@@ -726,12 +741,22 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
   | Times (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Times (e1', e2'))
   | Mod (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Mod (e1', e2'))
   | Quotient (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Quotient (e1', e2'))
-  | Call_Function (id, es) ->
+  | Call_Function (id, tps, es) ->
     let id', st' =
       substitute fresh names false id st id (fun x -> x) in
     let es', st'' =
-      fold_map ([], st') (instantiate_expression fresh names) es
-    in (Call_Function (id', es'), st'')
+      fold_map ([], st') (instantiate_expression fresh names) es in
+    let tps', st''' =
+      let instantiate_template_parameter st tp =
+        match tp with
+        | Type_Parameter ty ->
+          let ty', st' = instantiate_type fresh names st ty in
+          (Type_Parameter ty'), st'
+        | Term_Parameter e ->
+          let e', st' = instantiate_expression fresh names st e in
+          (Term_Parameter e'), st' in
+      fold_map ([], st'') instantiate_template_parameter tps
+    in (Call_Function (id', tps', es'), st''')
   | GEq (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> GEq (e1', e2'))
   | Gt (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Gt (e1', e2'))
   | Cast (ty, e) ->
@@ -898,7 +923,7 @@ let rec nested_fields (field_idents : identifier list) : naasty_expression =
        see whether we might actually have side-effects.
 *)
 let rec contains_functor_app : naasty_expression -> bool = function
-  | Call_Function (_, _) -> true
+  | Call_Function (_, _, _) -> true
   | Var _
   | Int_Value _
   | Char_Value _

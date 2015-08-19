@@ -625,7 +625,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       let translated_expression =
         try_local_name function_name local_name_map
         |> check_and_resolve_name st'
-        |> (fun x -> Call_Function (x, parameters)) in
+        |> (fun x -> Call_Function (x, [], parameters)) in
       (*In case assign_acc = [], we still want the function to be called,
         otherwise we'll get bugs because programmer-intended side-effects
         don't get done.*)
@@ -856,8 +856,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let consume_channel, st'' =
       (*FIXME should name-spacing ("NaasData") be hardcoded like this, or
               should it be left variable then resolved at compile time?*)
-      (*FIXME how to specify the type parameter? ("BLA")*)
-      Naasty_aux.add_symbol "NaasData::consume_channel<BLA>" (Term Value)
+      Naasty_aux.add_symbol "NaasData::consume_channel" (Term Value)
         (*FIXME "consume_channel" should have some function type*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st'' in
     let ctxt_acc' =
@@ -901,6 +900,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let translated =
       Assign (Var te,
               Call_Function (consume_channel,
+                             [Type_Parameter (Int_Type (None, default_int_metadata))],
                              [ArrayElement (Var inputs, Int_Value chan_offset);
                               Address_of (Var size)]))
 

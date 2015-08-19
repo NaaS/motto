@@ -87,7 +87,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
         [
           Declaration (Size_Type (Some lenI), Some (Int_Value 0));
           Commented (Skip, "Length of fixed-length parts");
-          Assign (Var lenI, Call_Function (sizeofI, [Var datatype_nameI]));
+          Assign (Var lenI, Call_Function (sizeofI, [], [Var datatype_nameI]));
           Commented (Skip, "Length of variable-length parts");
           Naasty_aux.concat body_contents;
           Return (Some (Var lenI))
@@ -115,12 +115,14 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
         (the label_opt,
          Increment (lenI,
                     Call_Function
-                      (readWriteData_encodeVIntSizeI, [Var next_placeholder])))
+                      (readWriteData_encodeVIntSizeI, [],
+                       [Var next_placeholder])))
       else
         (*FIXME this branch of the code is speculation: i don't know for sure
                 what code to generate for such a case yet.*)
         (naas_ty_s,
-         Increment (lenI, Call_Function (sizeofI, [Var next_placeholder]))) in
+         Increment (lenI, Call_Function (sizeofI, [],
+                                         [Var next_placeholder]))) in
     let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
     in (stmts @(*FIXME naive*) [commented_stmt], name :: names, next_placeholder - 1)
   | _ -> acc
@@ -168,7 +170,7 @@ let rec analyse_type_bstc_static
     let stmt =
       St_of_E
         (Call_Function
-           (readWriteData_read_write_VIntI,
+           (readWriteData_read_write_VIntI, [],
             [Address_of (Naasty_aux.nested_fields (name_idx :: target));
              Var streamI; Var streamendI; Address_of (Var read_offsetI)])) in
     let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
@@ -200,7 +202,7 @@ let rec analyse_type_bstc_dynamic
                       item_offset) in
             let f_call =
               Call_Function
-                (readWriteData_read_write_BytesI,
+                (readWriteData_read_write_BytesI, [],
                  [item_offset;
                   Naasty_aux.nested_fields (length_field_idx :: target);
                   Var streamI;
@@ -253,7 +255,7 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
           Commented (Skip, "Handling fixed-length data");
           Naasty_aux.concat body_contents1;
           Assign (Var write_offsetI,
-                  Call_Function (sizeofI, [Var datatype_nameI]));
+                  Call_Function (sizeofI, [], [Var datatype_nameI]));
 
           Commented (Skip, "Handling variable-length data");
           Naasty_aux.concat body_contents2;
@@ -309,7 +311,7 @@ let rec analyse_type_writebytestochannel_dynamic
             let name, name_idx = the label_opt, next_placeholder in
             let length_field_idx = next_placeholder - 1 in
             let f_call =
-              Call_Function (readWriteData_writeBytesI,
+              Call_Function (readWriteData_writeBytesI, [],
                              [Naasty_aux.nested_fields (name_idx :: source);
                               Naasty_aux.nested_fields (length_field_idx :: source);
                               Plus (Var channelI, Var offsetI)]) in
@@ -359,7 +361,7 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
           Naasty_aux.concat body_contents1;
           Assign (Var offsetI,
                   Plus (Var channelI,
-                        Call_Function (sizeofI, [Var datatype_nameI])));
+                        Call_Function (sizeofI, [], [Var datatype_nameI])));
 
           Commented (Skip, "Handling variable-length data");
           Naasty_aux.concat body_contents2;
@@ -390,7 +392,7 @@ let rec analyse_type_bcts_static
     let stmt =
       Increment (offsetI,
         (Call_Function
-           (readWriteData_writeVIntI,
+           (readWriteData_writeVIntI, [],
             [Cast (naas_ty',
                    Naasty_aux.nested_fields (name_idx :: target));
              item_offset]))) in
@@ -420,7 +422,7 @@ let rec analyse_type_bcts_dynamic
             let stream_offset = Plus (Var streamI, Var offsetI) in
             let f_call =
               Call_Function
-                (readWriteData_writeBytesI,
+                (readWriteData_writeBytesI, [],
                  [Naasty_aux.nested_fields (name_idx :: target);
                   Naasty_aux.nested_fields (length_field_idx :: target);
                   stream_offset]) in
@@ -469,7 +471,7 @@ let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_val
           Assign (Dereference (Var bytes_readI),
                   Field_In_Record
                     (Dereference (Var dataI),
-                     Call_Function (get_channel_lenI, [])));
+                     Call_Function (get_channel_lenI, [], [])));
 
           Commented (Skip, "Length of fixed-length parts");
           Naasty_aux.concat body_contents1;

@@ -97,9 +97,14 @@ let rec count_var_references_in_naasty_expr (st : state)
   | ArrayElement (e1, e2) ->
     count_var_references_in_naasty_expr st e1 table
     |> count_var_references_in_naasty_expr st e2
-  | Call_Function (_ (*ignore function identifier*), exprs) ->
+  | Call_Function (_ (*ignore function identifier*), tps, exprs) ->
     List.fold_right (fun expr acc ->
       count_var_references_in_naasty_expr st expr acc) exprs table
+    |> List.fold_right (fun tp acc ->
+        match tp with
+        | Type_Parameter _ -> acc
+        | Term_Parameter e ->
+          count_var_references_in_naasty_expr st e acc) tps
   | Record_Value fields ->
     List.fold_right (fun (_, e) table_acc ->
       count_var_references_in_naasty_expr st e table_acc) fields table
@@ -314,8 +319,13 @@ let rec naasty_expression_weight = function
   | LEq (e1, e2) ->
     naasty_expression_weight e1 +
     naasty_expression_weight e2 + 1
-  | Call_Function (_, exprs) ->
+  | Call_Function (_, tps, exprs) ->
     List.fold_right (fun expr acc -> acc + naasty_expression_weight expr) exprs 1
+    |> List.fold_right (fun tp acc ->
+      acc +
+      match tp with
+      | Type_Parameter _ -> acc
+      | Term_Parameter expr -> naasty_expression_weight expr) tps
   | Record_Value fields ->
     List.fold_right (fun (_, e) weight_acc ->
       naasty_expression_weight e + weight_acc) fields 1
@@ -363,8 +373,13 @@ let rec free_vars (expr : naasty_expression) (acc : Identifier_Set.t) : Identifi
 
   | Call_Function
       (_ (*we don't count the function name as a free variable*),
+       tps,
        exprs) ->
     List.fold_right free_vars exprs acc
+    |> List.fold_right (fun tp acc ->
+        match tp with
+        | Type_Parameter _ -> acc
+        | Term_Parameter e -> free_vars e acc) tps
 
   | Not e
   | Address_of e
@@ -440,9 +455,13 @@ let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_ex
   | Times (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Times (e1', e2'))
   | Mod (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Mod (e1', e2'))
   | Quotient (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Quotient (e1', e2'))
-  | Call_Function (id, es) ->
+  | Call_Function (id, tps, es) ->
     let es' = List.map (subst_expr subst) es in
-    Call_Function (id, es')
+    let tps' = List.map (fun tp ->
+      match tp with
+      | Type_Parameter _ -> tp
+      | Term_Parameter e -> Term_Parameter (subst_expr subst e)) tps in
+    Call_Function (id, tps', es')
   | GEq (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> GEq (e1', e2'))
   | Gt (e1, e2) -> binary_op_inst e1 e2 (fun e1' e2' -> Gt (e1', e2'))
   | Dereference e -> unary_op_inst e (fun e' -> Dereference e')

@@ -868,40 +868,30 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc' in
     let (chan_name,_) = channel_identifier in 
     let real_name = chan_name ^ "_receive_0" in  (*FIXME hack because channel nname is wrong*)
-    let chan_id = lookup_name (Term (*Channel_Name*) Value) st'' real_name in
-(*
-    let translated =
-      match chan_id with
-     | Some ch -> ConsumeChan ch
-     | None -> raise (Translation_Expr_Exc ("Could not find channel id " ^ chan_name ^ " in lookup", 
-                                            Some e, Some local_name_map, None, st)) in
-*)
+    let chan_id =
+      match lookup_name (Term (*Channel_Name*) Value) st'' real_name with
+      | Some ch -> ch
+      | None ->
+        raise (Translation_Expr_Exc
+                 ("Could not find channel id " ^ chan_name ^ " in lookup",
+                  Some e, Some local_name_map, None, st)) in
 
-(*
-    let (chanTyp,st) =
-      match st_opt with
-      | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int chan)
-      | Some st ->
-        match lookup_symbol_type chan (Term (*Channel_Name*) Value) st with  (*FIXME should be channel_name*)
-        | None -> failwith ("Channel type not found in symbol table: " ^ string_of_int chan)
-        | Some ty -> (ty,st)  in
-    let my_task = List.find (fun (x : Task_model.task) -> x.task_id = st.current_task) st.task_graph.tasks in
-    let chan_index = Task_model.find_input_channel my_task chan in
-    in "te= NaasData::consume_channel<" ^ string_of_naasty_type ~st_opt no_indent chanTyp ^
-          "> (inputs[" ^ string_of_int chan_index ^ "],&size);"
+(*FIXME this code seems redundant
+    let chanTyp =
+      match lookup_symbol_type chan_id (Term (*Channel_Name*) Value) st with  (*FIXME should be channel_name*)
+      | None ->
+        failwith ("Channel type not found in symbol table: " ^ string_of_int chan_id)
+      | Some ty -> ty in
 *)
-(*
-    FIXME incomplete
-    let chan_offset = (transfer code from Naasty_aux printing to here)
-    (*FIXME It looks like i can remove channel primitives from the IL*)
-*)
-    let chan_offset = 1 in
+    let my_task = List.find (fun (x : Task_model.task) ->
+      x.Task_model.task_id = st.current_task) st.task_graph.Task_model.tasks in
+    let chan_index = Task_model.find_input_channel my_task chan_id in
 
     let translated =
       Assign (Var te,
               Call_Function (consume_channel,
                              [Type_Parameter (Int_Type (None, default_int_metadata))],
-                             [ArrayElement (Var inputs, Int_Value chan_offset);
+                             [ArrayElement (Var inputs, Int_Value chan_index);
                               Address_of (Var size)]))
 
 (*FIXME calculate channel offset*)

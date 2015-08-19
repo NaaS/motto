@@ -435,6 +435,9 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
   | GotoLabel lbl ->
     indn indent ^ "goto " ^ lbl ^ terminal
   | WriteToChan (var, chan) ->
+(*FIXME it seems that channel-related IL primitives, and all their handling, is
+        redundant because channel-related Flick primitives are being translated into
+        function calls*)
     let (varTyp,st) =
       match st_opt with
       | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int var)
@@ -448,6 +451,9 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
        id_name st_opt var   ^ "outputs[" ^ string_of_int chan_index ^ 
         "],&size_written);\nif (!te.isOK()) {\n\treturn te;\n}"
    | ConsumeChan (chan) ->
+(*FIXME it seems that channel-related IL primitives, and all their handling, is
+        redundant because channel-related Flick primitives are being translated into
+        function calls*)
     let (chanTyp,st) =
       match st_opt with
       | None -> failwith ("Need state info in order to perform lookup for identifier type: " ^ string_of_int chan)

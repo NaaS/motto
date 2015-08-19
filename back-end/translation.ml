@@ -846,6 +846,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (*Add "te" declaration, unless it already exists in ctxt_acc*)
     let taskevent_ty, te, st' =
       Naasty_aux.add_usertyped_symbol "TaskEvent" "te" st in
+(*FIXME where does "size" come from?*)
     let size, st'' =
       Naasty_aux.add_symbol "size" (Term Value)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st' in
@@ -868,6 +869,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc' in
     let (chan_name,_) = channel_identifier in 
     let real_name = chan_name ^ "_receive_0" in  (*FIXME hack because channel nname is wrong*)
+(*FIXME is this an unhelpful indirection?*)
     let chan_id =
       match lookup_name (Term (*Channel_Name*) Value) st'' real_name with
       | Some ch -> ch
@@ -875,7 +877,6 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         raise (Translation_Expr_Exc
                  ("Could not find channel id " ^ chan_name ^ " in lookup",
                   Some e, Some local_name_map, None, st)) in
-
 (*FIXME this code seems redundant
     let chanTyp =
       match lookup_symbol_type chan_id (Term (*Channel_Name*) Value) st with  (*FIXME should be channel_name*)
@@ -885,7 +886,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 *)
     let my_task = List.find (fun (x : Task_model.task) ->
       x.Task_model.task_id = st.current_task) st.task_graph.Task_model.tasks in
+(*FIXME calculate channel offset*)
     let chan_index = Task_model.find_input_channel my_task chan_id in
+(*FIXME batch all channels into two channel arrays: one for inputs, and one for outputs*)
 
     let translated =
       Assign (Var te,
@@ -893,11 +896,6 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                              [Type_Parameter (Int_Type (None, default_int_metadata))],
                              [ArrayElement (Var inputs, Int_Value chan_index);
                               Address_of (Var size)]))
-
-(*FIXME calculate channel offset*)
-(*FIXME where does "size" come from?*)
-(*FIXME batch all channels into two channel arrays: one for inputs, and one for outputs*)
-
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
         ctxt_acc',

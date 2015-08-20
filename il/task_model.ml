@@ -14,7 +14,8 @@ type task_type =
         additional methods/members, each kind of class represented here must be
         associated with whatever additional methods/members/constructor
         parameters that class expects.*)
-type task_class = int
+type task_class = int (*FIXME this is very information-poor. Wouldn't it be
+                              helpful to have metadata, such as the class name?*)
 
 type chan_type =
   | Socket (*FIXME encode socket metadata -- address and port?*)

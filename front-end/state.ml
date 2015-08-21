@@ -79,6 +79,13 @@ type state =
       array of channels).*)
     current_task : Task_model.task_id;
     task_graph : Task_model.task_graph;
+(*TODO
+- channel names partitioned into two arrays of input & output channels
+- both arrays are local to a task.
+- but is this info used in the topology, to wire channels up between tasks?
+   (in that case, arrays would not be really local to the task, since their
+    offsets matter outside them).
+*)
   }
 
 let initial_state =
@@ -321,16 +328,20 @@ let lookup_function_type (st : state) (function_name : string) : (bool * functio
   else
     Some (List.assoc function_name st.crisp_funs)
 
-    
 (* Construct that part of state that represents the tasks and their connections *)
 let build_graph (st : state) =
-  let inp_task = {task_id = 0; task_type = Input; task_class= 0; input_chans = [0]; output_chans=[1]; 
-  process= {process_name = "InputTask"; process_type= ProcessType ([],([],[])); process_body = ProcessBody ([],True,[]) }} in
-  let merge_task = {task_id = 1; task_type = ManyToOne; task_class= 1; input_chans = [41;41]; output_chans=[1];
-  process= {process_name = "MergeTask"; process_type= ProcessType ([],([],[])); process_body = ProcessBody ([],True,[]) }} in
-  let out_task = {task_id = 2; task_type = Output; task_class= 2; input_chans = [1]; output_chans=[2];
-  process= {process_name = "OutputTask"; process_type= ProcessType ([],([],[])); process_body = ProcessBody ([],True,[]) }}
+  let inp_task =
+    {task_id = 0; task_type = Input; task_class= 0; input_chans = [0]; output_chans = [1];
+     process =
+       {process_name = "InputTask"; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in
+  let merge_task =
+    {task_id = 1; task_type = ManyToOne; task_class = 1; input_chans = [41; 41]; output_chans = [1];
+     process =
+       {process_name = "MergeTask"; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, []) }} in
+  let out_task =
+    {task_id = 2; task_type = Output; task_class= 2; input_chans = [1]; output_chans = [2];
+     process = {process_name = "OutputTask"; process_type = ProcessType ([],([],[])); process_body = ProcessBody ([], True, []) }}
   in
-  {st with task_graph = { tasks = [inp_task;merge_task;out_task] ; connections = []; task_classes = [0;1;2] };
-           current_task = 1;}
-  
+  {st with
+     task_graph = { tasks = [inp_task; merge_task; out_task]; connections = []; task_classes = [0;1;2] };
+     current_task = 1;}

@@ -289,6 +289,7 @@ and expression =
   | TupleValue of expression list
 
   | Seq of expression * expression
+  | Par of expression * expression
   | ITE of expression * expression * expression option
   | LocalDef of typing * expression (*def value_name : type = expression*)
   | Update of value_name * expression (*value_name := expression*)
@@ -362,6 +363,10 @@ and expression_to_string indent = function
   | Seq (e1, e2) ->
     expression_to_string indent e1 ^ "\n" ^
     expression_to_string indent e2
+  | Par (e1, e2) ->
+    indn indent ^
+    expression_to_string 0 e1 ^ " | " ^
+    expression_to_string 0 e2
 
   | True -> indn indent ^ "True"
   | False -> indn indent ^ "False"

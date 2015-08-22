@@ -117,6 +117,8 @@
 %token QUESTION
 %token QUESTIONQUESTION
 
+%token BAR
+
 (*Names*)
 (*
 %token <string> UPPER_ALPHA
@@ -129,6 +131,7 @@
 (*NOTE currently semicolons (i.e., sequential composition)
        are implicit in line-breaks;*)
 %right NL
+%right BAR
 %nonassoc local_def
 %nonassoc ite
 %nonassoc ARR_BOTH
@@ -683,6 +686,9 @@ expression:
   | e = expression; NL; f = expression
     %prec NL
     {Crisp_syntax.Seq (e, f)}
+
+  | e = expression; BAR; f = expression
+    {Crisp_syntax.Par (e, f)}
 
 (* FIXME disabled these for the time being, until i work out the core channel
    primitives. ARR_RIGHT and ARR_LEFT and ARR_BOTH seem more like sugaring that

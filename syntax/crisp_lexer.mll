@@ -174,4 +174,6 @@ rule main = parse
   | "?" {QUESTION}
   | "??" {QUESTIONQUESTION}
 
+  | "|" {BAR}
+
 (*FIXME string primitives as keywords -- e.g., concat, etc*)

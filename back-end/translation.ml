@@ -840,7 +840,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
    channel primitives:
      Exchange
 *)
-  | Receive (channel_inverted, channel_identifier) -> 
+  | Receive (channel_inverted, channel_identifier) ->
     (*NOTE only data-model instances can be communicated via channels.
            also need to ensure that #include the data-model instance output*)
     let size, st' =
@@ -871,7 +871,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       if List.mem size ctxt_acc then ctxt_acc else size :: ctxt_acc in
     let ctxt_acc' =
       if List.mem inputs ctxt_acc' then ctxt_acc' else inputs :: ctxt_acc' in
-    let (chan_name,_) = channel_identifier in 
+    let (chan_name, _) = channel_identifier in
     let real_name =
       (*FIXME hack because channel nname is wrong*)
       chan_name ^ "_receive_0" in
@@ -906,6 +906,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                      (Int_Type (None, default_int_metadata))],
                   [ArrayElement (Var inputs, Int_Value chan_index);
                    Address_of (Var size)]))
+    (*FIXME we should lift_assign*)
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
         ctxt_acc',
@@ -959,7 +960,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       if List.mem size ctxt_acc' then ctxt_acc' else size :: ctxt_acc' in
     let ctxt_acc' =
       if List.mem outputs ctxt_acc' then ctxt_acc' else outputs :: ctxt_acc' in
-    let (chan_name,_) = channel_identifier in
+    let (chan_name, _) = channel_identifier in
     let real_name =
       (*FIXME hack because channel nname is wrong*)
       chan_name ^ "_receive_0" in
@@ -994,7 +995,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                              [Var e_idx;
                               ArrayElement (Var outputs, Int_Value chan_index);
                               Address_of (Var size)]))
-
+    (*FIXME we should lift_assign*)
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
         ctxt_acc',
@@ -1002,6 +1003,87 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         local_name_map,
         st'')
 
+  (*FIXME need to improve inliner to avoid inlining function calls -- don't
+          want to multiply their effects. (This doesn't matter in the case of
+          peek_chan since it's pure, but still.)*)
+  (*FIXME lots of code duplicated from Receive*)
+  (*FIXME need to add the line of checking that follows a call to peek_channel*)
+  | Peek (channel_inverted, channel_identifier) ->
+    let inputs, st' =
+      let ty =
+        Array_Type (None,
+                    (*FIXME should be the type of channel buffers*)
+                    Int_Type (None, default_int_metadata),
+                    (*FIXME should be the size of the channel array*)
+                    Max 5) in
+      Naasty_aux.add_symbol "inputs" (Term Value)
+        (*FIXME carried-type of "inputs" array should be the channel type;
+                this should be a parameter to the function/process*)
+        ~ty_opt:(Some ty) st in
+    let peek_channel, st'' =
+      (*FIXME should name-spacing ("NaasData") be hardcoded like this, or
+              should it be left variable then resolved at compile time?*)
+      Naasty_aux.add_symbol "NaasData::peek_channel" (Term Value)
+        (*FIXME "consume_channel" should have some function type*)
+        ~ty_opt:(Some
+                  (*FIXME what type to use here?*)
+                   (Int_Type (None, default_int_metadata))) st' in
+    (*FIXME code style here sucks*)
+    let ctxt_acc' =
+      if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc in
+    let (chan_name, _) = channel_identifier in
+    let real_name =
+      (*FIXME hack because channel nname is wrong*)
+      chan_name ^ "_receive_0" in
+(*FIXME is this an unhelpful indirection?*)
+    let chan_id =
+      match lookup_name (Term (*Channel_Name*) Value) st'' real_name with
+      | Some ch -> ch
+      | None ->
+        raise (Translation_Expr_Exc
+                 ("Could not find channel id " ^ chan_name ^ " in lookup",
+                  Some e, Some local_name_map, None, st)) in
+(*FIXME this code seems redundant
+    let chanTyp =
+      match lookup_symbol_type chan_id (Term (*Channel_Name*) Value) st with  (*FIXME should be channel_name*)
+      | None ->
+        failwith ("Channel type not found in symbol table: " ^ string_of_int chan_id)
+      | Some ty -> ty in
+*)
+    let my_task = List.find (fun (x : Task_model.task) ->
+      x.Task_model.task_id = st.current_task) st.task_graph.Task_model.tasks in
+(*FIXME calculate channel offset*)
+    let chan_index = Task_model.find_input_channel my_task chan_id in
+(*FIXME batch all channels into two channel arrays: one for inputs, and one for
+        outputs. type for each parameter should be
+          std::vector<Buffer *>&*)
+
+    let naasty_ty =
+      (*FIXME use type inference*)
+      Int_Type (None, default_int_metadata) in
+    let (_, peek_idx, st'') =
+      mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "peek_" 0 st'' in
+
+    let translated_peek =
+      Assign (Var peek_idx,
+              Call_Function
+                 (peek_channel,
+                  [Type_Parameter
+                     (*FIXME need to work out the correct value for this*)
+                     (Int_Type (None, default_int_metadata))],
+                  [ArrayElement (Var inputs, Int_Value chan_index)])) in
+
+    let assignments =
+      Var peek_idx
+      |> lift_assign assign_acc
+      |> Naasty_aux.concat
+
+    in (Naasty_aux.concat [sts_acc; translated_peek; assignments],
+        (*add declaration for the fresh name we have for this tuple instance*)
+        peek_idx :: ctxt_acc',
+        [](*Having assigned to assign_accs, we can forget them.*),
+        local_name_map,
+        st'')
 
   | _ -> raise (Translation_Expr_Exc ("TODO: " ^ expression_to_string no_indent e,
                                       Some e, Some local_name_map, Some sts_acc, st))

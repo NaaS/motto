@@ -25,8 +25,10 @@ fun Wc_node : (type k_v/- chan; x : type k_v, y : type k_v, z : type k_v) -> ()
 #  let vs = peek_all () #([x, y])
 #  let v1 = vs[0] # * check if can project from lists like this
 #  let v2 = vs[1]
-  let v1 = peek (x)
-  let v2 = peek (y)
+#  let v1 = peek (x)
+#  let v2 = peek (y)
+  let v1 = ?? chan
+  let v2 = ?? chan
 
 #  if v1 > v2:
 #    <>

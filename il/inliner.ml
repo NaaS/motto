@@ -308,7 +308,8 @@ let rec naasty_expression_weight = function
   | GEq (e1, e2)
   | Gt (e1, e2)
   | Field_In_Record (e1, e2)
-  | LEq (e1, e2) ->
+  | LEq (e1, e2)
+  | ArrayElement (e1, e2) ->
     naasty_expression_weight e1 +
     naasty_expression_weight e2 + 1
   | Call_Function (_, tps, exprs) ->
@@ -321,6 +322,8 @@ let rec naasty_expression_weight = function
   | Record_Value fields ->
     List.fold_right (fun (_, e) weight_acc ->
       naasty_expression_weight e + weight_acc) fields 1
+  | e ->
+    raise (Inliner_Exc ("naasty_expression_weight", None, Some (St_of_E e)))
 
 let inliner_table_entry_weight entry =
   bind_opt naasty_expression_weight 0 entry.initialisation +
@@ -390,7 +393,8 @@ let rec free_vars (expr : naasty_expression) (acc : Identifier_Set.t) : Identifi
   | GEq (e1, e2)
   | Gt (e1, e2)
   | Field_In_Record (e1, e2)
-  | LEq (e1, e2) ->
+  | LEq (e1, e2)
+  | ArrayElement (e1, e2) ->
     List.fold_right free_vars [e1; e2] acc
   | Record_Value fields ->
     List.fold_right (fun (_, e) acc ->

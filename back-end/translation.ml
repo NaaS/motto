@@ -841,6 +841,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
      Exchange
 *)
   | Receive (channel_inverted, channel_identifier) -> 
+    (*NOTE only data-model instances can be communicated via channels.
+           also need to ensure that #include the data-model instance output*)
     let size, st' =
       Naasty_aux.add_symbol "size" (Term Value)
         (*FIXME type should be "size_t"*)

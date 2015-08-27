@@ -6,11 +6,11 @@ turn this into an _interactive_ runtime -- i.e., a "toplevel" or Read-Eval-Print
 Using the scriptable runtime, you can compile and run Flick programs using the
 OCaml compiler and runtime.  To compile the example:
 ```
-$ ./build.sh runtime_test.byte
+$ ./build.sh runtime_general_test.byte
 ```
 and then run!
 ```
-$ ./runtime_test.byte
+$ ./runtime_general_test.byte
 ```
 
 The full list of commands supported by the scriptable runtime is currently only
@@ -65,3 +65,10 @@ To run the type checker on regression tests, see the [test_type_checker.sh](http
 This implements the [crisp](https://github.com/NaaS/admin/wiki/crisp) language idea,
 but simplified as described in
 [Flick](https://github.com/NaaS/system/tree/master/crisp/flick).
+
+
+# Dependencies
+
+* ocamlfind
+  * m4
+* menhir

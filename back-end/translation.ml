@@ -847,7 +847,11 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st in
     let inputs, st'' =
       let ty =
-        Array_Type (None, Int_Type (None, default_int_metadata), Max 5(*FIXME*)) in
+        Array_Type (None,
+                    (*FIXME should be the type of channel buffers*)
+                    Int_Type (None, default_int_metadata),
+                    (*FIXME should be the size of the channel array*)
+                    Max 5) in
       Naasty_aux.add_symbol "inputs" (Term Value)
         (*FIXME carried-type of "inputs" array should be the channel type;
                 this should be a parameter to the function/process*)
@@ -857,7 +861,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
               should it be left variable then resolved at compile time?*)
       Naasty_aux.add_symbol "NaasData::consume_channel" (Term Value)
         (*FIXME "consume_channel" should have some function type*)
-        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st'' in
+        ~ty_opt:(Some
+                  (*FIXME what type to use here?*)
+                   (Int_Type (None, default_int_metadata))) st'' in
     (*FIXME code style here sucks*)
     let ctxt_acc' =
       if List.mem size ctxt_acc then ctxt_acc else size :: ctxt_acc in
@@ -893,7 +899,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let translated =
       St_of_E (Call_Function
                  (consume_channel,
-                  [Type_Parameter (Int_Type (None, default_int_metadata))],
+                  [Type_Parameter
+                     (*FIXME need to work out the correct value for this*)
+                     (Int_Type (None, default_int_metadata))],
                   [ArrayElement (Var inputs, Int_Value chan_index);
                    Address_of (Var size)]))
     in (Naasty_aux.concat [sts_acc; translated],
@@ -904,6 +912,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         st'')
 
   (*FIXME some code duplicated from "Receive"*)
+  (*FIXME contains lots of default types -- usually "int" is used*)
   | Send (channel_inverted, channel_identifier, e) ->
     (*Start by translating e*)
     let e_ty = (*FIXME use type inference*)

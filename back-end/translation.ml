@@ -477,6 +477,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     assert (assign_acc' = []);
 
     (*FIXME move this somewhere more general?*)
+    (*FIXME must this be an integer -- use type inference?*)
     let int_ty = Int_Type (None, default_int_metadata) in
 
     (*Determine the "from" and "until" values of the loop.
@@ -561,7 +562,10 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let (_, if_result_idx, st_before_then) =
       (*FIXME here we use Int_Type, but this should be inferred from the if
         expression*)
-      mk_fresh (Term Value) ~ty_opt:(Some (Int_Type (None, default_int_metadata))) "ifresult_" 0 st_cond in
+      mk_fresh (Term Value)
+        ~ty_opt:(Some
+                  (*FIXME use type inference*)
+                   (Int_Type (None, default_int_metadata))) "ifresult_" 0 st_cond in
     let (then_block, ctxt_acc_then, assign_acc_then, _, st_then) =
       naasty_of_flick_expr st_before_then e1 local_name_map Skip (if_result_idx :: ctxt_acc_cond) [if_result_idx] in
     let (else_block, ctxt_acc_else, assign_acc_else, _, st_else) =
@@ -864,7 +868,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       Naasty_aux.add_symbol "NaasData::consume_channel" (Term Value)
         (*FIXME "consume_channel" should have some function type*)
         ~ty_opt:(Some
-                  (*FIXME what type to use here?*)
+                  (*FIXME what type to use here -- use type inference?*)
                    (Int_Type (None, default_int_metadata))) st'' in
     (*FIXME code style here sucks*)
     let ctxt_acc' =

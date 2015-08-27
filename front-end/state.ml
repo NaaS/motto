@@ -100,7 +100,7 @@ let initial_state =
       (*FIXME create a constant, say Task_model.empty_graph;
               or accept the graph (and current_task) as a parameter
               to initial_state*)
-      { Task_model.tasks = []; Task_model.connections = []; Task_model.task_classes = [];};
+      { Task_model.tasks = []; Task_model.graph = ExplicitLinks([]);};
   }
 
 type scope =
@@ -343,5 +343,5 @@ let build_graph (st : state) =
      process = {process_name = "OutputTask"; process_type = ProcessType ([],([],[])); process_body = ProcessBody ([], True, []) }}
   in
   {st with
-     task_graph = { tasks = [inp_task; merge_task; out_task]; connections = []; task_classes = [0;1;2] };
+     task_graph = { tasks = [inp_task; inp_task; merge_task; out_task]; graph=ExplicitLinks([]) };
      current_task = 1;}

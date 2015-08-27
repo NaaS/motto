@@ -9,6 +9,12 @@ type task_type =
   | AnyToOne
   | Output
 
+type task_id = int
+
+type graph_type =
+  | ExplicitLinks of (task_id * task_id) list  (* Graph is an explicit list of all links *)
+  | FoldTree of (task_id * task_id * task_id * int)  (*Graph is a merge from an input to an output using binary merge *)  
+
 (*FIXME need inference to determine Task subclass? e.g., Many2One*)
 (*FIXME since different subclasses have different constructors, and perhaps
         additional methods/members, each kind of class represented here must be
@@ -34,7 +40,6 @@ type chan =
     (*FIXME incomplete?*)
   }
 
-type task_id = int
 
 type task =
   {
@@ -58,8 +63,7 @@ type connection =
 type task_graph =
   {
     tasks : task list;
-    connections : connection list;
-    task_classes : task_class list;
+    graph : graph_type;
   }
 
 (* Take a task and an integer representing a channel id and return the position of*)

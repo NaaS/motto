@@ -928,7 +928,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let write_channel, st'' =
       (*FIXME should name-spacing ("NaasData") be hardcoded like this, or
               should it be left variable then resolved at compile time?*)
-      Naasty_aux.add_symbol "NaasData::write_channel" (Term Value)
+      Naasty_aux.add_symbol "NaasData::write_to_channel" (Term Value)
         (*FIXME "write_channel" should have some function type*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st'' in
     let ctxt_acc' =

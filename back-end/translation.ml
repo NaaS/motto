@@ -846,11 +846,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (*Add "te" declaration, unless it already exists in ctxt_acc*)
     let taskevent_ty, te, st' =
       Naasty_aux.add_usertyped_symbol "TaskEvent" "te" st in
-    (*NOTE "size" value isn't used -- it's to know how much data has been
-            consumed. Since we don't ever read "size" in our use-cases at the
-            moment, we always assign to the same "size", to avoid overhead of
-            wasted space -- but note that this optimisation could be done by the
-            compiler.*)
+    (*NOTE "size" value tells us how much data has been consumed. Should have
+           distinct "size" variable for each occurrence of a channel-related
+           function.
+           However, since we don't ever read "size" in our use-cases at the
+           moment, we always assign to the same "size", to avoid overhead of
+           wasted space -- FIXME this optimisation could be done by the compiler.*)
     let size, st'' =
       Naasty_aux.add_symbol "size" (Term Value)
         (*FIXME type should be "size_t"*)

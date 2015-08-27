@@ -851,9 +851,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       Naasty_aux.add_symbol "size" (Term Value)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st' in
     let inputs, st'' =
+      let ty =
+        Array_Type (None, Int_Type (None, default_int_metadata), Max 5(*FIXME*)) in
       Naasty_aux.add_symbol "inputs" (Term Value)
-        (*FIXME "inputs" should have some array type*)
-        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st'' in
+        (*FIXME carried-type of "inputs" array should be the channel type;
+                this should be a parameter to the function/process*)
+        ~ty_opt:(Some ty) st'' in
     let consume_channel, st'' =
       (*FIXME should name-spacing ("NaasData") be hardcoded like this, or
               should it be left variable then resolved at compile time?*)

@@ -846,9 +846,14 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (*Add "te" declaration, unless it already exists in ctxt_acc*)
     let taskevent_ty, te, st' =
       Naasty_aux.add_usertyped_symbol "TaskEvent" "te" st in
-(*FIXME where does "size" come from?*)
+    (*NOTE "size" value isn't used -- it's to know how much data has been
+            consumed. Since we don't ever read "size" in our use-cases at the
+            moment, we always assign to the same "size", to avoid overhead of
+            wasted space -- but note that this optimisation could be done by the
+            compiler.*)
     let size, st'' =
       Naasty_aux.add_symbol "size" (Term Value)
+        (*FIXME type should be "size_t"*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st' in
     let inputs, st'' =
       let ty =
@@ -893,10 +898,13 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       x.Task_model.task_id = st.current_task) st.task_graph.Task_model.tasks in
 (*FIXME calculate channel offset*)
     let chan_index = Task_model.find_input_channel my_task chan_id in
-(*FIXME batch all channels into two channel arrays: one for inputs, and one for outputs*)
+(*FIXME batch all channels into two channel arrays: one for inputs, and one for
+        outputs. type for each parameter should be
+          std::vector<Buffer *>&*)
 
     let translated =
       Assign (Var te,
+              (*FIXME how is value of "te" used?*)
               Call_Function (consume_channel,
                              [Type_Parameter (Int_Type (None, default_int_metadata))],
                              [ArrayElement (Var inputs, Int_Value chan_index);

@@ -862,7 +862,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem size ctxt_acc then ctxt_acc else size :: ctxt_acc in
     let ctxt_acc' =
-      if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc' in
+      if List.mem inputs ctxt_acc' then ctxt_acc' else inputs :: ctxt_acc' in
     let (chan_name,_) = channel_identifier in 
     let real_name =
       (*FIXME hack because channel nname is wrong*)
@@ -896,6 +896,93 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                   [Type_Parameter (Int_Type (None, default_int_metadata))],
                   [ArrayElement (Var inputs, Int_Value chan_index);
                    Address_of (Var size)]))
+    in (Naasty_aux.concat [sts_acc; translated],
+        (*add declaration for the fresh name we have for this tuple instance*)
+        ctxt_acc',
+        [](*Having assigned to assign_accs, we can forget them.*),
+        local_name_map,
+        st'')
+
+  (*FIXME some code duplicated from "Receive"*)
+  | Send (channel_inverted, channel_identifier, e) ->
+    (*Add "te" declaration, unless it already exists in ctxt_acc*)
+    let taskevent_ty, te, st' =
+      Naasty_aux.add_usertyped_symbol "TaskEvent" "te" st in
+    (*NOTE "size" value tells us how much data has been consumed. Should have
+           distinct "size" variable for each occurrence of a channel-related
+           function.
+           However, since we don't ever read "size" in our use-cases at the
+           moment, we always assign to the same "size", to avoid overhead of
+           wasted space -- FIXME this optimisation could be done by the compiler.*)
+    let size, st'' =
+      Naasty_aux.add_symbol "size" (Term Value)
+        (*FIXME type should be "size_t"*)
+        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st' in
+    let outputs, st'' =
+      let ty =
+        Array_Type (None, Int_Type (None, default_int_metadata), Max 5(*FIXME*)) in
+      Naasty_aux.add_symbol "outputs" (Term Value)
+        (*FIXME carried-type of "outputs" array should be the channel type;
+                this should be a parameter to the function/process*)
+        ~ty_opt:(Some ty) st'' in
+    let write_channel, st'' =
+      (*FIXME should name-spacing ("NaasData") be hardcoded like this, or
+              should it be left variable then resolved at compile time?*)
+      Naasty_aux.add_symbol "NaasData::write_channel" (Term Value)
+        (*FIXME "write_channel" should have some function type*)
+        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st'' in
+    let ctxt_acc' =
+      if List.mem te ctxt_acc then ctxt_acc else te :: ctxt_acc in
+    (*FIXME code style here sucks*)
+    let ctxt_acc' =
+      if List.mem size ctxt_acc' then ctxt_acc' else size :: ctxt_acc' in
+    let ctxt_acc' =
+      if List.mem outputs ctxt_acc' then ctxt_acc' else outputs :: ctxt_acc' in
+    let (chan_name,_) = channel_identifier in
+    let real_name =
+      (*FIXME hack because channel nname is wrong*)
+      chan_name ^ "_receive_0" in
+(*FIXME is this an unhelpful indirection?*)
+    let chan_id =
+      match lookup_name (Term (*Channel_Name*) Value) st'' real_name with
+      | Some ch -> ch
+      | None ->
+        raise (Translation_Expr_Exc
+                 ("Could not find channel id " ^ chan_name ^ " in lookup",
+                  Some e, Some local_name_map, None, st)) in
+(*FIXME this code seems redundant
+    let chanTyp =
+      match lookup_symbol_type chan_id (Term (*Channel_Name*) Value) st with  (*FIXME should be channel_name*)
+      | None ->
+        failwith ("Channel type not found in symbol table: " ^ string_of_int chan_id)
+      | Some ty -> ty in
+*)
+    let my_task = List.find (fun (x : Task_model.task) ->
+      x.Task_model.task_id = st.current_task) st.task_graph.Task_model.tasks in
+(*FIXME calculate channel offset*)
+    let chan_index = Task_model.find_input_channel my_task chan_id in
+(*FIXME batch all channels into two channel arrays: one for inputs, and one for
+        outputs. type for each parameter should be
+          std::vector<Buffer *>&*)
+
+    let translated =
+      Assign (Var te,
+              (*FIXME how is value of "te" used?*)
+              Call_Function (write_channel,
+                             [Type_Parameter (Int_Type (None, default_int_metadata))],
+                             [ArrayElement (Var outputs, Int_Value chan_index);
+                              Address_of (Var size)]))
+(*FIXME include e's translation
+     naasty_of_flick_expr (st : state) (e : expression)
+       (local_name_map : local_name_map)
+       (sts_acc : naasty_statement) (ctxt_acc : identifier list)
+       (assign_acc : identifier list) : (naasty_statement *
+                                         identifier list (*ctxt_acc*) *
+                                         identifier list (*assign_acc*) *
+                                         local_name_map *
+                                         state)
+*)
+
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
         ctxt_acc',

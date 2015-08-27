@@ -868,7 +868,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc' in
     let (chan_name,_) = channel_identifier in 
-    let real_name = chan_name ^ "_receive_0" in  (*FIXME hack because channel nname is wrong*)
+    let real_name =
+      (*FIXME hack because channel nname is wrong*)
+      chan_name ^ "_receive_0" in
 (*FIXME is this an unhelpful indirection?*)
     let chan_id =
       match lookup_name (Term (*Channel_Name*) Value) st'' real_name with

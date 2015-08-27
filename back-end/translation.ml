@@ -837,43 +837,30 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
    ConsList
    AppendList
 
-   channels
-   Send
-   Receive
-   Exchange
+   channel primitives:
+     Exchange
 *)
   | Receive (channel_inverted, channel_identifier) -> 
-    (*Add "te" declaration, unless it already exists in ctxt_acc*)
-    let taskevent_ty, te, st' =
-      Naasty_aux.add_usertyped_symbol "TaskEvent" "te" st in
-    (*NOTE "size" value tells us how much data has been consumed. Should have
-           distinct "size" variable for each occurrence of a channel-related
-           function.
-           However, since we don't ever read "size" in our use-cases at the
-           moment, we always assign to the same "size", to avoid overhead of
-           wasted space -- FIXME this optimisation could be done by the compiler.*)
-    let size, st'' =
+    let size, st' =
       Naasty_aux.add_symbol "size" (Term Value)
         (*FIXME type should be "size_t"*)
-        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st' in
+        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st in
     let inputs, st'' =
       let ty =
         Array_Type (None, Int_Type (None, default_int_metadata), Max 5(*FIXME*)) in
       Naasty_aux.add_symbol "inputs" (Term Value)
         (*FIXME carried-type of "inputs" array should be the channel type;
                 this should be a parameter to the function/process*)
-        ~ty_opt:(Some ty) st'' in
+        ~ty_opt:(Some ty) st' in
     let consume_channel, st'' =
       (*FIXME should name-spacing ("NaasData") be hardcoded like this, or
               should it be left variable then resolved at compile time?*)
       Naasty_aux.add_symbol "NaasData::consume_channel" (Term Value)
         (*FIXME "consume_channel" should have some function type*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st'' in
-    let ctxt_acc' =
-      if List.mem te ctxt_acc then ctxt_acc else te :: ctxt_acc in
     (*FIXME code style here sucks*)
     let ctxt_acc' =
-      if List.mem size ctxt_acc then ctxt_acc else size :: ctxt_acc' in
+      if List.mem size ctxt_acc then ctxt_acc else size :: ctxt_acc in
     let ctxt_acc' =
       if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc' in
     let (chan_name,_) = channel_identifier in 
@@ -904,18 +891,18 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
           std::vector<Buffer *>&*)
 
     let translated =
-      Assign (Var te,
-              (*FIXME how is value of "te" used?*)
-              Call_Function (consume_channel,
-                             [Type_Parameter (Int_Type (None, default_int_metadata))],
-                             [ArrayElement (Var inputs, Int_Value chan_index);
-                              Address_of (Var size)]))
+      St_of_E (Call_Function
+                 (consume_channel,
+                  [Type_Parameter (Int_Type (None, default_int_metadata))],
+                  [ArrayElement (Var inputs, Int_Value chan_index);
+                   Address_of (Var size)]))
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
         ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
         st'')
+
 
   | _ -> raise (Translation_Expr_Exc ("TODO: " ^ expression_to_string no_indent e,
                                       Some e, Some local_name_map, Some sts_acc, st))

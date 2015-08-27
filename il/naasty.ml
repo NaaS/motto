@@ -95,6 +95,7 @@ and naasty_expression =
   | ArrayElement of naasty_expression * naasty_expression
   | Left_shift of naasty_expression * naasty_expression
   | Right_shift of naasty_expression * naasty_expression
+  | Nullptr
 
 type naasty_statement =
     (*Should include function prototypes here?*)

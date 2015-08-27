@@ -1072,15 +1072,31 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                      (*FIXME need to work out the correct value for this*)
                      (Int_Type (None, default_int_metadata))],
                   [ArrayElement (Var inputs, Int_Value chan_index)])) in
-
+    let condition = 
+      Equals (Var peek_idx, Nullptr)
+        in
+    let naasty_ty =
+      (*FIXME use type inference*)
+      Int_Type (None, default_int_metadata) in
+        let ret_func, st'' = Naasty_aux.add_symbol "TaskEvent" ~ty_opt:(Some naasty_ty) (Term Value) st'' in
+        let out_of_data, st'' = Naasty_aux.add_symbol "TaskEvent::OUT_OF_DATA" ~ty_opt:(Some naasty_ty) (Term Value) st'' in
+        let ret_type = Call_Function(ret_func, [], [Var out_of_data; Int_Value chan_index]) in
+        let result = 
+          Return (Some (ret_type)) 
+            in
+              let peek_with_check = 
+                 (* Add check for nullptr and possible return*)
+                 (* naasty_statement.If1 naasty.Equals (Var peek_idx, nullptr)  (return TaskEvent (OUT_OF_DATA, channel *)
+		  Seq (translated_peek, (If1 (condition,result))) 
+            in 
     let assignments =
       Var peek_idx
       |> lift_assign assign_acc
       |> Naasty_aux.concat
 
-    in (Naasty_aux.concat [sts_acc; translated_peek; assignments],
+    in (Naasty_aux.concat [sts_acc; peek_with_check; assignments],
         (*add declaration for the fresh name we have for this tuple instance*)
-        peek_idx :: ctxt_acc',
+        out_of_data :: ret_func :: peek_idx :: ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
         st'')

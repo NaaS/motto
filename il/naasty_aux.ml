@@ -218,6 +218,7 @@ let rec size_of_naasty_expression : naasty_expression -> int = function
   | Record_Value _
   | Union_Value _
   | Call_Function (_, _, _)
+  | Nullptr
   | Field_In_Record (_, _) -> 1
   | Dereference e
   | Address_of e ->
@@ -348,7 +349,8 @@ and string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
           "." ^ id_name st_opt id ^ " = " ^
           fst (string_of_naasty_expression ~st_opt e)) fields
          |> String.concat ", " in
-      "{" ^ fields_s ^ "}" in
+      "{" ^ fields_s ^ "}" 
+    | Nullptr -> "nullptr" in
   if size_of_naasty_expression e = 1 then
     e_s, false
   else

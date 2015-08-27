@@ -1310,15 +1310,21 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                 if !Config.cfg.Config.disable_inlining then body
                 else
                   let subst = Inliner.mk_subst st init_table body in
-                  (*If all variables mentioned in an assignment/declaration are to be deleted,
-                    then delete the assignment/declaration*)
-                  Inliner.erase_vars body (List.map fst subst)
+                  (*If all variables mentioned in an assignment/declaration are
+                    to be deleted, then delete the assignment/declaration.
+                    (Irrespective if it contains side-effecting functions,
+                     since these have been moved elsewhere.)
+                    FIXME this can re-order side-effecting functions, which
+                          would lead to the introduction of bugs. Should check
+                          to ensure that inlining doesn't reorder such
+                          functions.*)
+                  Inliner.erase_vars ~aggressive:true body (List.map fst subst)
                   (*Do the inlining*)
                   |> Inliner.subst_stmt subst in
 
               (*Iteratively delete variables that are never read, but
                 don't delete what's assigned to them if it may contain
-                side-effects*)
+                side-effects (i.e., call erase_vars in non-aggressive mode).*)
               let rec var_erased_body init_table st body =
                 if !Config.cfg.Config.disable_var_erasure then body
                 else

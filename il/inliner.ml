@@ -574,7 +574,7 @@ let subst_to_string ?st_opt:((st_opt : state option) = None)
 
 (*Erase declarations and assignments to inlined variables.
   NOTE we need to descend into For, If, etc*)
-let rec erase_vars (stmt : naasty_statement) (idents : identifier list) : naasty_statement =
+let rec erase_vars ?aggressive:(aggressive : bool = false) (stmt : naasty_statement) (idents : identifier list) : naasty_statement =
   match stmt with
   | Declaration (ty, _) ->
     begin
@@ -586,28 +586,30 @@ let rec erase_vars (stmt : naasty_statement) (idents : identifier list) : naasty
       if List.mem idx idents then Skip else stmt
     end
   | Seq (stmt1, stmt2) ->
-    mk_seq (erase_vars stmt1 idents) (erase_vars stmt2 idents)
+    mk_seq (erase_vars ~aggressive stmt1 idents) (erase_vars ~aggressive stmt2 idents)
   | Assign (Var id, e) ->
     if List.mem id idents then
-      match e with
-      | Var _ -> Skip
-      | _ ->
-        (*As an overapproximation, retain any expressions containing function
-          calls in case they include side-effects*)
-        (*FIXME include other side-effecting primitives, such as anything that
-                involves static variables or channels*)
-        if contains_functor_app e then St_of_E e
-        else Skip
+      if aggressive then Skip
+      else
+        match e with
+        | Var _ -> Skip
+        | _ ->
+          (*As an overapproximation, retain any expressions containing function
+            calls in case they include side-effects*)
+          (*FIXME include other side-effecting primitives, such as anything that
+                  involves static variables or channels*)
+          if contains_functor_app e then St_of_E e
+          else Skip
     else stmt
   | For ((ty, cond, inc), body) ->
-    let body' = erase_vars body idents in
+    let body' = erase_vars ~aggressive body idents in
     For ((ty, cond, inc), body')
   | If (cond, stmt1, stmt2) ->
-    let stmt1' = erase_vars stmt1 idents in
-    let stmt2' = erase_vars stmt2 idents in
+    let stmt1' = erase_vars ~aggressive stmt1 idents in
+    let stmt2' = erase_vars ~aggressive stmt2 idents in
     If (cond, stmt1', stmt2')
   | If1 (cond, stmt') ->
-    let stmt'' = erase_vars stmt' idents in
+    let stmt'' = erase_vars ~aggressive stmt' idents in
     If1 (cond, stmt'')
   | _ -> stmt
 

@@ -905,6 +905,16 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
   (*FIXME some code duplicated from "Receive"*)
   | Send (channel_inverted, channel_identifier, e) ->
+    (*Start by translating e*)
+    let e_ty = (*FIXME use type inference*)
+      Int_Type (None, default_int_metadata) in
+    (*Since this is a newly-declared variable, make sure it's fresh.*)
+    let (_, e_idx, st') =
+      mk_fresh (Term Value) ~ty_opt:(Some e_ty) ("e_") 0 st in
+    let (sts_acc, ctxt_acc, assign_acc, _, st) =
+      naasty_of_flick_expr st' e local_name_map sts_acc
+        (e_idx :: ctxt_acc) [e_idx] in
+
     (*Add "te" declaration, unless it already exists in ctxt_acc*)
     let taskevent_ty, te, st' =
       Naasty_aux.add_usertyped_symbol "TaskEvent" "te" st in
@@ -969,19 +979,10 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       Assign (Var te,
               (*FIXME how is value of "te" used?*)
               Call_Function (write_channel,
-                             [Type_Parameter (Int_Type (None, default_int_metadata))],
-                             [ArrayElement (Var outputs, Int_Value chan_index);
+                             [Type_Parameter e_ty],
+                             [Var e_idx;
+                              ArrayElement (Var outputs, Int_Value chan_index);
                               Address_of (Var size)]))
-(*FIXME include e's translation
-     naasty_of_flick_expr (st : state) (e : expression)
-       (local_name_map : local_name_map)
-       (sts_acc : naasty_statement) (ctxt_acc : identifier list)
-       (assign_acc : identifier list) : (naasty_statement *
-                                         identifier list (*ctxt_acc*) *
-                                         identifier list (*assign_acc*) *
-                                         local_name_map *
-                                         state)
-*)
 
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)

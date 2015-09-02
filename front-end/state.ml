@@ -45,8 +45,18 @@ let ik_is_field = function
   | Field _ -> true
   | _ -> false
 
+(*The function/process where a symbol was declared, and whether the symbol
+  was a parameter there*)
+type declaration_scope =
+  {
+    name : function_name;
+    is_parameter : bool;
+  }
+
 type term_symbol_metadata =
   {
+    declaration_scope : declaration_scope option;
+
     source_type : type_value option;
     naasty_type : naasty_type option;
     identifier_kind : identifier_kind;

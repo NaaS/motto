@@ -460,7 +460,9 @@ let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent pro
 
 (*Extends a scope by adding a mapping between a name and an index.
   NOTE we don't check for clashes! thus the _unsafe prefix*)
-let extend_scope_unsafe (scope : scope) (st : state) ?src_ty_opt:(src_ty_opt = None) ?ty_opt:(ty_opt = None) (id : string) : Naasty.identifier * state =
+let extend_scope_unsafe (scope : scope) (st : state)
+      ?src_ty_opt:(src_ty_opt = None) ?ty_opt:(ty_opt = None)
+      ?decl_scope_opt:(decl_scope_opt = None) (id : string) : Naasty.identifier * state =
   let ty_opt' =
     (*If we're given a type, but it isn't associated with a variable index, then
       update the type to associate it with the index we have.*)
@@ -480,6 +482,7 @@ let extend_scope_unsafe (scope : scope) (st : state) ?src_ty_opt:(src_ty_opt = N
     (st.next_symbol,
      let metadata =
      {
+       declaration_scope = decl_scope_opt;
        source_type = src_ty_opt;
        naasty_type = ty_opt';
        identifier_kind = ik;

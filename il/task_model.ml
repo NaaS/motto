@@ -11,15 +11,20 @@ type task_type =
 
 type task_id = int
 
+type graph_hint =   (* Type of task graph we are constructing *)
+  | ExplicitLinksType
+  | FoldTreeType
+  | DeMuxType
+
 type graph_type =
   | ExplicitLinks of (task_id * task_id) list  (* Graph is an explicit list of all links 
                                                   task_id pairs represent links between tasks*)
-  | FoldTree of (task_id * task_id * task_id * int)  (*Graph is a merge from an input to an output using binary merge 
+  | FoldTree of (task_id * task_id * task_id * Crisp_syntax.dependency_index)  (*Graph is a merge from an input to an output using binary merge 
                                                   task_ids represent input task, processing task, output task
                                                     -- e.g. hadoop use case*)  
-  | DeMux of (task_id * task_id * task_id * task_id * task_id * int)  (* Graph takes input from a client and forwards
+  | DeMux of (task_id * task_id * task_id * task_id * task_id * Crisp_syntax.dependency_index)  (* Graph takes input from a client and forwards
                                                it to one or more clients.  task_ids represent client input, client output,
-                                              processing, backend input, backend output and number of backends e.g. mapreduce *)
+                                              processing, backend input, backend output and number of backends e.g. mapreduce *)                                             
 
 (*FIXME need inference to determine Task subclass? e.g., Many2One*)
 (*FIXME since different subclasses have different constructors, and perhaps

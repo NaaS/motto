@@ -8,7 +8,7 @@
 #
 # NOTE expects to find the compiler in the working directory.
 
-DIR=tests/
+DIR=tests/flick_code/
 
 # NOTE tests containing "bad" in their name are filtered out. They are known
 #      negative tests. Perhaps should include them and flip the result?

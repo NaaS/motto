@@ -848,9 +848,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (*NOTE only data-model instances can be communicated via channels.
            also need to ensure that #include the data-model instance output*)
     let size, st' =
-      Naasty_aux.add_symbol "size" (Term Value)
-        (*FIXME type should be "size_t"*)
-        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st in
+      Naasty_aux.add_symbol "size" (Term Value) ~ty_opt:(Some (Size_Type None)) st in
     let inputs, st'' =
       let ty =
         Array_Type (None,

@@ -9,6 +9,12 @@ else
   TARGET="${1}"
 fi
 
+if [ -f "${TARGET}" ]
+then
+  echo "Target (${TARGET}) already exists" >&2
+  exit 1
+fi
+
 echo "building ${TARGET}"
 
 # NOTE could add -dont-catch-errors to have exceptions pass through catches.

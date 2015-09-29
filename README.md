@@ -39,9 +39,11 @@ as channels.
 Motto provides a flexible scriptable-runtime. That is, in addition to running
 Flick programs, you can programmatically control different aspects of the
 runtime. This is useful, for instance, if you want to alter the contents of
-channels, to make tests more repeatable and specific.  If you have the time,
-it's not difficult to turn this into an _interactive_ runtime -- i.e., a
-"toplevel" or Read-Eval-Print Loop, a.k.a., "REPL".)
+channels, to make tests more repeatable and specific. Or you could simulate
+phenomena that are beyond the control of Flick programs, such as channels
+breaking. If you have the time, it's not difficult to turn this into an
+_interactive_ runtime -- i.e., a "toplevel" or Read-Eval-Print Loop, a.k.a.,
+"REPL".)
 
 Now look at an example of the [runtime's use to run the factorial function](https://github.com/NaaS/motto/blob/master/tests/runtime/factorial.ml).
 Using the scriptable runtime, you can compile and run Flick programs using the

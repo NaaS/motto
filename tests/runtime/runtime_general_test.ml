@@ -137,7 +137,23 @@ let _ = run [
    Q_channel ("somechan", Incoming, None, "1115");
    Eval "[? somechan, ? somechan, let x = ? somechan, ? somechan - x]";
 
+   (*FIXME these don't seem to work well yet*)
+   (*List comprehension*)
+   Eval "[1 .. 3]";
+   (*List append*)
+   Eval "[1 .. 3] @ [3 .. 10]";
+   (*List cons*)
+   Eval "2 :: [3 .. 10]";
+(* FIXME need to add "head" and "tail" keywords
+   (*List head*)
+   Eval "head (2 :: [3 .. 10])";
+   (*List tail*)
+   Eval "tail (2 :: [3 .. 10])";*)
+   (*FIXME test "map"*)
+
    Load "tests/flick_code/variants.cp";
+   Eval "F_variants(c(5))";
+   Eval "F_variants(d(<>))";
 
 
   (** Testing of functions and asynch evaluation **)
@@ -218,7 +234,7 @@ let _ = run [
    Eval "fun_call_f2(6)";
 
 
-(*FIXME test case-of, update, update-indexable, and indexable-projection
+(*FIXME test update, update-indexable, and indexable-projection
         wiring up processes with channels
         channel arrays
   FIXME do we also need this asynch primitive: an expression is evaluated

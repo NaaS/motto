@@ -757,6 +757,10 @@ and channel_fun_ident ((c_name, idx_opt) : channel_identifier) (operation_verb :
 and evaluate ?work_item_name:(work_item_name : work_item_name = "<unnamed>")
       (st : state) (ctxt : runtime_ctxt) (e : expression) : typed_value * runtime_ctxt =
   let em, ctxt' = normalise st ctxt e in
-  let ([(_, result)], ctxt'') = run_until_done normalise st ctxt'
-                             [(work_item_name, em)] [] in
+  let (pre_result, ctxt'') = run_until_done normalise st ctxt'
+                           [(work_item_name, em)] [] in
+  let result =
+    match pre_result with
+    | [(_, result)] -> result
+    | [] -> Bottom in
   evaluate_value ctxt'' result, ctxt''

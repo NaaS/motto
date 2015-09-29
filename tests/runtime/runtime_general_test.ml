@@ -53,6 +53,15 @@ let _ = run [
    Eval "not (? boolchan)";
 *)
 
+
+(*
+   Declare_channel ("somechan", "integer/boolean");
+   Eval "? somechan";
+*)
+   Eval "? somechan";
+(*   Eval "? boolchan";*)
+(*   Eval "not (? boolchan)";*)
+
    MI (Show_runtime_ctxt None);
 (*   Eval "((False or not ? boolchan) and True)";*)
 (*   Eval "((False or not ? boolchan) or False)";*)

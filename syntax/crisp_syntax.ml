@@ -230,6 +230,8 @@ and channel_inverted = bool
 and channel_identifier = channel_name * expression option
 
 and expression =
+  | Bottom
+
     (*This is used for channels, to indicate that the channel is being passed
       inverted (with send/receive "swapped")*)
   | InvertedVariable of label
@@ -354,6 +356,7 @@ let rec channel_identifier_to_string (c_name, idx_opt) =
   | None -> ""
   | Some idx -> expression_to_string min_indentation idx
 and expression_to_string indent = function
+  | Bottom -> "_|_"
   | InvertedVariable value_name -> indn indent ^ "-" ^ value_name
   | Variable value_name -> indn indent ^ value_name
   | TypeAnnotation (e, ty) ->

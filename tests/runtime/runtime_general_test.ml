@@ -95,6 +95,11 @@ let _ = run [
    Q_channel ("boolchan", Incoming, None, "True");
    Eval "boolchan ! (False or not ? boolchan) and True";
 
+   (*"peek" on channel*)
+   Q_channel ("boolchan", Incoming, None, "True");
+   Eval "?? boolchan";
+   Eval "?? boolchan";
+   Eval "? boolchan";
 
    (** Testing of some types other than Booleans **)
 

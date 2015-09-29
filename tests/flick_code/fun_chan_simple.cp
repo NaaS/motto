@@ -10,5 +10,5 @@ fun fun_chan_simp2 : (integer/integer fun_chan_simp2_c) -> (integer)
   3
   fun_chan_simp2_c ! 751
   fun_chan_simp2_c ! 753
-  fun_chan_simp2_c ! 755
-  fun_chan_simp2_c ! 757
+#  fun_chan_simp2_c ! 755
+#  fun_chan_simp2_c ! 757

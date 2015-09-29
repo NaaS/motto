@@ -156,20 +156,26 @@ let _ = run [
    Asynch_Eval ("t5", "fun_chan_simp2(-int_chan)");
    Asynch_Eval ("t7", "fun_chan_simp1(int_chan)");
 
+   (*NOTE arbitrarily many expressions can share the same channel*)
    Asynch_Eval ("t4.a", "fun_chan_simp1(int_chan)");
    Asynch_Eval ("t5.a", "fun_chan_simp2(-int_chan)");
    Asynch_Eval ("t7.a", "fun_chan_simp1(int_chan)");
+   Run_Asynch;
 
+   Clear_Asynch_Eval;
+(*
    Asynch_Eval ("t6", "? int_chan");
    Asynch_Eval ("t6.b", "? int_chan");
 (*   Asynch_Eval ("t6.c", "? int_chan");*)
+*)
    Asynch_Eval ("t8", "int_chan ! 1");
    Asynch_Eval ("t9", "int_chan ! 2");
    Asynch_Eval ("t10", "int_chan ! 3");
    Asynch_Eval ("t11", "int_chan ! 4");
    Asynch_Eval ("t12", "int_chan ! 5");
-(*   Asynch_Eval "int_chan ! 6";*)
-(*   Asynch_Eval "int_chan ! ? int_chan";*)
+   Asynch_Eval ("t13", "int_chan ! 6");
+   Q_channel ("int_chan", Incoming, None, "7");
+   Asynch_Eval ("t14", "int_chan ! ? int_chan");
    Run_Asynch;
 
    Load "tests/flick_code/fun_call.cp";

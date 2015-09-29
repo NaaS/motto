@@ -363,7 +363,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Record fields -> project_from fields
       | TupleValue es ->
         let labels =
-          enlist 1 (List.length es)
+          enlist 1 (List.length es + 1)
           |> List.map string_of_int in
         List.combine labels es
         |> project_from

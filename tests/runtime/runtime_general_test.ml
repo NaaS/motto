@@ -112,7 +112,9 @@ let _ = run [
    Q_channel ("somechan", Incoming, None, "10");
    Q_channel ("somechan", Incoming, None, "100");
    Q_channel ("somechan", Incoming, None, "1000");
-   Eval "<? somechan, ? somechan, ? somechan>";
+   (*Here we test tuple creation, then projection*)
+   Eval "let test_tuple = <? somechan, ? somechan, ? somechan>";
+   Eval "test_tuple.1";
 
    Load "tests/flick_code/records.cp";
    Eval "{ test = 3, a2 = True, b3 = <1, False, [3]>}";
@@ -125,6 +127,7 @@ let _ = run [
    Q_channel ("somechan", Incoming, None, "15");
    Q_channel ("somechan", Incoming, None, "115");
    Q_channel ("somechan", Incoming, None, "1115");
+   (*Here we test record creation, then projection*)
    Eval "let testing = { test = ? somechan, a2 = True, b3 = <? somechan, False, [? somechan]>} with test = ? somechan";
    Eval "testing.test";
 

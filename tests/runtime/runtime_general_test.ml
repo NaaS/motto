@@ -63,25 +63,39 @@ let _ = run [
 
    MI (Show_runtime_ctxt None);
 
-(*   Eval "((False or not ? boolchan) and True)";*)
-(*   Eval "((False or not ? boolchan) or False)";*)
-(*   Eval "((not ? boolchan) or False)";*)
-(*   Eval "(False or (not ? boolchan))";*)
-(*   Eval "(False or False or (not ? boolchan))";*)
-(*   Eval "(False or (False or (not ? boolchan)))";*)
-(*   Eval "False or (False or (? boolchan))";*)
-(*   Eval "False or (False or (False or (? boolchan)))";*)
-(*   Eval "not (False or (False or (? boolchan)))";*)
+   (*These next lines should evaluate to True, False, ... alternatingly*)
+   Q_channel ("boolchan", Incoming, None, "False");
+   Eval "((False or not ? boolchan) and True)";
+   Q_channel ("boolchan", Incoming, None, "True");
+   Eval "((False or not ? boolchan) or False)";
+   Q_channel ("boolchan", Incoming, None, "False");
+   Eval "((not ? boolchan) or False)";
+   Q_channel ("boolchan", Incoming, None, "True");
+   Eval "(False or (not ? boolchan))";
+   Q_channel ("boolchan", Incoming, None, "False");
+   Eval "(False or False or (not ? boolchan))";
+   Q_channel ("boolchan", Incoming, None, "True");
+   Eval "(False or (False or (not ? boolchan)))";
+   Q_channel ("boolchan", Incoming, None, "True");
+   Eval "False or (False or (? boolchan))";
+   Q_channel ("boolchan", Incoming, None, "False");
+   Eval "False or (False or (False or (? boolchan)))";
+   Q_channel ("boolchan", Incoming, None, "False");
+   Eval "not (False or (False or (? boolchan)))";
 
-(*   Eval "((False or False) or (not ? boolchan))";*)
-(*   Eval "not not not not not ? boolchan";*)
+   Q_channel ("boolchan", Incoming, None, "True");
+   Eval "((False or False) or (not ? boolchan))";
+   Q_channel ("boolchan", Incoming, None, "False");
+   Eval "not not not not not ? boolchan";
+   Q_channel ("boolchan", Incoming, None, "True");
+   Eval "boolchan ! ((False or not ? boolchan) and True)";
 
+   Q_channel ("boolchan", Incoming, None, "False");
    Eval "boolchan ! ((False or not ? boolchan) and True)";
-(*
-   Eval "boolchan ! ((False or not ? boolchan) and True)";
+   Q_channel ("boolchan", Incoming, None, "True");
    Eval "boolchan ! (False or not ? boolchan) and True";
-*)
 
+   (*Now turning to types other than Booleans*)
    Eval "<1, True, 1313>";
 
    Q_channel ("somechan", Incoming, None, "10");

@@ -95,7 +95,9 @@ let _ = run [
    Q_channel ("boolchan", Incoming, None, "True");
    Eval "boolchan ! (False or not ? boolchan) and True";
 
-   (*Now turning to types other than Booleans*)
+
+   (** Testing of some types other than Booleans **)
+
    Eval "<1, True, 1313>";
 
    Q_channel ("somechan", Incoming, None, "10");
@@ -125,12 +127,8 @@ let _ = run [
 
    Load "tests/flick_code/variants.cp";
 
-(*FIXME test case-of, update, update-indexable, and indexable-projection
-        wiring up processes with channels
-        channel arrays
-  FIXME do we also need this asynch primitive: an expression is evaluated
-        repeatedly, but if it blocks then it returns some other expression.
-*)
+
+  (** Testing of functions and asynch evaluation **)
 
    Load "tests/flick_code/factorial.cp";
    Eval "factorial (5)";
@@ -206,6 +204,15 @@ let _ = run [
 
    Load "tests/flick_code/fun_call.cp";
    Eval "fun_call_f2(6)";
+
+
+(*FIXME test case-of, update, update-indexable, and indexable-projection
+        wiring up processes with channels
+        channel arrays
+  FIXME do we also need this asynch primitive: an expression is evaluated
+        repeatedly, but if it blocks then it returns some other expression.
+*)
+
 
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]

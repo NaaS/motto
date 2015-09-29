@@ -105,6 +105,8 @@ let _ = run [
 (*FIXME test case-of, update, update-indexable, and indexable-projection
         wiring up processes with channels
         channel arrays
+  FIXME do we also need this asynch primitive: an expression is evaluated
+        repeatedly, but if it blocks then it returns some other expression.
 *)
 
    Load "tests/flick_code/factorial.cp";
@@ -141,21 +143,26 @@ let _ = run [
    (*Redeclaring a channel implicitly clears it*)
    Declare_channel ("int_chan", "integer/integer");
    Load "tests/flick_code/fun_chan_simple.cp";
-(*   Eval "fun_chan_simp2(-int_chan)";
+   Eval "fun_chan_simp2(-int_chan)";
    Eval "fun_chan_simp1(int_chan)";
-*)
-(*
-   Asynch_Eval "fun_chan_simp1(int_chan)";
-   Asynch_Eval "fun_chan_simp2(-int_chan)";
+   Eval "fun_chan_simp1(int_chan)";
+
+   (*If we used Eval, evaluating the next two expressions in this order would
+     block unless int_chan had incoming values.*)
+   Asynch_Eval ("t-1", "fun_chan_simp1(int_chan)");
+   Asynch_Eval ("t-2", "fun_chan_simp2(-int_chan)");
    Run_Asynch;
-*)
-(*   Eval "fun_chan_simp2(-int_chan)";*)
+
+   (*At this point we should have a single incoming value left in int_chan.
+     The next expression consumes it.*)
+   Eval "fun_chan_simp1(int_chan)";
+
+   (*This shouldn't be needed at this point.*)
    Clear_Asynch_Eval;
 
    Asynch_Eval ("t4", "fun_chan_simp1(int_chan)");
    Asynch_Eval ("t5", "fun_chan_simp2(-int_chan)");
    Asynch_Eval ("t7", "fun_chan_simp1(int_chan)");
-
    (*NOTE arbitrarily many expressions can share the same channel*)
    Asynch_Eval ("t4.a", "fun_chan_simp1(int_chan)");
    Asynch_Eval ("t5.a", "fun_chan_simp2(-int_chan)");
@@ -163,11 +170,7 @@ let _ = run [
    Run_Asynch;
 
    Clear_Asynch_Eval;
-(*
-   Asynch_Eval ("t6", "? int_chan");
-   Asynch_Eval ("t6.b", "? int_chan");
-(*   Asynch_Eval ("t6.c", "? int_chan");*)
-*)
+
    Asynch_Eval ("t8", "int_chan ! 1");
    Asynch_Eval ("t9", "int_chan ! 2");
    Asynch_Eval ("t10", "int_chan ! 3");

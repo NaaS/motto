@@ -42,27 +42,27 @@ let _ = run [
    Eval "not True";
    Eval "not False";
    Eval "? boolchan";
-(*   Eval "not (? boolchan)";*)
-(*   Eval "(not not ? boolchan) and False";*)
-(*   Eval "not not ? boolchan and False";*)
+   Eval "not (? boolchan)";
+   Q_channel ("boolchan", Incoming, None, "False");
+   Q_channel ("boolchan", Incoming, None, "True");
+   Eval "(not not ? boolchan) and False";
+   Eval "not not ? boolchan or False";
 
 (* NOTE will cause program to block, unless more input becomes available on that channel.
-   Eval "not (? boolchan)";
-   Eval "not (? boolchan)";
-   Eval "not (? boolchan)";
+        Attempting to unblock this by sending it an ^C, interrupting it, will
+        result in it evaluating to bottom (since no other value is logically
+        possible). We cannot normalise bottom, and this results in the
+        evaluation system faulting. This is by design; we could allow bottom to
+        thread through the rest of the computation (e.g., if it's assigned to
+        some variable) but then we'd face additional complications: we'd have to
+        normalise, say, <5, _|_> to _|_, or tolerate expressions like <5, _|_>
+        which would make our semantics non-strict.
+
    Eval "not (? boolchan)";
 *)
-
-
-(*
-   Declare_channel ("somechan", "integer/boolean");
-   Eval "? somechan";
-*)
-   Eval "? somechan";
-(*   Eval "? boolchan";*)
-(*   Eval "not (? boolchan)";*)
 
    MI (Show_runtime_ctxt None);
+
 (*   Eval "((False or not ? boolchan) and True)";*)
 (*   Eval "((False or not ? boolchan) or False)";*)
 (*   Eval "((not ? boolchan) or False)";*)

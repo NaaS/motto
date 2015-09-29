@@ -101,6 +101,10 @@ let _ = run [
    Eval "?? boolchan";
    Eval "? boolchan";
 
+   (*NOTE even if two expressions evaluate to the same value, their side-effects
+          may be different. In this case, they're the same.*)
+   Eval "(if 3 < 4: boolchan ! True else: boolchan ! False) = (boolchan ! 3 < 4)";
+
    (** Testing of some types other than Booleans **)
 
    Eval "<1, True, 1313>";

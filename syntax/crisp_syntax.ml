@@ -354,7 +354,7 @@ let rec channel_identifier_to_string (c_name, idx_opt) =
   c_name ^
   match idx_opt with
   | None -> ""
-  | Some idx -> expression_to_string min_indentation idx
+  | Some idx -> "[" ^ expression_to_string min_indentation idx ^ "]"
 and expression_to_string indent = function
   | Bottom -> "_|_"
   | InvertedVariable value_name -> indn indent ^ "-" ^ value_name

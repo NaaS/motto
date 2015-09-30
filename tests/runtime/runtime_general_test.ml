@@ -139,13 +139,15 @@ let _ = run [
 
    (*FIXME these don't seem to work well yet*)
    (*List comprehension*)
+   Eval "1 .. 3";
    Eval "[1 .. 3]";
    (*List append*)
    Eval "[1, 2, 3] @ [4, 5, 6]";
+   Eval "1 .. 3 @ 4 .. 10";
    Eval "[1 .. 3] @ [4 .. 10]";
    (*List cons*)
-   Eval "2 :: [3 .. 10]";
-   Eval "1 :: 2 :: [3 .. 10]";
+   Eval "2 :: 3 .. 10";
+   Eval "1 :: 2 :: 3 .. 10";
    Eval "1 :: 2 :: 3 :: [4, 5, 6]";
 (* FIXME need to add "head" and "tail" keywords
    (*List head*)
@@ -153,6 +155,10 @@ let _ = run [
    (*List tail*)
    Eval "tail (2 :: [3 .. 10])";*)
    (*FIXME test "map"*)
+   (*NOTE these are badly-typed; we don't use the type-checker in this interface yet*)
+   Eval "0 :: [1 .. 3]";
+   Eval "[1 .. 3] @ 4 .. 10";
+   Eval "1 .. 3 @ [4 .. 10]";
 
    Load "tests/flick_code/variants.cp";
    Eval "F_variants(c(5))";

@@ -243,7 +243,9 @@ let _ = run [
    Eval "fun_call_f2(6)";
 
 
-(*FIXME test update, update-indexable, and indexable-projection
+(*FIXME test:
+        update, update-indexable, and indexable-projection
+        exceptions, local and global state
         wiring up processes with channels
         channel arrays
   FIXME do we also need this asynch primitive: an expression is evaluated

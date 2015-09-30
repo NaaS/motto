@@ -10,6 +10,8 @@ open Naasty
 open Naasty_aux
 open State
 
+let log m =
+  print_endline (Printf.sprintf "\027[36m %s\027[m%!" m)
 
 let require_annotations = false
 
@@ -1200,6 +1202,154 @@ let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
       in mk_seq (Declaration (ty, None)) stmt) ctxt' body
   in (body', st')
 
+let split_io_channels f =
+  let replace_channels f chans =
+    let rec replace f =
+      let rec get_name n chans dir =
+        match chans with
+        | [] -> failwith "Couldn't find channel name."
+        | (Channel (ctype, cname))::_ when cname = n || cname = (n ^ "_" ^ dir) -> cname
+        | _::t -> get_name n t dir
+      in
+      match f with
+      | Bottom
+      | True
+      | False
+      | InvertedVariable _
+      | Variable _
+      | Int _
+      | IPv4_address _
+      | EmptyList
+      | Str _
+      | Meta_quoted _
+      | Hole ->
+        f
+      | Send (inv, (c_name, idx_opt), e) ->
+        let name = get_name c_name chans "out" in
+        let idx_opt' =
+          match idx_opt with
+          | None -> None
+          | Some e -> Some (replace e)
+        in
+        Send (inv, (name, idx_opt'), replace e)
+      | Receive (inv, (c_name, idx_opt)) ->
+        let name = get_name c_name chans "in" in
+        let idx_opt' =
+          match idx_opt with
+          | None -> None
+          | Some e -> Some (replace e)
+        in
+        Receive (inv, (name, idx_opt'))
+      | Peek (inv, (c_name, idx_opt)) ->
+        let name = get_name c_name chans "in" in
+        let idx_opt' =
+          match idx_opt with
+          | None -> None
+          | Some e -> Some (replace e)
+        in
+        Peek (inv, (name, idx_opt'))
+      | TypeAnnotation (e, ty) -> TypeAnnotation (replace e, ty) 
+      | And (b1, b2) -> And (replace b1, replace b2)
+      | Or (b1, b2) -> Or (replace b1, replace b2)
+      | Not b' -> Not (replace b')
+      | Equals (e1, e2) -> Equals (replace e1, replace e2)
+  
+      | GreaterThan (a1, a2) -> GreaterThan (replace a1, replace a2)
+      | LessThan (a1, a2) -> LessThan (replace a1, replace a2)
+  
+      | Plus (a1, a2) -> Plus (replace a1, replace a2)
+      | Minus (a1, a2) -> Minus (replace a1, replace a2)
+      | Times (a1, a2) -> Times (replace a1, replace a2)
+      | Mod (a1, a2) -> Mod (replace a1, replace a2)
+      | Quotient (a1, a2) -> Quotient (replace a1, replace a2)
+      | Abs a -> Abs (replace a)
+  
+      | Int_to_address e -> Int_to_address (replace e)
+      | Address_to_int e -> Address_to_int (replace e)
+  
+      | ConsList (x, xs) -> ConsList (replace x, replace xs)
+      | AppendList (xs, ys) -> AppendList (replace xs, replace ys)
+  
+      | TupleValue xs -> TupleValue (List.map (fun x -> replace x) xs) 
+  
+      | Seq (e1, e2) -> Seq (replace e1, replace e2)
+      | Par (e1, e2) -> Par (replace e1, replace e2)
+      | ITE (be, e1, e2_opt) ->
+        let e2_opt' =
+          match e2_opt with
+          | None -> None
+          | Some e -> Some (replace e)
+        in
+        ITE (replace be, replace e1, e2_opt')
+      | LocalDef (ty, e) -> LocalDef (ty, replace e)
+      | Update (v, e) -> Update (v, replace e)
+      | UpdateIndexable (v, idx, e) -> UpdateIndexable (v, replace idx, replace e)
+  
+      | RecordProjection (e, l) -> RecordProjection (replace e, l)
+  
+      | Functor_App (f, es) ->
+        let es' = List.map (fun arg -> 
+          match arg with
+          | Exp e -> Exp (replace e)
+          | Named (l, e) -> Named (l, replace e)
+          ) es in
+        Functor_App (f, es')
+  
+      | Record es -> Record (List.map (fun (l, e) -> (l, replace e)) es)
+  
+      | RecordUpdate (r, (l, e)) -> RecordUpdate (replace r, (l, replace e)) 
+  
+      | CaseOf (e, es) ->
+        CaseOf (replace e,
+        (List.map (fun (e1, e2) -> (replace e1, replace e2)) es) )
+  
+      | IndexableProjection (v, idx) -> IndexableProjection (v, replace idx) 
+  
+      | IntegerRange (e1, e2) -> IntegerRange (replace e1, replace e2)
+  
+      | Map (v, l, body, unordered) -> Map (v, replace l, replace body, unordered)
+
+      | Iterate (v, l, acc, body, unordered) ->
+        let acc' =
+          match acc with
+          | None -> None
+          | Some (acc_v, acc_e) -> Some (acc_v, replace acc_e)
+        in
+          Iterate (v, replace l, acc', replace body, unordered)
+    in
+      replace f
+  in
+  let rec split channels =
+    match channels with
+    | [] -> []
+    | (Channel (ctype, cname))::t ->
+      print_endline (channel_type_to_string ctype);
+      match ctype with
+      | ChannelSingle (Empty, _)
+      | ChannelSingle (_, Empty)
+      | ChannelArray (Empty, _, _)
+      | ChannelArray (_, Empty, _) ->
+        (Channel (ctype, cname))::(split t) 
+      | ChannelSingle (v1, v2) ->
+        (Channel (ChannelSingle (v1, Empty), cname ^ "_in"))::
+        (Channel (ChannelSingle (Empty, v2), cname ^ "_out"))::(split t)
+      | ChannelArray (v1, v2, dep) ->
+        (Channel (ChannelArray (v1, Empty, dep), cname ^ "_in"))::
+        (Channel (ChannelArray (Empty, v2, dep), cname ^ "_out"))::(split t)
+  in  
+  match f.fn_params with
+  | FunType (FunDomType (channels, values), ret) ->
+    let channels' = split channels in
+    let fn_body' =
+      match f.fn_body with
+      | ProcessBody (s, expression, e) ->
+        ProcessBody (s, replace_channels expression channels', e)
+    in
+    { fn_name = f.fn_name;
+      fn_params = FunType (FunDomType (channels', values), ret);
+      fn_body = fn_body';
+    }
+
 let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   (naasty_declaration * state) =
   match tl with
@@ -1208,7 +1358,9 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       Crisp_syntax_aux.update_empty_label ty_decl.type_name ty_decl.type_value
       |> naasty_of_flick_type st
     in (Type_Decl ty', st')
-  | Function fn_decl ->
+  | Function f ->
+    let fn_decl = split_io_channels f in
+    log (toplevel_decl_to_string (Function (split_io_channels f))); 
     (*FIXME might need to prefix function names with namespace, within the
             function body*)
     let ((chans, arg_tys), res_tys) =
@@ -1341,7 +1493,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           },
         st5)
 
-  | Process process ->
+  | Process process -> 
     (*A process could be regarded as a unit-returning function that is evaluated
       repeatedly in a loop, until a stopping condition is satisfied. Perhaps the
       most common stopping condition will be "end of file" or "no more data"

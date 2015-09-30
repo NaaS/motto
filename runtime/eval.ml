@@ -86,6 +86,16 @@ let rec fold_list ?acc:(acc : expression option = None)
     raise (Eval_Exc ("fold_list : not given a list", Some l, None))
 
 let iterated_cons (es : expression list) (l : expression) : expression =
+  begin
+    (*NOTE this is only a shallow check -- we don't check the rest of the list
+           to ensure that it's well-formed (i.e., consists only of ConList
+           applications finishing with EmptyList)*)
+    match l with
+    | EmptyList -> ()
+    | ConsList (_, _) -> ()
+    | _ ->
+      raise (Eval_Exc ("iterated_cons : not given a list", Some l, None))
+  end;
   List.fold_right (fun x l -> ConsList (x, l)) (List.rev es) l
 
 (*NOTE l1 should be in normal form*)

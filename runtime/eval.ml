@@ -85,12 +85,15 @@ let rec fold_list ?acc:(acc : expression option = None)
   | _ ->
     raise (Eval_Exc ("fold_list : not given a list", Some l, None))
 
+let iterated_cons (es : expression list) (l : expression) : expression =
+  List.fold_right (fun x l -> ConsList (x, l)) (List.rev es) l
+
 (*NOTE l1 should be in normal form*)
-let rec append_list (acc : expression list) (l1 : expression) (l2 : expression) : expression =
+let rec append_list (acc : expression list)
+   (l1 : expression) (l2 : expression) : expression =
   match l1 with
-  | EmptyList -> l2
-  | ConsList (h, EmptyList) ->
-    List.fold_right (fun x l -> ConsList (x, l)) acc (ConsList (h, l2))
+  | EmptyList -> iterated_cons acc l2
+  | ConsList (h, EmptyList) -> iterated_cons acc (ConsList (h, l2))
   | ConsList (h, t) -> append_list (h :: acc) t l2
   | _ ->
     raise (Eval_Exc ("append_list : not given a list", Some l1, None))

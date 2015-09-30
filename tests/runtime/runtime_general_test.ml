@@ -141,9 +141,12 @@ let _ = run [
    (*List comprehension*)
    Eval "[1 .. 3]";
    (*List append*)
+   Eval "[1, 2, 3] @ [4, 5, 6]";
    Eval "[1 .. 3] @ [3 .. 10]";
    (*List cons*)
    Eval "2 :: [3 .. 10]";
+   Eval "1 :: 2 :: [3 .. 10]";
+   Eval "1 :: 2 :: 3 :: [4, 5, 6]";
 (* FIXME need to add "head" and "tail" keywords
    (*List head*)
    Eval "head (2 :: [3 .. 10])";

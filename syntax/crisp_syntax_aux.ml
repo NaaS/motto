@@ -522,8 +522,7 @@ let funarg_fill_hole (contents : expression) : fun_arg -> fun_arg = function
 
 (*Map an expression list into a Flick list*)
 let flick_list (l : expression list) : expression =
-  List.rev l
-  |> (fun l -> List.fold_right (fun x l -> ConsList (x, l)) l EmptyList)
+  List.fold_right (fun x l -> ConsList (x, l)) (List.rev l) EmptyList
 
 (*Convert OCaml integer list into a Flick integer list*)
 let flick_integer_list (l : int list) : expression =

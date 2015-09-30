@@ -84,6 +84,7 @@ let enlist (from : int) (until : int) : int list =
     if cursor = until then List.rev acc
     else enlist' (cursor :: acc) (cursor + 1) in
   enlist' [] from
+  |> List.rev
 
 (*Like fold_map, but generates a tuple containing the various outputs, rather than
   a list. Its neater to use this function if we only have a few (e.g., 2)
@@ -127,6 +128,7 @@ let list_split_nth_exc (n : int) (l : 'a list) =
   assert (n < List.length l);
   let l' : ('a * int) list =
     enlist 0 (List.length l)
+    |> List.rev
     |> List.combine l in
   let l1, (x, _), l2 = list_split_exc (fun (_, i) -> i = n) l' in
   (List.map fst l1), x, (List.map fst l2)

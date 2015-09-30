@@ -253,7 +253,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Mod _
       | Quotient _ -> failwith "TODO"
       | IntegerRange _ -> (fun i1 i2 ->
-          enlist i1 i2
+          enlist i1 (i2 + 1)
           |> Crisp_syntax_aux.flick_integer_list)
       | _ -> failwith "Impossible" in
 

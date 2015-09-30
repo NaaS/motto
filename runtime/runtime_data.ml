@@ -104,6 +104,7 @@ let string_of_runtime_ctxt ?indentation:(indentation : int = 0)
   let except_table =
     let scope_counts =
       enlist 0 (List.length ctxt.except_table)
+      |> List.rev
       |> List.map string_of_int in
     let except_print excepts =
       List.map (fun (l, e) ->

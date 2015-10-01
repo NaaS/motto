@@ -137,7 +137,6 @@ let _ = run [
    Q_channel ("somechan", Incoming, None, "1115");
    Eval "[? somechan, ? somechan, let x = ? somechan, ? somechan - x]";
 
-   (*FIXME these don't seem to work well yet*)
    (*List comprehension*)
    Eval "1 .. 3";
    Eval "[1 .. 3]";

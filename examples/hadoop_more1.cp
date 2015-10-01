@@ -20,18 +20,13 @@ fun consume : (c' : type k_v) -> (type k_v)
   c'
 
 #fun Wc_node : (type k_v/- x, type k_v/- y, -/type k_v z) -> ()
-fun Wc_node : ([type k_v/type k_v] chan; x : type k_v, y : type k_v, z : type k_v) -> ()
+fun Wc_node : (type k_v/- chan; x : type k_v, y : type k_v, z : type k_v) -> ()
   # Instead of "vs" could have pattern matching, to give v1 and v2
 #  let vs = peek_all () #([x, y])
 #  let v1 = vs[0] # * check if can project from lists like this
 #  let v2 = vs[1]
 #  let v1 = peek (x)
 #  let v2 = peek (y)
-
-  for i in unordered chan
-  initially acc = True:
-    acc and not ((?? chan[i]) = None)
-
   let v1 = ?? chan
   let v2 = ?? chan
 

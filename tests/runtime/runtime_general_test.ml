@@ -240,9 +240,15 @@ let _ = run [
    Load "tests/flick_code/fun_call.cp";
    Eval "fun_call_f2(6)";
 
-
 (*FIXME test:
-        update, update-indexable, and indexable-projection
+        update, update-indexable, and indexable-projection*)
+   Eval ("let blaX = 3");
+   Eval ("blaX := 30"); (*FIXME we're updating an immutable*)
+   Eval ("blaX[4]");
+   Eval ("blaX[4] := 30");
+
+
+(*FIXME further test:
         exceptions, local and global state
         wiring up processes with channels
         channel arrays

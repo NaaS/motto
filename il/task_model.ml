@@ -34,23 +34,7 @@ type graph_type =
 type task_class = int (*FIXME this is very information-poor. Wouldn't it be
                               helpful to have metadata, such as the class name?*)
 
-type chan_type =
-  | Socket (*FIXME encode socket metadata -- address and port?*)
-  | Type (*FIXME encode type data*)
-
 type chan_id = int
-
-(*NOTE a channel's id consists of its offset in input_chans or
-       output_chans*)
-type chan_offset = int
-(*NOTE channels in libNaaS are unidirectional*)
-type chan =
-  {
-    (*chan_type : chan_type;*)
-    chan_id : chan_id;
-    (*FIXME incomplete?*)
-  }
-
 
 type task =
   {
@@ -61,12 +45,6 @@ type task =
     output_chans : chan_id list;
     process : Crisp_syntax.process;
   }
-
-(*A connection describes which channel of which task (in a task graph) is
-  connected to which channel of which (other) task.*)
-type connection =
-  { src : task_id * chan_offset;
-    dst : task_id * chan_offset }
 
 (*NOTE to be well-formed, all tasks ids mentioned in connections must be
        resolvable to tasks, and all chan offsets must be resolvable within their

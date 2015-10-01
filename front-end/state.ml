@@ -340,38 +340,37 @@ let lookup_function_type (st : state) (function_name : string) : (bool * functio
 
 (* From a list of function names and channel names and the state construct a task_graph that contains a list of*)
 (* tasks and a representation of the graph itself *)                                              
-let create_task_and_channels (hint : graph_hint) (functions : string list) (channels : string list) (st : state) : task_graph = 
-  let rec find_it (acc : int) (functions : string list) (st : state) (channel : string) : int = 
-  let chanfunc = channel in  (*FIXME translate channel into the string for the function where this channel is *)
-  match functions with  (* First create an association between the functions and the channels by creating a list of the number 
-            in the array of each function associated with each channel *)
-    | hd :: tl when chanfunc = hd -> acc (* match *)
-    | hd :: tl -> find_it (acc + 1) tl st channel (* non-match *)
-    | _ -> failwith ("Cannot find channel " ^ channel ^ " in channel list for task") (* end of list *) in
-  let channelMap = List.map (find_it 0 functions st) channels in
-        (* Now construct the graph using the hint and the channelMap *)
+let create_task_and_channels (hint : graph_hint) (processes: process list) (st : state) : task_graph = 
   match hint with
     | ExplicitLinksType -> {tasks = []; graph =  ExplicitLinks([])}
     | FoldTreeType -> 
+      (* assert (List.length processes == 2); *)
+      let inName = (List.hd processes).process_name ^ "InputTask" in
+      let outName = (List.hd processes).process_name ^ "OutputTask" in
       let inpTask=
         {task_id = 0; task_type = Input; task_class= 0; input_chans = []; output_chans = [];
-        process = {process_name = "FlickInputTask"; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in
+        process = {process_name = inName; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in
       let mergeTask= {task_id = 1; task_type = ManyToOne; task_class= 0; input_chans = []; output_chans = [];
-         process = {process_name = "FlickMergeTask"; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in
+         process = List.hd processes} in
       let outputTask = {task_id = 2; task_type = Output; task_class= 0; input_chans = []; output_chans = [];
-         process = {process_name = "FlickOutputTask"; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}}
+         process = {process_name = outName; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}}
       in {tasks  = [inpTask;mergeTask;outputTask]; graph =  FoldTree(0,1,2,"no_inputs")} (**FIXME get the dependency_index *)
     | DeMuxType -> 
+      (*assert (List.length processes == 1);*)
+      let cl_in_name = (List.hd processes).process_name ^ "ClientInputTask" in
+      let cl_out_name = (List.hd processes).process_name ^ "ClientOutputTask" in
+      let be_in_name = (List.hd processes).process_name ^ "BackendInputTask" in
+      let be_out_name = (List.hd processes).process_name ^ "BackendOutputTask" in
       let client_inp_task = {task_id = 0; task_type = Input; task_class= 0; input_chans = []; output_chans = [];
-        process = {process_name = "ClientInputTask"; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in 
+        process = {process_name = cl_in_name; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in 
       let backend_inp_task = {task_id = 1; task_type = Input; task_class= 0; input_chans = []; output_chans = [];
-        process = {process_name = "BackendInputTask"; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in
+        process = {process_name = be_in_name; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in
       let process_task = {task_id = 2; task_type = AnyToOne; task_class= 0; input_chans = []; output_chans = [];
-        process = {process_name = "DeMuxTask"; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in
+        process = List.hd processes} in
       let backend_out_task = {task_id = 3; task_type = Output; task_class= 0; input_chans = []; output_chans = [];
-        process = {process_name = "FlickInputTask"; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in
+        process = {process_name = be_out_name; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} in
       let client_out_task = {task_id = 4; task_type = Output; task_class= 0; input_chans = []; output_chans = [];
-        process = {process_name = "FlickInputTask"; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} 
+        process = {process_name = cl_out_name; process_type = ProcessType ([], ([], [])); process_body = ProcessBody ([], True, [])}} 
       in
       {tasks = [client_inp_task;backend_inp_task;process_task;backend_out_task;client_out_task]; 
         graph =  DeMux(0,1,2,3,4,"no_backends")}  (**FIXME get the dependency_index *)

@@ -6,6 +6,8 @@
 open General
 open State
 open Naasty
+open Task_model
+open Crisp_syntax
 
 module ICL_Backend : Backend.Instance =
 struct
@@ -117,7 +119,15 @@ let translate = translate_serialise_stringify
 end
 
 let translate st (tys, funs, procs) =
-  ICL_Backend.translate st
+  let progs =  Crisp_project.content_of procs in
+  let extract_proc (decl : toplevel_decl) = match decl with
+    | Process p -> p
+    | _ -> failwith ("Expected list to contain processes only in icl_backend:translate") in
+  let processes = List.map extract_proc progs in
+  let tg = create_task_and_channels ExplicitLinksType processes st  in
+  (*let st' = {st with task_graph = tg} in *)
+  let st' = st in
+  ICL_Backend.translate st'
     {Backend.types_unit = tys;
      Backend.functions_unit = funs;
      Backend.processes_unit = procs}

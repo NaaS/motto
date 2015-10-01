@@ -27,6 +27,7 @@ type identifier_kind =
                              indicats a disjunct*)
   | Field of type_value (*the type of the record in which this field occurs*)
   | Function_Name (*details should be looked up in the dedicated field in the symbol table*)
+  | Defined_Function_Name
   | Channel_Name
   | Map_Name
 let string_of_identifier_kind ?summary_types:(summary_types : bool = false) = function
@@ -38,6 +39,7 @@ let string_of_identifier_kind ?summary_types:(summary_types : bool = false) = fu
     "Field (" ^ Crisp_syntax.type_value_to_string ~summary_types:summary_types
                   true false min_indentation tv ^ ")"
   | Function_Name -> "Function_Name"
+  | Defined_Function_Name -> "Defined_Function_Name"
   | Channel_Name -> "Channel_Name"
   | Map_Name -> "Map_Name"
 
@@ -98,13 +100,33 @@ type state =
 *)
   }
 
+(*The initial state consists of empty values for most things, except for
+  the symbol table, which is initialised with interpreted functions.
+  This initialisation gives us initial_next_symbol, initial_term_symbols, and
+    calls Functions.export_funs to populate crisp_funs.
+*)
 let initial_state =
+  (*Metadata used for interpreted function symbols*)
+  let def_fn_term_symbol_metadata =
+  {
+    declaration_scope = None;
+    source_type = None;
+    naasty_type = None;
+    identifier_kind = Defined_Function_Name;
+    channel_id = None;
+  } in
+  (*Initialise next_symbol and term_symbols based on the available
+    interpreted function symbols*)
+  let (initial_next_symbol, initial_term_symbols) =
+    List.fold_right (fun (fn, _) (i, term_symbols) ->
+      (i + 1, (fn, i, def_fn_term_symbol_metadata) :: term_symbols))
+      Functions.export_funs (1, []) in
   { pragma_inclusions = [];
     type_declarations = [];
-    next_symbol = 1;
+    next_symbol = initial_next_symbol;
     type_symbols = [];
-    term_symbols = [];
-    crisp_funs = [];
+    term_symbols = initial_term_symbols;
+    crisp_funs = Functions.export_funs;
     current_task = -1; (*FIXME create a constant, say Task_model.no_task*)
     task_graph =
       (*FIXME create a constant, say Task_model.empty_graph;
@@ -126,6 +148,7 @@ let forget_label_in_identifier_kind (ik : identifier_kind) =
   | Undetermined
   | Value
   | Function_Name
+  | Defined_Function_Name
   | Channel_Name
   | Map_Name -> ik
   | Disjunct tv ->

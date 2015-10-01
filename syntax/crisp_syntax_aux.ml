@@ -273,6 +273,181 @@ and channel_type_match (ct1 : channel_type) (ct2 : channel_type) : bool =
     type_match ty1A ty1B && type_match ty2A ty2B
   | (_, _) -> false
 
+(*Simple form of unification on types.
+  (We only have a single unification variable, encoded using "Undefined").*)
+(*NOTE here we ignore serialisation annotations and names*)
+let rec type_unify (ty1 : type_value) (ty2 : type_value) : type_value option =
+  let unify_pairs (tys1 : type_value list) (tys2 : type_value list) : type_value list option =
+    let ty_pairs = List.combine tys1 tys2 in
+    let f (ty1, ty2) = type_unify ty1 ty2 in
+    List.fold_right (fun result acc ->
+      match acc with
+      | None -> None
+      | Some acc ->
+        begin
+          match result with
+          | None -> None
+          | Some ty' -> Some (ty' :: acc)
+        end) (List.map f ty_pairs) (Some []) in
+  match ty1, ty2 with
+  | (Undefined, Undefined) -> Some ty1
+  | (Undefined, _) -> Some ty2
+  | (_, Undefined) -> Some ty1
+
+  | (UserDefinedType (_, tyname1), UserDefinedType (_, tyname2)) ->
+    if tyname1 = tyname2 then Some ty1
+    else None
+
+  | (String (_, _), String (_, _))
+  | (Integer (_, _), Integer (_, _))
+  | (Boolean (_, _), Boolean (_, _))
+  | (Empty, Empty)
+  | (IPv4Address _, IPv4Address _) -> Some ty1
+
+  | (Tuple (_, tys1), Tuple (_, tys2)) ->
+    begin
+      match unify_pairs tys1 tys2 with
+      | None -> None
+      | Some tys' -> Some (Tuple (None, tys'))
+    end
+  | (RecordType (_, tys1, _), RecordType (_, tys2, _)) ->
+    begin
+      match unify_pairs tys1 tys2 with
+      | None -> None
+      | Some tys' -> Some (RecordType (None, tys', []))
+    end
+  | (Disjoint_Union (_, tys1), Disjoint_Union (_, tys2)) ->
+    begin
+      match unify_pairs tys1 tys2 with
+      | None -> None
+      | Some tys' -> Some (Disjoint_Union (None, tys'))
+    end
+
+  | (List (_, ty1, di1, _), List (_, ty2, di2, _)) ->
+    if di1 <> di2 then None
+    else
+      begin
+        match type_unify ty1 ty2 with
+        | None -> None
+        | Some ty' -> Some (List (None, ty', di1, []))
+      end
+  | (Reference (_, ty1), Reference (_, ty2)) ->
+    begin
+      match type_unify ty1 ty2 with
+      | None -> None
+      | Some ty' -> Some (Reference (None, ty'))
+    end
+
+  | (Dictionary (_, ty1A, ty2A), Dictionary (_, ty1B, ty2B)) ->
+    begin
+      match type_unify ty1A ty1B, type_unify ty2A ty2B with
+      | None, _ -> None
+      | _, None -> None
+      | Some ty1, Some ty2 -> Some (Dictionary (None, ty1, ty2))
+    end
+
+  | (ChanType (_, ct1), ChanType (_, ct2)) ->
+    match channel_type_unify ct1 ct2 with
+    | None -> None
+    | Some ct -> Some (ChanType (None, ct))
+and channel_type_unify (ct1 : channel_type) (ct2 : channel_type) : channel_type option =
+  match ct1, ct2 with
+  | (ChannelSingle (ty1A, ty2A), ChannelSingle (ty1B, ty2B)) ->
+    begin
+      match type_unify ty1A ty1B, type_unify ty2A ty2B with
+      | None, _ -> None
+      | _, None -> None
+      | Some ty1, Some ty2 -> Some (ChannelSingle (ty1, ty2))
+    end
+  | (ChannelArray (ty1A, ty2A, di1), ChannelArray (ty1B, ty2B, di2)) ->
+    if di1 <> di2 then None
+    else
+      begin
+        match type_unify ty1A ty1B, type_unify ty2A ty2B with
+        | None, _ -> None
+        | _, None -> None
+        | Some ty1, Some ty2 -> Some (ChannelArray (ty1, ty2, di1))
+      end
+
+(*Given a pair of types, extract all pairings between an occurrence of Undefined
+  in one type and the corresponding type in the other
+  This is used since we don't have a full implementation of first-order
+  unification, and this serves to compute the unifier to the single unification
+  variable we have (i.e., "Undefined").*)
+(*NOTE here we ignore serialisation annotations and names*)
+let rec extract_unifier (ty1 : type_value) (ty2 : type_value) : type_value list =
+  let extract_unifiers (tys1 : type_value list) (tys2 : type_value list) : type_value list =
+    let ty_pairs = List.combine tys1 tys2 in
+    let f (ty1, ty2) = extract_unifier ty1 ty2 in
+    List.map f ty_pairs
+    |> List.flatten in
+  match ty1, ty2 with
+  | (Undefined, _) -> [ty2]
+  | (_, Undefined) -> [ty1]
+
+  | (UserDefinedType (_, _), UserDefinedType (_, _))
+  | (String (_, _), String (_, _))
+  | (Integer (_, _), Integer (_, _))
+  | (Boolean (_, _), Boolean (_, _))
+  | (Empty, Empty)
+  | (IPv4Address _, IPv4Address _) -> []
+
+  | (Tuple (_, tys1), Tuple (_, tys2))
+  | (RecordType (_, tys1, _), RecordType (_, tys2, _))
+  | (Disjoint_Union (_, tys1), Disjoint_Union (_, tys2)) -> extract_unifiers tys1 tys2
+
+  | (List (_, ty1, _, _), List (_, ty2, _, _)) -> extract_unifier ty1 ty2
+
+  | (Dictionary (_, ty1A, ty2A), Dictionary (_, ty1B, ty2B)) ->
+    extract_unifier ty1A ty1B @ extract_unifier ty2A ty2B
+
+  | (ChanType (_, ct1), ChanType (_, ct2)) -> channel_extract_unifier ct1 ct2
+and channel_extract_unifier (ct1 : channel_type) (ct2 : channel_type) : type_value list =
+  match ct1, ct2 with
+  | (ChannelSingle (ty1A, ty2A), ChannelSingle (ty1B, ty2B)) ->
+    extract_unifier ty1A ty1B @ extract_unifier ty2A ty2B
+  | (ChannelArray (ty1A, ty2A, di1), ChannelArray (ty1B, ty2B, di2)) ->
+    extract_unifier ty1A ty1B @ extract_unifier ty2A ty2B
+
+let unique_unifier (unifiers : type_value list) : type_value option =
+  match unifiers with
+  | [] -> None
+  | (u :: us) ->
+    let unifier =
+      List.fold_right (fun u acc ->
+        if u <> acc then failwith "Unifiers should be identical"(*FIXME give more info*)
+        else acc) us u
+    in Some unifier
+
+let rec apply_unifier (unifier : type_value) (ty : type_value) : type_value =
+  assert (unifier <> Undefined);
+  match ty with
+  | Undefined -> unifier
+  | UserDefinedType (_, _)
+  | String (_, _)
+  | Integer (_, _)
+  | Boolean (_, _)
+  | Empty
+  | IPv4Address _ -> ty
+  | RecordType (label_opt, tys, ty_ann) ->
+    RecordType (label_opt, List.map (apply_unifier unifier) tys, ty_ann)
+  | Disjoint_Union (label_opt, tys) ->
+    Disjoint_Union (label_opt, List.map (apply_unifier unifier) tys)
+  | List (label_opt, ty, di_opt, ty_ann) ->
+    List (label_opt, apply_unifier unifier ty, di_opt, ty_ann)
+  | Tuple (label_opt, tys) ->
+    Tuple (label_opt, List.map (apply_unifier unifier) tys)
+  | Dictionary (label_opt, ty1, ty2) ->
+    Dictionary (label_opt, apply_unifier unifier ty1, apply_unifier unifier ty2)
+  | Reference (label_opt, ty) -> Reference (label_opt, apply_unifier unifier ty)
+  | ChanType (label_opt, ct) ->
+    ChanType (label_opt, channel_type_apply_unifier unifier ct)
+and channel_type_apply_unifier unifier = function
+  | ChannelSingle (ty1, ty2) ->
+    ChannelSingle (apply_unifier unifier ty1, apply_unifier unifier ty2)
+  | ChannelArray (ty1, ty2, di_opt) ->
+    ChannelArray (apply_unifier unifier ty1, apply_unifier unifier ty2, di_opt)
+
 (*Simple predicate to indicate whether, at the surface level, a type is a
   usertype*)
 let is_usertype = function

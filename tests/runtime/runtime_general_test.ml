@@ -149,11 +149,10 @@ let _ = run [
    Eval "2 :: 3 .. 10";
    Eval "1 :: 2 :: 3 .. 10";
    Eval "1 :: 2 :: 3 :: [4, 5, 6]";
-(* FIXME need to add "head" and "tail" keywords
    (*List head*)
    Eval "head (2 :: [3 .. 10])";
    (*List tail*)
-   Eval "tail (2 :: [3 .. 10])";*)
+   Eval "tail (2 :: [3 .. 10])";
    (*FIXME test "map"*)
    (*NOTE these are badly-typed; we don't use the type-checker in this interface yet*)
    Eval "0 :: [1 .. 3]";

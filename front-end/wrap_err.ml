@@ -102,6 +102,21 @@ let wrap (f : 'a -> 'b) (x : 'a) : 'b =
         st_s)
     end;
     exit 1
+  | Functions.Functions_Exc (msg, fn, e_opt) ->
+    begin
+    if not !cfg.unexceptional then
+      let e_s =
+        match e_opt with
+        | None -> ""
+        | Some e ->
+          "at expression:" ^ Crisp_syntax.expression_to_string
+                               Crisp_syntax.min_indentation e ^ "\n" in
+      print_endline
+       ("Function-lookup error for '" ^ fn ^ "': " ^ msg ^ "\n" ^
+(*FIXME        "in file " ^ source_file ^ "\n" ^*)
+        e_s)
+    end;
+    exit 1
   | e ->
     if !cfg.unexceptional then exit 1
     else raise e

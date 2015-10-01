@@ -474,6 +474,13 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       begin
       match identifier_kind with
       | Disjunct _ -> return_eval e, ctxt
+      | Defined_Function_Name ->
+        let arg_es = List.map (function
+            | Exp e -> e
+            | Named _ -> failwith "TODO") fun_args in
+        continuate_list arg_es (fun normal_arg_es _ ctxt' ->
+          return_eval (Functions.apply_function function_name normal_arg_es), ctxt'
+        ), ctxt
       | Function_Name ->
         let arg_es = List.map (function
             | Exp e -> e

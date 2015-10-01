@@ -120,13 +120,13 @@ let interpret_flick_list (e : expression) : expression list =
     raise (Eval_Exc ("interpret_flick_list : not given a list", Some e, None)) in
   interpret_flick_list' [] e
 
-let get_dictionary e v ctxt =
+let get_dictionary caller_form e v ctxt =
   if not (List.mem_assoc v ctxt.Runtime_data.value_table) then
-    raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
+    raise (Eval_Exc ("Cannot " ^ caller_form ^ ": Symbol " ^ v ^ " not in runtime context", Some e, None));
   match List.assoc v ctxt.Runtime_data.value_table with
   | Dictionary d -> d
   | _ ->
-   raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not a dictionary ", Some e, None))
+   raise (Eval_Exc ("Cannot " ^ caller_form ^ ": Symbol " ^ v ^ " not a dictionary ", Some e, None))
 
 (*Get some value from the runtime context*)
 let resolve ctxt l =
@@ -585,7 +585,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       return_eval e', ctxt''), ctxt
 
   | UpdateIndexable (v, idx, e) ->
-    let dict = get_dictionary e v ctxt in
+    let dict = get_dictionary "UpdateIndexable" e v ctxt in
 
     let idx_v, ctxt' = evaluate st ctxt idx in
 
@@ -607,7 +607,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
 
   | IndexableProjection (v, idx) ->
     (*FIXME how to initialise dictionaries etc in the simulator?*)
-    let dict = get_dictionary e v ctxt in
+    let dict = get_dictionary "IndexableProjection" e v ctxt in
 
     let idx_v, ctxt' = evaluate st ctxt idx in
 

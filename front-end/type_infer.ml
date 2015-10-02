@@ -27,7 +27,7 @@ let assert_identical_types e1_ty e2_ty e st =
     end
 
 let assert_not_undefined_type ty e st =
-  if not (ty <> Undefined) then
+  if (undefined_ty ty) then
     raise (Type_Inference_Exc ("Type should not be Undefined", e, st))
 
 (*NOTE currently we don't support dependently-typed lists*)
@@ -187,7 +187,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         (*We MUST be able to infer the type of e, either from the type
           annotation, or from e itself. If e's type is Undefined, and no
           annotation is given, then complain.*)
-        if e_ty = Undefined then
+        if undefined_ty e_ty then
           raise (Type_Inference_Exc ("A ground type cannot be inferred for this expression.", e, st))
         else e_ty
       | Some ty_value ->
@@ -245,7 +245,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let ty, _ = ty_of_expr ~strict st e in
     let _ =
       if strict then
-        if not (ty = Undefined || expected_ty = ty) then
+        if not (undefined_ty ty || expected_ty = ty) then
           begin
           let ty_s = type_value_to_string true false min_indentation ty in
           let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
@@ -355,7 +355,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           (*FIXME give more info*)
           raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
           end;
-        (Undefined(*FIXME unsure how to index channel arrays*),
+        (def_undefined(*FIXME unsure how to index channel arrays*),
          ChanType (None, ChannelSingle (rx_ty, tx_ty)))
       | Some (List (lbl_opt, val_ty, dpd_idx, _)) ->
         (*NOTE currently ignoring list's dependency_index*)
@@ -458,7 +458,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
                     annotations first, rather than ignore them.*)
                 (forget_type_annotation (forget_label field_ty) =
                  forget_type_annotation (forget_label ty) ||
-                 field_ty = Undefined)) field_tys in
+                 field_ty = def_undefined)) field_tys in
           if not field_exists_in_record then
             raise (Type_Inference_Exc ("Label '" ^ label ^
                                        "' doesn't belong to a field in record", e, st))
@@ -678,7 +678,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         else acc) (List.tl body_tys) (List.hd body_tys |> forget_label) in
     (ty, st)
 
-  | EmptyList -> (List(None, Undefined, None, []), st)
+  | EmptyList -> (List(None, def_undefined, None, []), st)
   | ConsList (h_e, t_e) ->
     let h_ty, _ = ty_of_expr ~strict st h_e in
     assert_not_undefined_type h_ty h_e st;
@@ -688,13 +688,13 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         matcher*)
       match Crisp_syntax_aux.resolve_if_usertype st t_ty with
       | List (_, ty, _, _) as list_ty ->
-        if ty <> Undefined then
+        if not (undefined_ty ty) then
           begin
           assert_identical_types ty h_ty e st;
           list_ty
           end
         else List (None, h_ty, None, [])
-      | Undefined ->
+      | Undefined _(*ignoring variable name*) ->
         (*We create a list type that carries h_ty*)
         List (None, h_ty, None, [])
       | _ ->
@@ -709,7 +709,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       ty_of_expr ~strict st l2
       |> fst
       |> forget_label in
-    if not (l1_ty = l2_ty || l1_ty = Undefined || l2_ty = Undefined) then
+    if not (l1_ty = l2_ty || undefined_ty l1_ty || undefined_ty l2_ty) then
       begin
       let l1_ty_s = type_value_to_string true false min_indentation l1_ty in
       let l2_ty_s = type_value_to_string true false min_indentation l2_ty in
@@ -817,5 +817,5 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
              State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
                true st)
       | _ -> ()) mis;
-    Undefined, st
-  | Hole -> Undefined, st
+    def_undefined, st
+  | Hole -> def_undefined, st

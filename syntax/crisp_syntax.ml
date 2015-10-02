@@ -50,13 +50,16 @@ type type_value =
   | Tuple of label option * type_value list
   | Dictionary of label option * type_value * type_value
   | Reference of label option * type_value
-  | Undefined
+  | Undefined of string
     (*NOTE ChanType should not be contained in any other types -- lists,
            variants, etc*)
   | ChanType of label option * channel_type
 and channel_type =
   | ChannelSingle of type_value * type_value
   | ChannelArray of type_value * type_value * dependency_index option
+
+(*NOTE currently only a single unification variable is supported*)
+let def_undefined = Undefined "X"
 
 type channel = Channel of channel_type * channel_name
 
@@ -128,7 +131,7 @@ let rec type_value_to_string ?summary_types:(summary_types : bool = false)
       opt_string (indn indent) label " : " ^ "ref " ^
        type_value_to_string mixfix_lists false 0 ty ^
         endline
-  | Undefined -> "undefined"
+  | Undefined s -> "undefined(" ^ s ^ ")"
   | ChanType (label_opt, ct) -> "channel " ^
       opt_string (indn indent) label_opt " : " ^ channel_type_to_string ct
 
@@ -143,7 +146,10 @@ and channel_type_to_string = function
 let channel_to_string (Channel (channel_type, channel_name)) =
   channel_type_to_string channel_type ^ " " ^ channel_name
 
-let undefined_ty ty = ty = Undefined
+let undefined_ty ty =
+  match ty with
+  | Undefined _ -> true
+  | _ -> false
 
 type typing = value_name * type_value option
 
@@ -691,7 +697,7 @@ let rec forget_label (ty : type_value) =
     Reference (None, forget_label ty)
   | Disjoint_Union (_, _) (*NOTE we must not erase field names, so we don't recurse on tys*)
   | Empty
-  | Undefined
+  | Undefined _
   | ChanType _
   | IPv4Address _ -> ty
 
@@ -716,6 +722,6 @@ let rec forget_type_annotation (ty : type_value) =
   | UserDefinedType (_, _)
   | Disjoint_Union (_, _) (*NOTE we must not erase field names, so we don't recurse on tys*)
   | Empty
-  | Undefined
+  | Undefined _
   | ChanType _
   | IPv4Address _ -> ty

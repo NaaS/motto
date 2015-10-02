@@ -115,7 +115,7 @@ let label_of_type : type_value -> label option = function
   | List (l_opt, _, _, _) -> l_opt
   | Empty -> failwith "Empty type cannot be given a label"
   | IPv4Address l_opt -> l_opt
-  | Undefined -> None
+  | Undefined s -> Some s
   | ChanType (l_opt, _) -> l_opt
 
 let label_of_channel (Channel (_, channel_name)) = channel_name
@@ -210,7 +210,7 @@ let rec is_fully_defined_type : type_value -> bool = function
   | Empty
   | IPv4Address _ -> true
 
-  | Undefined -> false
+  | Undefined _ -> false
 
   | Tuple (_, tys)
   | RecordType (_, tys, _)
@@ -236,7 +236,7 @@ and is_fully_defined_channel_type = function
 (*NOTE here we require serialisation annotations to be identical*)
 let rec type_match (ty1 : type_value) (ty2 : type_value) : bool =
   match ty1, ty2 with
-  | (Undefined, _) ->
+  | (Undefined _, _) ->
     failwith "ty1 must be ground"
 
   | (UserDefinedType (_, _), UserDefinedType (_, _))
@@ -263,7 +263,7 @@ let rec type_match (ty1 : type_value) (ty2 : type_value) : bool =
 
   | (ChanType (_, ct1), ChanType (_, ct2)) ->
     channel_type_match ct1 ct2
-  | (_, Undefined) -> true
+  | (_, Undefined _(*NOTE i ignore variable name*)) -> true
   | (_, _) -> false
 and channel_type_match (ct1 : channel_type) (ct2 : channel_type) : bool =
   match ct1, ct2 with
@@ -274,7 +274,8 @@ and channel_type_match (ct1 : channel_type) (ct2 : channel_type) : bool =
   | (_, _) -> false
 
 (*Simple form of unification on types.
-  (We only have a single unification variable, encoded using "Undefined").*)
+  (We only have a single unification variable, encoded using "Undefined"
+  -- i ignore the parameter).*)
 (*NOTE here we ignore serialisation annotations and names*)
 let rec type_unify (ty1 : type_value) (ty2 : type_value) : type_value option =
   let unify_pairs (tys1 : type_value list) (tys2 : type_value list) : type_value list option =
@@ -290,9 +291,9 @@ let rec type_unify (ty1 : type_value) (ty2 : type_value) : type_value option =
           | Some ty' -> Some (ty' :: acc)
         end) (List.map f ty_pairs) (Some []) in
   match ty1, ty2 with
-  | (Undefined, Undefined) -> Some ty1
-  | (Undefined, _) -> Some ty2
-  | (_, Undefined) -> Some ty1
+  | (Undefined _, Undefined _) -> Some ty1
+  | (Undefined _, _) -> Some ty2
+  | (_, Undefined _) -> Some ty1
 
   | (UserDefinedType (_, tyname1), UserDefinedType (_, tyname2)) ->
     if tyname1 = tyname2 then Some ty1
@@ -382,8 +383,8 @@ let rec extract_unifier (ty1 : type_value) (ty2 : type_value) : type_value list 
     List.map f ty_pairs
     |> List.flatten in
   match ty1, ty2 with
-  | (Undefined, _) -> [ty2]
-  | (_, Undefined) -> [ty1]
+  | (Undefined _, _) -> [ty2]
+  | (_, Undefined _) -> [ty1]
 
   | (UserDefinedType (_, _), UserDefinedType (_, _))
   | (String (_, _), String (_, _))
@@ -419,10 +420,11 @@ let unique_unifier (unifiers : type_value list) : type_value option =
         else acc) us u
     in Some unifier
 
+(*NOTE we ignore the name of the unification variable*)
 let rec apply_unifier (unifier : type_value) (ty : type_value) : type_value =
-  assert (unifier <> Undefined);
+  assert (not (undefined_ty unifier));
   match ty with
-  | Undefined -> unifier
+  | Undefined _ -> unifier
   | UserDefinedType (_, _)
   | String (_, _)
   | Integer (_, _)

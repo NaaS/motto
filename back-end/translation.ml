@@ -67,7 +67,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
             (Some idx, st)
       end in
   match ty with
-  | Undefined -> failwith "Cannot translate undefined type"
+  | Undefined _ -> failwith "Cannot translate undefined type"
   | Disjoint_Union (_, _) -> failwith "Unsupported"
   | List (_, _, _, _) ->
     (*Lists can be turned into arrays*)

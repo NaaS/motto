@@ -23,7 +23,7 @@ type function_db = function_entry list
 
 let function_db : function_db =
   [{name = "head";
-    ty = FunType (FunDomType ([], [List (Some "l", Undefined, None, [])]), FunRetType [Undefined]);
+    ty = FunType (FunDomType ([], [List (Some "l", def_undefined, None, [])]), FunRetType [def_undefined]);
     impl = (fun es ->
       match es with
       | [ConsList (h, _)] -> h
@@ -32,13 +32,17 @@ let function_db : function_db =
       )
    };
    {name = "tail";
-    ty = FunType (FunDomType ([], [List (Some "l", Undefined, None, [])]), FunRetType [List (None, Undefined, None, [])]);
+    ty = FunType (FunDomType ([], [List (Some "l", def_undefined, None, [])]), FunRetType [List (None, def_undefined, None, [])]);
     impl = (fun es ->
       match es with
       | [ConsList (_, t)] -> t
       | [e] -> failwith "Function not defined for given input"(*FIXME give more details*)
       | _ -> failwith "Wrong number of arguments"(*FIXME use Functions_Exc*)
       )
+   };
+   {name = "hash";
+    ty = FunType (FunDomType ([], [def_undefined]), FunRetType [Integer (None, [])]);
+    impl = (fun x -> Int (Hashtbl.hash x))
    };
   ]
 

@@ -478,7 +478,9 @@ let extend_scope_unsafe (scope : scope) (st : state)
      })
   | Term ik ->
     (*Must not add polymorphic constants to the symbol table.*)
-    assert (src_ty_opt <> Some Crisp_syntax.Undefined);
+    assert (match src_ty_opt with
+            | Some (Crisp_syntax.Undefined _) -> false
+            | _ -> true);
     (st.next_symbol,
      let metadata =
      {

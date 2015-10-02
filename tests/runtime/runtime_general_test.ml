@@ -240,6 +240,10 @@ let _ = run [
    Load "tests/flick_code/fun_call.cp";
    Eval "fun_call_f2(6)";
 
+   Eval ("hash(3)");
+   Eval ("hash(3)");
+   Eval ("hash(2)");
+
 (*FIXME test:
         update, update-indexable, and indexable-projection*)
    Eval ("let blaX = 3");

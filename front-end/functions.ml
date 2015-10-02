@@ -22,24 +22,25 @@ type function_entry =
 type function_db = function_entry list
 
 let function_db : function_db =
-[{name = "head";
-  ty = FunType (FunDomType ([], [List (Some "l", Undefined, None, [])]), FunRetType [Undefined]);
-  impl = (fun es ->
-    match es with
-    | [ConsList (h, _)] -> h
-    | [e] -> failwith "Function not defined for given input"(*FIXME give more details*)
-    | _ -> failwith "Wrong number of arguments"(*FIXME use Functions_Exc*)
-    )
-};
- {name = "tail";
-  ty = FunType (FunDomType ([], [List (Some "l", Undefined, None, [])]), FunRetType [List (None, Undefined, None, [])]);
-  impl = (fun es ->
-    match es with
-    | [ConsList (_, t)] -> t
-    | [e] -> failwith "Function not defined for given input"(*FIXME give more details*)
-    | _ -> failwith "Wrong number of arguments"(*FIXME use Functions_Exc*)
-    )
-}]
+  [{name = "head";
+    ty = FunType (FunDomType ([], [List (Some "l", Undefined, None, [])]), FunRetType [Undefined]);
+    impl = (fun es ->
+      match es with
+      | [ConsList (h, _)] -> h
+      | [e] -> failwith "Function not defined for given input"(*FIXME give more details*)
+      | _ -> failwith "Wrong number of arguments"(*FIXME use Functions_Exc*)
+      )
+   };
+   {name = "tail";
+    ty = FunType (FunDomType ([], [List (Some "l", Undefined, None, [])]), FunRetType [List (None, Undefined, None, [])]);
+    impl = (fun es ->
+      match es with
+      | [ConsList (_, t)] -> t
+      | [e] -> failwith "Function not defined for given input"(*FIXME give more details*)
+      | _ -> failwith "Wrong number of arguments"(*FIXME use Functions_Exc*)
+      )
+   };
+  ]
 
 let export_fun (e : function_entry) : (function_name * (bool * function_type)) =
   (e.name, (true, e.ty))

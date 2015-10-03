@@ -323,7 +323,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         if not (lbl_opt = Some map_name) then
           begin
           (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
+          raise (Type_Inference_Exc ("UpdateIndexable: Mismatch between label and map name", e, st))
           end;
         idx_ty, val_ty
       | _ -> raise (Type_Inference_Exc ("Expected to find dictionary type", e, st)) in
@@ -346,14 +346,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         if not (lbl_opt = Some map_name) then
           begin
           (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
+          raise (Type_Inference_Exc ("IndexableProjection: Mismatch between label and map name for dictionary", e, st))
           end;
         idx_ty, val_ty
       | Some (ChanType (lbl_opt, ChannelArray (rx_ty, tx_ty, di_opt))) ->
         if not (lbl_opt = Some map_name) then
           begin
           (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
+          raise (Type_Inference_Exc ("IndexableProjection: Mismatch between label and map name for channel array", e, st))
           end;
         (def_undefined(*FIXME unsure how to index channel arrays*),
          ChanType (None, ChannelSingle (rx_ty, tx_ty)))
@@ -713,7 +713,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       begin
       let l1_ty_s = type_value_to_string true false min_indentation l1_ty in
       let l2_ty_s = type_value_to_string true false min_indentation l2_ty in
-      raise (Type_Inference_Exc ("Mismatch between types of list components:" ^
+      raise (Type_Inference_Exc ("AppendList : Mismatch between types of list components:" ^
                                  l1_ty_s ^ " and " ^ l2_ty_s, e, st))
       end;
     (l1_ty, st)
@@ -733,7 +733,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         if not (label_opt = Some c_name) then
           begin
           (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
+          raise (Type_Inference_Exc ("Send: Mismatch between label and map name", e, st))
           end;
         if not inv && tx_chan_type ct = data_ty then
           data_ty
@@ -741,7 +741,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           data_ty
         else
           (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Mismatch between type of data and that of channel", e, st))
+          raise (Type_Inference_Exc ("Send: Mismatch between type of data and that of channel", e, st))
       | _ ->
         (*FIXME give more info*)
         raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in
@@ -760,7 +760,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         if not (label_opt = Some c_name) then
           begin
           (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Mismatch between label and map name", e, st))
+          raise (Type_Inference_Exc ("Peek: Mismatch between label and map name", e, st))
           end;
         if not inv then rx_chan_type ct
         else tx_chan_type ct

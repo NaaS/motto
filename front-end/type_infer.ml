@@ -730,11 +730,14 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     let ty =
       match chan_ty with
       | ChanType (label_opt, ct) ->
-        if not (label_opt = Some c_name) then
-          begin
-          (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Send: Mismatch between label and map name", e, st))
-          end;
+        begin
+          match label_opt with
+          | None -> ()(*NOTE assume that None can be matched to any channel name*)
+          | Some label ->
+            if label <> c_name then
+              raise (Type_Inference_Exc ("Send: Mismatch between label (" ^
+                     label ^ ") and map name (" ^ c_name ^ ")", e, st))
+        end;
         if not inv && tx_chan_type ct = data_ty then
           data_ty
         else if inv && rx_chan_type ct = data_ty then

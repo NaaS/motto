@@ -732,7 +732,10 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       | ChanType (label_opt, ct) ->
         begin
           match label_opt with
-          | None -> ()(*NOTE assume that None can be matched to any channel name*)
+          | None ->
+            (*NOTE assume that None can be matched to any channel name.
+              FIXME does this make sense?*)
+            ()
           | Some label ->
             if label <> c_name then
               raise (Type_Inference_Exc ("Send: Mismatch between label (" ^

@@ -610,7 +610,16 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
     (*Translate each function argument as an expression.*)
     let (result_indices, sts_acc', ctxt_acc', _, st') =
-      List.fold_right (fun (e, ty) (result_indices, sts_acc, ctxt_acc, assign_acc, st) ->
+      List.fold_right (fun (e, ty') (result_indices, sts_acc, ctxt_acc, assign_acc, st) ->
+        let ty, st = Type_infer.ty_of_expr ~strict:true st e in
+        let ty =
+          match Crisp_syntax_aux.type_unify ty ty' with
+          | None ->
+            raise (Translation_Expr_Exc
+              ("Could not unify formal-parameter type with the inferred " ^
+               "actual-parameter type argument of function '" ^ function_name ^ "'",
+               Some e, Some local_name_map, None, st))
+          | Some ty -> ty in
         let (naasty_ty, st') =
           naasty_of_flick_type st ty
              (*We need to do this step otherwise the variable will get declared

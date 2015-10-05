@@ -210,6 +210,29 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
     let st''' =
         update_symbol_type type_identifier translated_ty Type st''
     in (translated_ty, st''')
+  | ChanType (label_opt, chan_type) ->  (*FIXME -- THIS IS A DUMMY NOT REAL TRANSLATION *)
+    let ik =
+      match default_ik with
+      | None -> Value
+      | Some ik -> ik in
+    let (naasty_label_opt, st) = check_and_generate_name ik label_opt in
+    match chan_type with  
+    | ChannelSingle (in_type, out_type) -> 
+      (match in_type with 
+      | Empty -> 
+        let (naasty_type, st) = naasty_of_flick_type st out_type in
+        (Chan_Type (naasty_label_opt, false, Output, naasty_type),st)
+      | _ -> 
+        let (naasty_type, st) = naasty_of_flick_type st in_type in
+        (Chan_Type (naasty_label_opt, false, Output, naasty_type),st)  )   
+    | ChannelArray (in_type, out_type, dep_ind_opt) -> 
+      (match in_type with 
+      | Empty -> 
+        let (naasty_type, st) = naasty_of_flick_type st out_type in
+        (Chan_Type (naasty_label_opt, true, Output, naasty_type),st)
+      | _ -> 
+        let (naasty_type, st) = naasty_of_flick_type st in_type in
+        (Chan_Type (naasty_label_opt, true, Output, naasty_type),st)  ) 
 
 (*If the name exists in the name mapping, then map it, otherwise leave the name
   as it is*)
@@ -895,7 +918,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem inputs ctxt_acc' then ctxt_acc' else inputs :: ctxt_acc' in
     let (chan_name, opt) = channel_identifier in
-    let chan_index =  input_map chan_name st'' opt in
+    let (chan_index,chan_type) =  input_map chan_name st'' opt in
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)
@@ -965,7 +988,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       if List.mem outputs ctxt_acc' then ctxt_acc' else outputs :: ctxt_acc' in
 (*FIXME calculate channel offset*)
     let (chan_name, opt) = channel_identifier in
-    let chan_index =  output_map chan_name st'' opt in
+    let (chan_index,chan_type) =  output_map chan_name st'' opt in
+    let (naasty_chan_type, st'')  = naasty_of_flick_type st'' chan_type  in
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)
@@ -977,7 +1001,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       Assign (Var te,
               (*FIXME how is value of "te" used?*)
               Call_Function (write_channel,
-                             [Type_Parameter e_ty],
+                             [Type_Parameter naasty_chan_type],
                              [Var e_idx;
                               ArrayElement (Var outputs, Var chan_index_idx);
                               Address_of (Var size)]))
@@ -1018,7 +1042,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc in
     let (chan_name, opt) = channel_identifier in
-    let chan_index =  input_map chan_name st'' opt in
+    let (chan_index,chan_type) =  input_map chan_name st'' opt in
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)

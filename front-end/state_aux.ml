@@ -61,7 +61,10 @@ let infer_graph_hint (chan_name : string) : graph_hint =
 let get_channel_type (st : state) (chan_name : string) : channel_type =
   match lookup_term_data (Term Channel_Name) st.term_symbols chan_name with
   | None ->
-      failwith ("Channel name " ^ chan_name ^ " not found in symbol table.")
+      print_endline ("Channel name " ^ chan_name ^ " not found in symbol table, pretending it is type int for now");
+      ChannelSingle (Integer (None, [("hello", Ann_Int(0))]),Empty)  (**FIXME -- this should not be here it should fail*)
+      (* print_endline (state_to_str ~summary_types:(!Config.cfg.Config.summary_types) true st); *)
+      (* failwith ("Channel name " ^ chan_name ^ " not found in symbol table.")                  *)
   | Some (_, meta_data) -> begin
     match the (meta_data.source_type) with
     | ChanType (_, channel_type) -> channel_type
@@ -69,10 +72,12 @@ let get_channel_type (st : state) (chan_name : string) : channel_type =
     end
 
 (* input_map takes a string that represents the channel, the state and optionally*)
-(* an expression, if and only if the channel is an array*)
-let input_map (chan_name : string) (st : state) (index : expression option) : expression =
+(* an expression, if and only if the channel is an array -- it returns an expression for the*)
+(* offset within the input array and also the type for that channel*)
+let input_map (chan_name : string) (st : state) (index : expression option) : expression * Crisp_syntax.type_value =
+  let chan_type = ChanType (None, get_channel_type st chan_name) in
   let hint = infer_graph_hint chan_name in
-  match hint with 
+  let expr = match hint with 
     | PassThroughType -> Int 0
     | FoldTreeType ->  begin match chan_name with
       | "x" -> Int 0
@@ -83,17 +88,19 @@ let input_map (chan_name : string) (st : state) (index : expression option) : ex
       | "client_in" -> Int 0
       | "backend_in" ->  Plus ((Int 1),(the index))
       | _ -> failwith ("Expected channel name to be one from client or backend but got " ^ chan_name)
-      end
+      end in
+   (expr,chan_type)
   
 (* output_map is similar to input map for mapping output channels *)
-let output_map (chan_name : string) (st : state)  (index : expression option) : expression =
+let output_map (chan_name : string) (st : state)  (index : expression option) : expression * Crisp_syntax.type_value =
+  let chan_type =  ChanType (None, get_channel_type st chan_name) in
   let hint = infer_graph_hint chan_name in
-  match hint with 
+  let expr = match hint with 
     | PassThroughType -> Int 0
     | FoldTreeType -> Int 0
     | DeMuxType -> begin match chan_name with 
       | "client_out" -> Int 0
       | "backend_out" -> Plus ((Int 1),(the index))
       | _ -> failwith ("Expected channel name to be one from client or backend but got " ^ chan_name)
-      end  
-
+      end in
+  (expr,chan_type)

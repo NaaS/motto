@@ -899,7 +899,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let my_task = List.find (fun (x : Task_model.task) ->
       x.Task_model.task_id = st.current_task) st.task_graph.Task_model.tasks in
 (*FIXME calculate channel offset*)
-    let chan_index = Task_model.find_input_channel my_task chan_id in
+    let chan_index = 0 in
 (*FIXME batch all channels into two channel arrays: one for inputs, and one for
         outputs. type for each parameter should be
           std::vector<Buffer *>&*)
@@ -988,7 +988,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let my_task = List.find (fun (x : Task_model.task) ->
       x.Task_model.task_id = st.current_task) st.task_graph.Task_model.tasks in
 (*FIXME calculate channel offset*)
-    let chan_index = Task_model.find_input_channel my_task chan_id in
+    let chan_index = 0 in
 (*FIXME batch all channels into two channel arrays: one for inputs, and one for
         outputs. type for each parameter should be
           std::vector<Buffer *>&*)

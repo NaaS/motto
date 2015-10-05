@@ -134,7 +134,7 @@ let initial_state =
       (*FIXME create a constant, say Task_model.empty_graph;
               or accept the graph (and current_task) as a parameter
               to initial_state*)
-      { Task_model.tasks = []; Task_model.graph = ExplicitLinks([]);};
+      { Task_model.tasks = [];};
   }
 
 type scope =

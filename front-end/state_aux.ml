@@ -7,6 +7,9 @@
 open Debug
 open State
 open Naasty_aux
+open Task_model
+open Crisp_syntax
+open General
 
 
 let state_to_str ?indentation:(indentation : string = "  ")
@@ -49,3 +52,48 @@ let state_to_str ?indentation:(indentation : string = "  ")
                               string_of_bool is_fun ^ ", " ^
                               Crisp_syntax.function_type_to_string ft ^ ")")
                         crisp_funs) ^ "\n"
+
+
+(* Infer the type of graph we are building from the list of channels it gets *)
+let infer_graph_hint (chan_name : string) : graph_hint =
+  PassThroughType  (**FIXME -- this is a temporary hack *)
+
+let get_channel_type (st : state) (chan_name : string) : channel_type =
+  match lookup_term_data (Term Channel_Name) st.term_symbols chan_name with
+  | None ->
+      failwith ("Channel name " ^ chan_name ^ " not found in symbol table.")
+  | Some (_, meta_data) -> begin
+    match the (meta_data.source_type) with
+    | ChanType (_, channel_type) -> channel_type
+    | _ -> failwith "Not of type ChanType"
+    end
+
+(* input_map takes a string that represents the channel, the state and optionally*)
+(* an expression, if and only if the channel is an array*)
+let input_map (chan_name : string) (st : state) (index : expression option) : expression =
+  let hint = infer_graph_hint chan_name in
+  match hint with 
+    | PassThroughType -> Int 0
+    | FoldTreeType ->  begin match chan_name with
+      | "x" -> Int 0
+      | "y" -> Int 1
+      | _ -> failwith ("Expected channel name to be one from x or y but got " ^ chan_name)
+      end  
+    | DeMuxType -> begin match chan_name with 
+      | "client_in" -> Int 0
+      | "backend_in" ->  Plus ((Int 1),(the index))
+      | _ -> failwith ("Expected channel name to be one from client or backend but got " ^ chan_name)
+      end
+  
+(* output_map is similar to input map for mapping output channels *)
+let output_map (chan_name : string) (st : state)  (index : expression option) : expression =
+  let hint = infer_graph_hint chan_name in
+  match hint with 
+    | PassThroughType -> Int 0
+    | FoldTreeType -> Int 0
+    | DeMuxType -> begin match chan_name with 
+      | "client_out" -> Int 0
+      | "backend_out" -> Plus ((Int 1),(the index))
+      | _ -> failwith ("Expected channel name to be one from client or backend but got " ^ chan_name)
+      end  
+

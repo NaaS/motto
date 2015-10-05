@@ -36,31 +36,3 @@ type task_graph =
   {
     tasks : task list;
   }
-
-(* Infer the type of graph we are building from the list of channels it gets *)
-let infer_graph_hint (chan_name : string) : graph_hint =
-  PassThroughType  (**FIXME -- this is a temporary hack *)
-
-(* input_map takes a string that represents the channel and optionally an*)
-let input_map (chan_name : string) (index : expression option) : expression =
-  let hint = infer_graph_hint chan_name in
-  match hint with 
-    | PassThroughType -> Int 0
-    | FoldTreeType ->  the index 
-    | DeMuxType -> begin match chan_name with 
-      | "client_in" -> Int 0
-      | "backend_in" ->  Plus ((Int 1),(the index))
-      | _ -> failwith ("Expected channel name to be one from client or backend")
-      end
-  
-(* output_map takes a string that represents the channel and optionally an*)
-let output_map (chan_name : string) (index : expression option) : expression =
-  let hint = infer_graph_hint chan_name in
-  match hint with 
-    | PassThroughType -> Int 0
-    | FoldTreeType -> Int 0
-    | DeMuxType -> begin match chan_name with 
-      | "client_out" -> Int 0
-      | "backend_out" -> Plus ((Int 1),(the index))
-      | _ -> failwith ("Expected channel name to be one from client or backend")
-      end  

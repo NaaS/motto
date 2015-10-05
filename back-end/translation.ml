@@ -10,6 +10,7 @@ open Naasty
 open Naasty_aux
 open State
 open Task_model
+open State_aux
 
 let log m =
   print_endline (Printf.sprintf "\027[36m %s\027[m%!" m)
@@ -893,19 +894,25 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       if List.mem size ctxt_acc then ctxt_acc else size :: ctxt_acc in
     let ctxt_acc' =
       if List.mem inputs ctxt_acc' then ctxt_acc' else inputs :: ctxt_acc' in
-    let chan_index = 0 in
+    let (chan_name, opt) = channel_identifier in
+    let chan_index =  input_map chan_name st'' opt in
+    let (_, chan_index_idx, st'') =
+      mk_fresh (Term Value)
+        (*Array indices are int-typed*)
+        ~ty_opt:(Some (Int_Type (None, default_int_metadata)))
+        ("chan_index_") 0 st'' in
     let translated =
       St_of_E (Call_Function
                  (consume_channel,
                   [Type_Parameter
                      (*FIXME need to work out the correct value for this*)
                      (Int_Type (None, default_int_metadata))],
-                  [ArrayElement (Var inputs, Int_Value chan_index);
+                  [ArrayElement (Var inputs, Var chan_index_idx);
                    Address_of (Var size)]))
     (*FIXME we should lift_assign*)
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
-        ctxt_acc',
+        chan_index_idx :: ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
         st'')
@@ -958,7 +965,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       if List.mem outputs ctxt_acc' then ctxt_acc' else outputs :: ctxt_acc' in
 (*FIXME calculate channel offset*)
     let (chan_name, opt) = channel_identifier in
-    let chan_index =  input_map chan_name opt in
+    let chan_index =  output_map chan_name st'' opt in
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)
@@ -1011,7 +1018,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc in
     let (chan_name, opt) = channel_identifier in
-    let chan_index =  input_map chan_name opt in
+    let chan_index =  input_map chan_name st'' opt in
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)

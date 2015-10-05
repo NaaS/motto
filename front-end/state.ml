@@ -58,6 +58,7 @@ type declaration_scope =
 type term_symbol_metadata =
   {
     declaration_scope : declaration_scope option;
+    dependency_index : bool;
 
     source_type : type_value option;
     naasty_type : naasty_type option;
@@ -110,6 +111,7 @@ let initial_state =
   let def_fn_term_symbol_metadata =
   {
     declaration_scope = None;
+    dependency_index = false;
     source_type = None;
     naasty_type = None;
     identifier_kind = Defined_Function_Name;

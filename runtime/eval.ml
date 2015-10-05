@@ -500,7 +500,8 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
               raise (Eval_Exc ("Calling processes not supported, for functor: " ^ function_name, Some e, None))
             | _ ->
               raise (Eval_Exc ("Invalid declaration found when calling functor:" ^ function_name, Some e, None)) in
-          let (is_fun(*FIXME this info is not yet used*), ((chans, arg_tys), ret_tys)) =
+            let (is_fun(*FIXME this info is not yet used*),
+                 (dis(*FIXME this info is not yet used*), (chans, arg_tys), ret_tys)) =
             match lookup_function_type st function_name with
             | None ->
               raise (Eval_Exc ("Could not retrieve type from symbol table, for functor: " ^ function_name, Some e, None))

@@ -23,8 +23,8 @@ let name_of_decl = function
   | d -> failwith ("name_of_decl : cannot extract name from declaration: " ^ toplevel_decl_to_string d)
 
 (*Unwraps a Crisp function type into a tuple of its components*)
-let extract_function_types (FunType (FunDomType (chans, arg_tys), FunRetType ret_tys)) =
-  ((chans, arg_tys), ret_tys)
+let extract_function_types (FunType (dis, FunDomType (chans, arg_tys), FunRetType ret_tys)) =
+  (dis, (chans, arg_tys), ret_tys)
 
 (*Unwraps a Crisp process body type into a tuple of its components*)
 let extract_process_body_bits (ProcessBody (st_decls, e, ex_decls)) =
@@ -132,7 +132,7 @@ let order_fun_args (fname : function_name) (st : State.state) (args : fun_arg li
         failwith "fun_arg values should be either all Exp, or all Named. Expected all Exp.")
          args
   | (Named _) :: _ ->
-    let ((chans, arg_tys), ret_tys) =
+    let (_(*ignore dependent parameters*), (chans, arg_tys), ret_tys) =
       List.assoc fname st.State.crisp_funs
       |> snd (*it shouldn't matter if we're dealing with a call to a function or
               a process*)

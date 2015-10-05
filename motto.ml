@@ -12,6 +12,7 @@ type arg_params =
   | TypeInfer
   | TestParseFile
   | TestParseDir
+  | DependancyValue
 ;;
 
 type param_entry =
@@ -125,6 +126,11 @@ let rec param_table : param_entry list =
         exit 0
         end);
       desc = "Show this list";};
+    { key = "--set_dep_param";
+      parameter_desc = "(dependency name)=(integer)";
+      action = (fun () ->
+        next_arg := Some DependancyValue);
+      desc = "Set a dependancy parameter to a value. Note that there shouldn't be a space between the dependency name and the integer value.";};
   ] in
 
 while !arg_idx < Array.length Sys.argv do
@@ -169,6 +175,10 @@ while !arg_idx < Array.length Sys.argv do
         next_arg := None
       | Some TestParseDir ->
         cfg := { !cfg with parser_test_dirs = s :: !cfg.parser_test_dirs};
+        next_arg := None
+      | Some DependancyValue ->
+        let [k; v] = Str.split (Str.regexp "=") s in
+        cfg := { !cfg with dependency_valuation = (k, int_of_string v) :: !cfg.dependency_valuation};
         next_arg := None
   in
   handle_arg !arg_idx;

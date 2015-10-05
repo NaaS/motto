@@ -191,9 +191,15 @@ type function_rettype = FunRetType of type_value list
 let function_rettype_to_string (FunRetType tys) =
   "(" ^ String.concat ", " (List.map (type_value_to_string default_use_mixfix_lists false 0) tys) ^ ")"
 ;;
-type function_type = FunType of function_domtype * function_rettype
-let function_type_to_string (FunType (fd, fr)) =
-  function_domtype_to_string fd ^ " -> " ^ function_rettype_to_string fr
+type function_type = FunType of dependency_index list * function_domtype * function_rettype
+let function_type_to_string (FunType (dis, fd, fr)) =
+  let dis_s =
+    if dis = [] then ""
+    else
+      "{" ^
+      String.concat ", " dis ^
+      "} => " in
+  dis_s ^ function_domtype_to_string fd ^ " -> " ^ function_rettype_to_string fr
 ;;
 
 type integer = int (*FIXME precision*)

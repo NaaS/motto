@@ -364,9 +364,10 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
          val_ty)
       | _ ->
         raise (Type_Inference_Exc ("Expected to find indexable type", e, st)) in
-    let _ =
+(*    FIXME currently not doing this check
+      let _ =
       if strict then
-        assert_identical_types expected_idx_ty idx_ty e st in
+        assert_identical_types expected_idx_ty idx_ty e st in*)
     (value_ty, st)
 
   | Record fields ->
@@ -510,7 +511,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
           | None ->
             raise (Type_Inference_Exc ("Functor_App function: Missing declaration for '" ^ functor_name ^ "'", e, st))
           | Some f_ty -> f_ty in
-        let ((chans, arg_tys), ret_tys) = extract_function_types functor_ty in
+        let (dis(*FIXME currenty not doing anything with this*), (chans, arg_tys), ret_tys) = extract_function_types functor_ty in
         let arg_tys =
           (*Regard channels as simply being parameters*)
           List.map chan_to_ty chans @ arg_tys in

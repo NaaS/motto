@@ -435,8 +435,11 @@ function_domain_type:
       {Crisp_syntax.FunDomType ([], ps)}
   | LEFT_R_BRACKET; chans = channels; RIGHT_R_BRACKET
       {Crisp_syntax.FunDomType (chans, [])}
-function_type: fd = function_domain_type; AR_RIGHT; fr = function_return_type
-  {Crisp_syntax.FunType (fd, fr)}
+function_type:
+  | fd = function_domain_type; AR_RIGHT; fr = function_return_type
+      {Crisp_syntax.FunType ([], fd, fr)}
+  | LEFT_C_BRACKET; dvars = dep_vars; RIGHT_C_BRACKET; ARR_RIGHT; fd = function_domain_type; AR_RIGHT; fr = function_return_type
+      {Crisp_syntax.FunType (dvars, fd, fr)}
 
 state_decl :
   | LOCAL; var = IDENTIFIER; COLON; ty = single_line_type_def; ASSIGN; e = expression

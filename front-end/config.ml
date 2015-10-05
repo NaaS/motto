@@ -40,6 +40,8 @@ type configuration =
       simply output non-zero status code if there's an error, and zero otherwise.*)
     unexceptional : bool;
     run_compiled_runtime_script : bool;
+    (*Mapping from dependency indices to values*)
+    dependency_valuation : (string * int) list;
   }
 
 let cfg : configuration ref = ref {
@@ -58,4 +60,5 @@ let cfg : configuration ref = ref {
   skip_type_check = false;
   unexceptional = false;
   run_compiled_runtime_script = false;
+  dependency_valuation = [];
 }

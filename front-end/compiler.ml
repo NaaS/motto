@@ -76,7 +76,9 @@ let type_check_blob (st : State.state) (chans : channel list)
   let ret = forget_label ret in
   (Crisp_syntax_aux.type_match ret actual_ret, (ret, actual_ret))
 
-(*Gather declaration information from a program, and encode in the state.*)
+(*Gather declaration information from a program, and encode in the state.
+  For instance, we gather function names and signatures and extend the symbol
+  table.*)
 let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.state =
   List.fold_right (fun decl st ->
     match decl with
@@ -93,9 +95,26 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
           else
             failwith ("Function name '" ^ fn_name ^ "' isn't fresh.") in
 
+        let (dis, (chans, arg_tys), ret_tys) =
+          Crisp_syntax_aux.extract_function_types fn_params in
+
+        (*Extend the symbol table with the dependency indices, unless they
+          already exist*)
+        let st' =
+          List.fold_right (fun di st ->
+            if Naasty_aux.is_fresh di st then
+              Naasty_aux.extend_scope_unsafe (Term Value) st
+                (*NOTE dependency indices assumed to be of int type*)
+                ~src_ty_opt:(Some (Integer (None, [](*FIXME no type annotation?*))))
+                ~dependency_index:true
+                di
+              |> snd
+            else
+              (*FIXME check that the symbol in the symbol table has
+                      dependency_index=true*)
+              st) dis st' in
+
         let _ =
-          let ((chans, arg_tys), ret_tys) =
-            Crisp_syntax_aux.extract_function_types fn_params in
           let ret_ty =
             match ret_tys with
             | [] -> flick_unit_type
@@ -103,7 +122,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
             | _ -> failwith "Multifunctions not supported"(*FIXME give more info*) in
           if !Config.cfg.Config.skip_type_check then ()
           else
-            match type_check_blob st chans arg_tys ret_ty fn_body with
+            match type_check_blob st' chans arg_tys ret_ty fn_body with
             | (true, _) -> ()
             | (false, (expected_ty, actual_ty)) ->
               let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
@@ -141,8 +160,8 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
               seems like a good idea to kinda treat this as a function*)
       let fn_params =
         match process_type with
-        | ProcessType (_, (chans, args)) ->
-          FunType (FunDomType (chans, args), FunRetType [flick_unit_type]) in
+        | ProcessType (dis, (chans, args)) ->
+          FunType (dis, FunDomType (chans, args), FunRetType [flick_unit_type]) in
       begin
       let st =
         { st with crisp_funs = (process_name, (false, fn_params)) :: st.crisp_funs} in
@@ -157,7 +176,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
             failwith ("Process name '" ^ process_name ^ "' isn't fresh.") in
 
         let _ =
-          let ((chans, arg_tys), ret_tys) =
+          let (dis(*FIXME currently not doing anything with this*), (chans, arg_tys), ret_tys) =
             Crisp_syntax_aux.extract_function_types fn_params in
 
           let ret_ty = flick_unit_type in
@@ -174,8 +193,6 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
         st'
       | Some (_, _) -> failwith ("Process '" ^ process_name ^ "' declared more than once")
       end
-
-
     | Include _ ->
       failwith "Inclusions should have been expanded before reaching this point.")
     p st
@@ -215,13 +232,17 @@ let check_distinct_parameter_names (st : state) : state =
   let _ =
     begin
     List.iter (fun (function_name, (is_fun, function_type)) ->
-      let ((chans, arg_tys), ret_tys) =
+      let thing = if is_fun then "function" else "process" in
+      let (dis, (chans, arg_tys), ret_tys) =
         Crisp_syntax_aux.extract_function_types function_type in
+      ignore(List.fold_right (fun di dis_acc ->
+        if List.exists (fun di' -> di = di') dis_acc then
+          failwith ("All " ^ thing ^ " dependant parameters must be named")
+          else di :: dis_acc) dis []);
       let arg_names = List.map Crisp_syntax_aux.label_of_type arg_tys in
       let channel_names =
         List.map (fun cn -> Some (Crisp_syntax_aux.label_of_channel cn)) chans in
       ignore (List.fold_right (fun name_opt acc ->
-        let thing = if is_fun then "function" else "process" in
         match name_opt with
         | None -> failwith ("All " ^ thing ^ " parameters must be named")
         | Some label ->

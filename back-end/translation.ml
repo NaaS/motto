@@ -599,10 +599,11 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       occurrences.*)
     let arg_expressions = Crisp_syntax_aux.order_fun_args function_name st fun_args in
 
-    let ((chans, arg_tys), ret_tys) =
+    let (dis, (chans, arg_tys), ret_tys) =
       List.assoc function_name st.State.crisp_funs
       |> snd (*FIXME disregarding whether function or process*)
       |> Crisp_syntax_aux.extract_function_types in
+    assert (dis = []); (*FIXME currently functions cannot be dependent*)
     assert (chans = []); (*FIXME currently functions cannot be given channel
                            parameters*)
 
@@ -1166,7 +1167,10 @@ let unidirect_channel (st : state) (Channel (channel_type, channel_name)) : naas
         subchan ty Output unidir_chan_send_suffix is_array st'
     in (rec_ty @ sen_ty, st'')
   | ChannelArray (receive_ty, send_ty, dependency) ->
-    assert (dependency = None); (*NOTE Dependencies aren't supported*)
+(* NOTE Dependencies aren't fully supported. We're increasing support for
+        them in order to be able to use them, since we need them for the
+        NaaS use-cases.
+    assert (dependency = None);*)
     let is_array = true in
     let rec_ty, st' = match receive_ty with
       | Empty -> ([], st)
@@ -1338,7 +1342,7 @@ let split_io_channels f =
         (Channel (ChannelArray (Empty, v2, dep), cname ^ "_out"))::(split t)
   in  
   match f.fn_params with
-  | FunType (FunDomType (channels, values), ret) ->
+  | FunType (dis, FunDomType (channels, values), ret) ->
     let channels' = split channels in
     let fn_body' =
       match f.fn_body with
@@ -1346,7 +1350,7 @@ let split_io_channels f =
         ProcessBody (s, replace_channels expression channels', e)
     in
     { fn_name = f.fn_name;
-      fn_params = FunType (FunDomType (channels', values), ret);
+      fn_params = FunType (dis, FunDomType (channels', values), ret);
       fn_body = fn_body';
     }
 
@@ -1363,7 +1367,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     log (toplevel_decl_to_string (Function (split_io_channels f))); 
     (*FIXME might need to prefix function names with namespace, within the
             function body*)
-    let ((chans, arg_tys), res_tys) =
+    let (dis(*FIXME currently not doing anything with "dis"*), (chans, arg_tys), res_tys) =
       Crisp_syntax_aux.extract_function_types fn_decl.fn_params in
     (*local_name_map is local to function
      blocks, so we start out with an empty

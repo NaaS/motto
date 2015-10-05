@@ -124,8 +124,6 @@ let translate st (tys, funs, procs) =
     | Process p -> p
     | _ -> failwith ("Expected list to contain processes only in icl_backend:translate") in
   let processes = List.map extract_proc progs in
-  let tg = create_task_and_channels ExplicitLinksType processes st  in
-  (*let st' = {st with task_graph = tg} in *)
   let st' = st in
   ICL_Backend.translate st'
     {Backend.types_unit = tys;

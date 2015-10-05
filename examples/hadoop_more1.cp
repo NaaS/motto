@@ -36,8 +36,8 @@ fun Wc_node : (type k_v/- chan; x : type k_v, y : type k_v, z : type k_v) -> ()
 
   if v1.key = 0-1 and v2.key = 0-1: # * i think "-" cannot be prefix
 #    z ! ? x
-    ? chan 
-    chan ! 5 # FIXME test
+#    ? chan 
+#    chan ! 5 # FIXME test
     send (z, consume (x))
     consume (y)
     <>

@@ -72,7 +72,8 @@ let rec count_var_references_in_naasty_expr (st : state)
 
   | Int_Value _
   | Nullptr
-  | Bool_Value _ ->
+  | Bool_Value _
+  | Literal _ ->
     table
   | Not e
   | Abs e
@@ -442,8 +443,9 @@ let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_ex
       List.assoc id subst
     else expr
   | Int_Value _
-	| Nullptr
-  | Bool_Value _ -> expr
+  | Nullptr
+  | Bool_Value _
+  | Literal _ -> expr
   | Cast (ty, e) -> unary_op_inst e (fun e' -> Cast (ty, e'))
   | Not e -> unary_op_inst e (fun e' -> Not e')
   | Abs e -> unary_op_inst e (fun e' -> Abs e')

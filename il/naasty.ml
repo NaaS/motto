@@ -96,6 +96,17 @@ and naasty_expression =
   | Left_shift of naasty_expression * naasty_expression
   | Right_shift of naasty_expression * naasty_expression
   | Nullptr
+    (*'Literal' consists of a string that's opaque to the IL, but that should
+       make sense to the target language at the point of inclusion. By this I
+       mean that, if we have 'Literal "a"' then "a" is either a keyword in the
+       target language, or it is a symbol that's in scope.
+       We use this for including expressions in the IL which we currently
+       don't have a good way of encoding in the IL -- such as
+       TaskEvent::OUT_OF_DATA.
+       FIXME eventually we need a better way of handling this. We also need to
+             register target-level functions such as "peek_channel" etc.
+             I think we could use a map-based approach, as in the Functions module.*)
+  | Literal of string
 
 type naasty_statement =
     (*Should include function prototypes here?*)

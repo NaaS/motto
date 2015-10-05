@@ -886,33 +886,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       if List.mem size ctxt_acc then ctxt_acc else size :: ctxt_acc in
     let ctxt_acc' =
       if List.mem inputs ctxt_acc' then ctxt_acc' else inputs :: ctxt_acc' in
-    let (chan_name, _) = channel_identifier in
-    let real_name =
-      (*FIXME hack because channel nname is wrong*)
-      chan_name ^ "_receive_0" in
-(*FIXME is this an unhelpful indirection?*)
-    let chan_id =
-      match lookup_name (Term (*Channel_Name*) Value) st'' real_name with
-      | Some ch -> ch
-      | None ->
-        raise (Translation_Expr_Exc
-                 ("Could not find channel id " ^ chan_name ^ " in lookup",
-                  Some e, Some local_name_map, None, st)) in
-(*FIXME this code seems redundant
-    let chanTyp =
-      match lookup_symbol_type chan_id (Term (*Channel_Name*) Value) st with  (*FIXME should be channel_name*)
-      | None ->
-        failwith ("Channel type not found in symbol table: " ^ string_of_int chan_id)
-      | Some ty -> ty in
-*)
-    let my_task = List.find (fun (x : Task_model.task) ->
-      x.Task_model.task_id = st.current_task) st.task_graph.Task_model.tasks in
-(*FIXME calculate channel offset*)
     let chan_index = 0 in
-(*FIXME batch all channels into two channel arrays: one for inputs, and one for
-        outputs. type for each parameter should be
-          std::vector<Buffer *>&*)
-
     let translated =
       St_of_E (Call_Function
                  (consume_channel,
@@ -975,45 +949,28 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       if List.mem size ctxt_acc' then ctxt_acc' else size :: ctxt_acc' in
     let ctxt_acc' =
       if List.mem outputs ctxt_acc' then ctxt_acc' else outputs :: ctxt_acc' in
-    let (chan_name, _) = channel_identifier in
-    let real_name =
-      (*FIXME hack because channel nname is wrong*)
-      chan_name ^ "_receive_0" in
-(*FIXME is this an unhelpful indirection?*)
-    let chan_id =
-      match lookup_name (Term (*Channel_Name*) Value) st'' real_name with
-      | Some ch -> ch
-      | None ->
-        raise (Translation_Expr_Exc
-                 ("Could not find channel id " ^ chan_name ^ " in lookup",
-                  Some e, Some local_name_map, None, st)) in
-(*FIXME this code seems redundant
-    let chanTyp =
-      match lookup_symbol_type chan_id (Term (*Channel_Name*) Value) st with  (*FIXME should be channel_name*)
-      | None ->
-        failwith ("Channel type not found in symbol table: " ^ string_of_int chan_id)
-      | Some ty -> ty in
-*)
-    let my_task = List.find (fun (x : Task_model.task) ->
-      x.Task_model.task_id = st.current_task) st.task_graph.Task_model.tasks in
 (*FIXME calculate channel offset*)
-    let chan_index = 0 in
-(*FIXME batch all channels into two channel arrays: one for inputs, and one for
-        outputs. type for each parameter should be
-          std::vector<Buffer *>&*)
-
+    let (chan_name, opt) = channel_identifier in
+    let chan_index =  input_map chan_name opt in
+    let (_, chan_index_idx, st'') =
+      mk_fresh (Term Value)
+        (*Array indices are int-typed*)
+        ~ty_opt:(Some (Int_Type (None, default_int_metadata)))
+        ("consume_index_") 0 st'' in 
+    let (sts_acc, ctx_acc', assign_acc', local_name_map, st'') = 
+      naasty_of_flick_expr st'' chan_index local_name_map sts_acc ctxt_acc' [chan_index_idx] in
     let translated =
       Assign (Var te,
               (*FIXME how is value of "te" used?*)
               Call_Function (write_channel,
                              [Type_Parameter e_ty],
                              [Var e_idx;
-                              ArrayElement (Var outputs, Int_Value chan_index);
+                              ArrayElement (Var outputs, Var chan_index_idx);
                               Address_of (Var size)]))
     (*FIXME we should lift_assign*)
     in (Naasty_aux.concat [sts_acc; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
-        ctxt_acc',
+        chan_index_idx :: ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
         st'')
@@ -1047,8 +1004,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc in
     let (chan_name, opt) = channel_identifier in
-    let chan_index =  input_map chan_name opt PassThroughType in
-
+    let chan_index =  input_map chan_name opt in
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)

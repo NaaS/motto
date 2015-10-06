@@ -46,7 +46,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
       raise (Type_Inference_Exc ("Variable: Missing declaration for '" ^ label ^ "'", e, st))
     | Some (_, {source_type; _}) ->
       match source_type with
-      | None -> raise (Type_Inference_Exc ("Missing source type for '" ^ label ^ "'", e, st))
+      | None -> raise (Type_Inference_Exc ("Variable: Missing source type for '" ^ label ^ "'", e, st))
       | Some ty -> (ty, st)
     end
 
@@ -216,7 +216,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
               raise (Type_Inference_Exc ("Name " ^ value_name ^ " is already used for a non-value identifier, of kind " ^ string_of_identifier_kind identifier_kind, e, st)) in
           (*Now we check to ensure that the type of the new binding is the same as the old.*)
           match source_type with
-          | None -> raise (Type_Inference_Exc ("Missing source type for '" ^ value_name ^ "'", e, st))
+          | None -> raise (Type_Inference_Exc ("LocalDef: Missing source type for '" ^ value_name ^ "'", e, st))
           | Some value_name_ty ->
             let value_name_ty = forget_label value_name_ty in
             let ty = forget_label ty in
@@ -240,7 +240,7 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
     | Some (_, {source_type; _}) ->
       match source_type with
       | None ->
-        raise (Type_Inference_Exc ("Missing source type for '" ^ value_name ^ "'", e, st))
+        raise (Type_Inference_Exc ("Update: Missing source type for '" ^ value_name ^ "'", e, st))
       | Some ty -> ty in
     let ty, _ = ty_of_expr ~strict st e in
     let _ =

@@ -1191,7 +1191,9 @@ let split_io_channels f =
     let rec replace f =
       let rec get_name n chans dir =
         match chans with
-        | [] -> failwith "Couldn't find channel name."
+        | [] ->
+          (*FIXME make error more informative: dump stack*)
+          failwith ("Couldn't find channel name: " ^ n)
         | (Channel (ctype, cname))::_ when cname = n || cname = (n ^ "_" ^ dir) -> cname
         | _::t -> get_name n t dir
       in

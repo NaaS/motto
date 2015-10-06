@@ -501,7 +501,7 @@ let extend_scope_unsafe (scope : scope) (st : state)
 
 (*Adds a fresh identifier to the scope, based on a specific prefix, to which
   we concatenate a numeric suffix/index*)
-let mk_fresh (scope : scope) ?ty_opt:(ty_opt = None) (id : string) (min_idx : int) (st : state) :
+let mk_fresh (scope : scope) ?src_ty_opt:(src_ty_opt = None) ?ty_opt:(ty_opt = None) (id : string) (min_idx : int) (st : state) :
   string * Naasty.identifier * state =
   if min_idx < 0 then
     failwith "min_idx must be non-negative"
@@ -511,7 +511,7 @@ let mk_fresh (scope : scope) ?ty_opt:(ty_opt = None) (id : string) (min_idx : in
       idx := 1 + !idx
     done;
     let name = id ^ string_of_int !idx in
-    let (idx, st') = extend_scope_unsafe scope st ~ty_opt name
+    let (idx, st') = extend_scope_unsafe scope st ~src_ty_opt ~ty_opt name
     in (name, idx, st')
 
 (*Indicates if a name is fresh in either scope*)

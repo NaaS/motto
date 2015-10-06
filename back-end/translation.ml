@@ -1365,7 +1365,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
             | Some l -> l in
           let naasty_ty, st = naasty_of_flick_type st ty in
           let _, id, st' =
-            mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) l 0 st in
+            mk_fresh (Term Value) ~src_ty_opt:(Some ty) ~ty_opt:(Some naasty_ty) l 0 st in
           let lnm' = extend_local_names local_name_map Value l id st' in
           let naasty_ty' =
             set_empty_identifier naasty_ty

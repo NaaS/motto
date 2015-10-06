@@ -208,7 +208,9 @@ match !cfg.source_file with
     let compile file =
       Compiler.parse_program file
       |> Compiler.front_end cfg
-      |> (fun ((st, cus) as data) ->
+      |> (fun ((st, _) as data) ->
+           (*Check if we should stop here, or if we can continue with the
+              compilation*)
            if !Config.cfg.Config.front_end_and_state then
              begin
                State_aux.state_to_str

@@ -42,6 +42,9 @@ type configuration =
     run_compiled_runtime_script : bool;
     (*Mapping from dependency indices to values*)
     dependency_valuation : (string * int) list;
+    (*Don't execute the back-end. Simply execute the front-end, then
+      print the state.*)
+    front_end_and_state : bool;
   }
 
 let cfg : configuration ref = ref {
@@ -61,4 +64,5 @@ let cfg : configuration ref = ref {
   unexceptional = false;
   run_compiled_runtime_script = false;
   dependency_valuation = [];
+  front_end_and_state = false;
 }

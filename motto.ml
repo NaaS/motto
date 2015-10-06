@@ -131,6 +131,11 @@ let rec param_table : param_entry list =
       action = (fun () ->
         next_arg := Some DependancyValue);
       desc = "Set a dependancy parameter to a value. Note that there shouldn't be a space between the dependency name and the integer value.";};
+    { key = "--front_end_and_state";
+      parameter_desc = "";
+      action = (fun () ->
+        cfg := { !cfg with front_end_and_state = true });
+      desc = "Don't execute the back-end. Simply execute the front-end, then print the state. This is used for debugging.";};
   ] in
 
 while !arg_idx < Array.length Sys.argv do
@@ -203,8 +208,17 @@ match !cfg.source_file with
     let compile file =
       Compiler.parse_program file
       |> Compiler.front_end cfg
-      |> Compiler.back_end cfg
-      |> Output.write_files !cfg.output_location in
+      |> (fun ((st, cus) as data) ->
+           if !Config.cfg.Config.front_end_and_state then
+             begin
+               State_aux.state_to_str
+                 ~summary_types:(!Config.cfg.Config.summary_types) true st
+               |> print_endline;
+               exit 0;
+             end
+           else
+             Compiler.back_end cfg data
+             |> Output.write_files !cfg.output_location) in
     Wrap_err.wrap compile source_file
 | _ ->
   if !cfg.parser_test_files <> [] || !cfg.parser_test_dirs <> [] then

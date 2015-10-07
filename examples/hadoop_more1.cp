@@ -27,12 +27,18 @@ fun Wc_node : (type k_v/- chan; x : type k_v, y : type k_v, z : type k_v) -> ()
 #  let v2 = vs[1]
 #  let v1 = peek (x)
 #  let v2 = peek (y)
-  let v1 = ?? chan
-  let v2 = ?? chan
+  let v1 : type k_v = ?? chan
+  let v2 : type k_v = ?? chan
 
 #  if v1 > v2:
 #    <>
 #  else: <>
+
+#  chan ! ? chan
+#  x
+#  z
+#  consume (x)
+##  send (z, consume (x))
 
   if v1.key = 0-1 and v2.key = 0-1: # * i think "-" cannot be prefix
 #    z ! ? x

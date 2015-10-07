@@ -46,19 +46,19 @@ let rec param_table : param_entry list =
       parameter_desc = "";
       action = (fun () ->
         cfg := { !cfg with disable_inlining = true });
-      desc = "Disable inlining phase on target code";};
+      desc = "(Debugging option) Disable inlining phase on target code";};
     { key = "--disable_var_erasure";
       parameter_desc = "";
       action = (fun () ->
         cfg := { !cfg with disable_var_erasure = true });
-      desc = "Don't prune temporary variables from the symbol table";};
+      desc = "(Debugging option) Don't prune temporary variables from the symbol table";};
     { key = "--debug_output";
       parameter_desc = "";
       action = (fun () ->
         if !cfg.verbosity < 1 then
           (*FIXME there isn't yet a compiler switch to get more verbose output*)
           cfg := { !cfg with verbosity = 1; });
-      desc = "Show lots of internal information during compilation";};
+      desc = "(Debugging option) Show lots of internal information during compilation";};
     { key = "-q";
       parameter_desc = "";
       action = (fun () ->
@@ -135,7 +135,15 @@ let rec param_table : param_entry list =
       parameter_desc = "";
       action = (fun () ->
         cfg := { !cfg with front_end_and_state = true });
-      desc = "Don't execute the back-end. Simply execute the front-end, then print the state. This is used for debugging.";};
+      desc = "(Debugging option) Don't execute the back-end. Simply execute the front-end, then print the state.";};
+    { key = "--naive_internal_naming";
+      parameter_desc = "";
+      action = (fun () ->
+        cfg := { !cfg with naive_internal_naming = true });
+      desc = "(Debugging option) When this flag is set, the names provided by the programmer are taken
+      literally -- no attempt is made to rename to avoid collisions.
+      A single global namespace is assumed, so the programmer needs to ensure
+      that all names are unique.";};
   ] in
 
 while !arg_idx < Array.length Sys.argv do

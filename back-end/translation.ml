@@ -53,20 +53,54 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
         else
           (idx, st)
     end in
-  let check_and_generate_name (ik : identifier_kind) label_opt =
+  let check_and_generate_name (ik : identifier_kind) (ty : type_value)
+        label_opt (st : state) =
     match label_opt with
     | None -> (None, st)
     | Some identifier ->
       begin
         match lookup_name (Term ik) st identifier with
         | None ->
-          let (idx, st') = extend_scope_unsafe (Term ik) st identifier
+          let (idx, st') =
+            extend_scope_unsafe ~src_ty_opt:(Some ty) (Term ik) st identifier
           in (Some idx, st')
         | Some idx ->
           if forbid_shadowing then
             failwith ("Already declared identifier: " ^ identifier)
           else
             (Some idx, st)
+      end in
+  (*Register the naasty_type of a symbol in the symbol table*)
+  let update_naasty_ty (ik : identifier_kind) (naasty_ty : naasty_type)
+        label_opt (st : state) =
+    match label_opt with
+    | None -> st
+    | Some identifier ->
+      begin
+        match lookup_name (Term ik) st identifier with
+        | None ->
+          st
+          (* FIXME or do the following?
+          failwith ("Cannot update non-existing symbol record for '" ^ identifier ^ "'") *)
+        | Some idx ->
+          let term_symbols' = List.map (fun ((id, index, metadata) as symbol_data) ->
+            assert ((id = identifier && idx = index) ||
+                    (id <> identifier && idx <> index));
+            if index = idx then
+              begin
+                (*Usually we apply this after the symbol record has just been
+                  created, and the naasty_type isn't set at creation time,
+                  therefore it should still be None.
+                assert (metadata.naasty_type = None);
+                NOTE disabled this assertion since the assumption doesn't seem
+                     valid*)
+                let metadata' =
+                  { metadata with
+                    naasty_type = Some naasty_ty } in
+                (id, index, metadata')
+              end
+            else symbol_data) st.term_symbols in
+          { st with term_symbols = term_symbols' }
       end in
   match ty with
   | Undefined _ -> failwith "Cannot translate undefined type"
@@ -87,8 +121,9 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
     failwith "Unsupported"
   | UserDefinedType (label_opt, type_name) ->
     let type_name' = check_and_resolve_typename type_name in
-    let (label_opt', st') = check_and_generate_name Value label_opt in
-    let ty' = UserDefined_Type (label_opt', type_name')
+    let (label_opt', st') = check_and_generate_name Value ty label_opt st in
+    let ty' = UserDefined_Type (label_opt', type_name') in
+    let st' = update_naasty_ty Value ty' label_opt st'
     in (ty', st')
   | Boolean (label_opt, type_ann) ->
     if (type_ann <> []) then
@@ -97,20 +132,21 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
       match default_ik with
       | None -> Value
       | Some ik -> ik in
-    let (label_opt', st') = check_and_generate_name ik label_opt in
+    let (label_opt', st') = check_and_generate_name ik ty label_opt st in
     let translated_ty = Bool_Type label_opt' in
     let st'' =
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx translated_ty (Term ik) st'
+        update_symbol_type idx translated_ty (Term ik) st' in
+    let st'' = update_naasty_ty ik translated_ty label_opt st''
     in (translated_ty, st'')
   | Integer (label_opt, type_ann) ->
     let ik =
       match default_ik with
       | None -> Value
       | Some ik -> ik in
-    let (label_opt', st') = check_and_generate_name ik label_opt in
+    let (label_opt', st') = check_and_generate_name ik ty label_opt st in
     let translated_ty, st' =
       if not require_annotations then
         (Int_Type (label_opt', default_int_metadata), st)
@@ -118,7 +154,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
         if type_ann = [] then
           raise (Translation_Type_Exc ("No annotation given", ty))
         else
-          let (label_opt', st') = check_and_generate_name ik label_opt in
+          let (label_opt', st') = check_and_generate_name ik ty label_opt st' in
           let metadata =
             List.fold_right (fun (name, ann) md ->
               match ann with
@@ -146,28 +182,30 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx translated_ty (Term ik) st'
+        update_symbol_type idx translated_ty (Term ik) st' in
+    let st'' = update_naasty_ty ik translated_ty label_opt st''
     in (translated_ty, st'')
   | IPv4Address label_opt ->
     let ik =
       match default_ik with
       | None -> Value
       | Some ik -> ik in
-    let (label_opt', st') = check_and_generate_name ik label_opt in
+    let (label_opt', st') = check_and_generate_name ik ty label_opt st in
     let metadata = { signed = false; precision = 32; hadoop_vint = false } in
     let translated_ty = Int_Type (label_opt', metadata) in
     let st'' =
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx translated_ty (Term ik) st'
+        update_symbol_type idx translated_ty (Term ik) st' in
+    let st'' = update_naasty_ty ik translated_ty label_opt st''
     in (translated_ty, st'')
   | String (label_opt, type_ann) ->
     let ik =
       match default_ik with
       | None -> Value
       | Some ik -> ik in
-    let (label_opt', st') = check_and_generate_name ik label_opt in
+    let (label_opt', st') = check_and_generate_name ik ty label_opt st in
     let vlen = Undefined (*FIXME determine from type_ann*) in
     let container_type =
       match vlen with
@@ -184,21 +222,23 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
       match label_opt' with
       | None -> st'
       | Some idx ->
-        update_symbol_type idx container_type (Term ik) st'
+        update_symbol_type idx container_type (Term ik) st' in
+    let st'' = update_naasty_ty ik container_type label_opt st''
     in (container_type, st'')
   | Reference (label_opt, ty) ->
     let ik =
       match default_ik with
       | None -> Value
       | Some ik -> ik in
-    let (label_opt', st') = check_and_generate_name ik label_opt in
+    let (label_opt', st') = check_and_generate_name ik ty label_opt st in
     let (ty', st'') = naasty_of_flick_type st' ty in
     let translated_ty = Pointer_Type (label_opt', ty') in
     let st''' =
       match label_opt' with
       | None -> st''
       | Some idx ->
-        update_symbol_type idx translated_ty (Term ik) st''
+        update_symbol_type idx translated_ty (Term ik) st'' in
+    let st''' = update_naasty_ty ik translated_ty label_opt st'''
     in (translated_ty, st''')
   | RecordType (label_opt, tys, type_ann) ->
     if (type_ann <> []) then
@@ -215,7 +255,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
       match default_ik with
       | None -> Value
       | Some ik -> ik in
-    let (naasty_label_opt, st) = check_and_generate_name ik label_opt in
+    let (naasty_label_opt, st) = check_and_generate_name ik ty label_opt st in
     match chan_type with  
     | ChannelSingle (in_type, out_type) -> 
       (match in_type with 
@@ -686,10 +726,32 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | None ->
         (*FIXME currently defaulting to Int, but we should use type inference
                 on e here*)
-        let int_ty = Int_Type (None, default_int_metadata) in
-        (int_ty, st)
-      | Some ty -> naasty_of_flick_type st ty in
-      let (_, name_idx, st'') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) name 0 st' in
+        let ty = Integer (Some name, []) in
+        let naasty_ty = Int_Type (None, default_int_metadata) in
+        let (_, st) =
+          (*FIXME should probably use mk_fresh*)
+          extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) ~ty_opt:(Some naasty_ty) name
+          (*FIXME should update the label info in the naasty_ty for this symbol;
+                  currently only its Flick type mentions the identifier.*)
+        in (naasty_ty, st)
+      | Some ty ->
+        let ty = Crisp_syntax_aux.update_empty_label name ty in
+        let naasty_ty, st' = naasty_of_flick_type st ty in
+(*        let (_, st'') =
+          (*FIXME should probably use mk_fresh*)
+          extend_scope_unsafe (Term Value) st' ~src_ty_opt:(Some ty) ~ty_opt:(Some naasty_ty) name
+*)
+        let st'' = st'
+
+        in naasty_ty, st'' in
+(*    FIXME the next line was "inlined" in the previous block, which contains
+            that decides how to extend the symbol table.
+      let (_, name_idx, st'') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) name 0 st' in*)
+      let st'' = st' in
+      let name_idx =
+        match lookup_name (Term Value) st' name with
+        | None -> failwith ("Did not find index for symbol '" ^ name ^ "'")
+        | Some idx -> idx in
       let (sts_acc', ctxt_acc', assign_acc', _, st''') =
         naasty_of_flick_expr st'' e local_name_map sts_acc (name_idx :: ctxt_acc)
           [name_idx] in
@@ -1374,6 +1436,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       let channel_types, st'' =
         fold_map ([], st') unidirect_channel chans (*FIXME thread local_name_map*) in
       (List.flatten channel_types @ standard_types, local_name_map, st'') in
+
     let (n_res_ty, st'') =
       match res_tys with
       | [] -> (Unit_Type, st')

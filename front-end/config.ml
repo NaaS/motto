@@ -45,6 +45,11 @@ type configuration =
     (*Don't execute the back-end. Simply execute the front-end, then
       print the state.*)
     front_end_and_state : bool;
+    (*When this flag is set, the names provided by the programmer are taken
+      literally -- no attempt is made to rename to avoid collisions.
+      A single global namespace is assumed, so the programmer needs to ensure
+      that all names are unique.*)
+    naive_internal_naming : bool;
   }
 
 let cfg : configuration ref = ref {
@@ -65,4 +70,5 @@ let cfg : configuration ref = ref {
   run_compiled_runtime_script = false;
   dependency_valuation = [];
   front_end_and_state = false;
+  naive_internal_naming = false;
 }

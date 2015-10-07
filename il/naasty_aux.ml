@@ -505,6 +505,13 @@ let mk_fresh (scope : scope) ?src_ty_opt:(src_ty_opt = None) ?ty_opt:(ty_opt = N
   string * Naasty.identifier * state =
   if min_idx < 0 then
     failwith "min_idx must be non-negative"
+  else if !Config.cfg.Config.naive_internal_naming then
+    let idx, st' =
+      match lookup_name scope st id with
+      | None ->
+        extend_scope_unsafe scope st ~src_ty_opt ~ty_opt id
+      | Some idx -> idx, st
+    in (id, idx, st')
   else
     let idx = ref min_idx in
     while (lookup_name scope st (id ^ string_of_int !idx) <> None) do

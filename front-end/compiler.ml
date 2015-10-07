@@ -90,8 +90,8 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
       | None ->
         let (fn_idx, st') =
           if Naasty_aux.is_fresh fn_name st then
-            Naasty_aux.extend_scope_unsafe (Term Function_Name) st ~ty_opt:None(*FIXME put function's type here?*)
-                              fn_name
+            Naasty_aux.extend_scope_unsafe (Term Function_Name) st
+              ~ty_opt:None(*FIXME put function's type here?*) fn_name
           else
             failwith ("Function name '" ^ fn_name ^ "' isn't fresh.") in
 
@@ -140,7 +140,8 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
           List.fold_right (fun (name, ik, ty) st ->
             let (_, st') =
               if Naasty_aux.is_fresh name st then
-                Naasty_aux.extend_scope_unsafe (Term ik) st ~src_ty_opt:(Some ty) ~ty_opt:None name
+                Naasty_aux.extend_scope_unsafe (Term ik) st
+                  ~src_ty_opt:(Some ty) ~ty_opt:None name
               else
                 failwith ("Constant '" ^ name ^ "' isn't fresh.") in
             (*NOTE order of declarations isn't preserved within term_symbols*)

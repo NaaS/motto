@@ -953,13 +953,14 @@ let rec contains_functor_app : naasty_expression -> bool = function
 
 (*Add a symbol (to a given scope) unless it's already been added to the given scope*)
 let add_symbol (label : label) (scope : scope)
+      ?src_ty_opt:(src_ty_opt : type_value option = None)
       ?ty_opt:(ty_opt : naasty_type option = None)
       (st : state) : int * state =
   match lookup_name scope st label with
   | Some id -> id, st
   | None ->
     (*Declare the symbol*)
-    extend_scope_unsafe ~ty_opt scope st label
+    extend_scope_unsafe ~src_ty_opt ~ty_opt scope st label
 
 (*Like add_symbol, but also ensures that its type is added (as a user-defined
   type)*)

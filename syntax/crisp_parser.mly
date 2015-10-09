@@ -147,6 +147,8 @@
 %nonassoc GT LT
 %right COLONCOLON
 %nonassoc MOD ABS
+%nonassoc prefix_negative
+%nonassoc infix_negative
 %nonassoc DASH
 %right PLUS
 %nonassoc SLASH
@@ -581,11 +583,15 @@ expression:
   | a1 = expression; LT; a2 = expression
     {Crisp_syntax.LessThan (a1, a2)}
 
+  | DASH; a = expression
+    %prec prefix_negative
+    {Crisp_syntax.Minus (Crisp_syntax.Int 0, a)}
   | n = INTEGER
     {Crisp_syntax.Int n}
   | a1 = expression; PLUS; a2 = expression
     {Crisp_syntax.Plus (a1, a2)}
   | a1 = expression; DASH; a2 = expression
+    %prec infix_negative
     {Crisp_syntax.Minus (a1, a2)}
   | a1 = expression; ASTERISK; a2 = expression
     {Crisp_syntax.Times (a1, a2)}

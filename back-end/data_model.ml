@@ -53,7 +53,9 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
         begin
           match v with
           | Ann_Str _ -> failwith "TODO"
-          | Ann_Int _ -> failwith "TODO"
+          | Ann_Int _ ->
+            (*FIXME was: failwith "TODO"*)
+            (stmts, names, next_placeholder)
           | Ann_Ident s ->
             let stmt =
               (*next_placeholder stands for the contents of "s"*)
@@ -61,7 +63,9 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
                    Increment (lenI, Var next_placeholder)) in
             let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
             in (stmts @(*FIXME naive*) [commented_stmt], s :: names, next_placeholder - 1)
-          | Ann_BinaryExp (_, _, _) -> failwith "TODO"
+          | Ann_BinaryExp (_, _, _) ->
+            (*FIXME was: failwith "TODO"*)
+            (stmts, names, next_placeholder)
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
@@ -101,7 +105,7 @@ let rec analyse_type_getstreamlen ty ((stmts, names, next_placeholder) as acc : 
     (*FIXME probably we should look at ty_ann*)
     List.fold_right analyse_type_getstreamlen tys acc
   | Integer (label_opt, ty_ann) ->
-    assert (is_hadoop_vint ty_ann);
+(*    assert (is_hadoop_vint ty_ann);*)
     let naas_ty, st =
       Translation.naasty_of_flick_type
         initial_state (*FIXME instead of re-translating the type, could pass an
@@ -165,7 +169,7 @@ let rec analyse_type_bstc_static
     (*FIXME accumulate target, in case we have nested records*)
     List.fold_right (analyse_type_bstc_static target) tys acc
   | Integer (label_opt, ty_ann) ->
-    assert (is_hadoop_vint ty_ann);
+(*    assert (is_hadoop_vint ty_ann);*)
     let name, name_idx = the label_opt, next_placeholder in
     let stmt =
       St_of_E
@@ -192,7 +196,9 @@ let rec analyse_type_bstc_dynamic
         begin
           match v with
           | Ann_Str _ -> failwith "TODO"
-          | Ann_Int _ -> failwith "TODO"
+          | Ann_Int _ ->
+            (*FIXME was: failwith "TODO"*)
+            (stmts, names, next_placeholder)
           | Ann_Ident length_field ->
             let name, name_idx = the label_opt, next_placeholder in
             let length_field_idx = next_placeholder - 1 in
@@ -212,7 +218,9 @@ let rec analyse_type_bstc_dynamic
               If1 (GEq (Naasty_aux.nested_fields (length_field_idx :: target), Int_Value 0),
                    Increment (write_offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt1; stmt2], length_field :: name :: names, next_placeholder - 2)
-          | Ann_BinaryExp (_, _, _) -> failwith "TODO"
+          | Ann_BinaryExp (_, _, _) ->
+            (*FIXME was: failwith "TODO"*)
+            (stmts, names, next_placeholder)
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
@@ -280,7 +288,7 @@ let rec analyse_type_writebytestochannel_static
     List.fold_right (analyse_type_writebytestochannel_static source target)
       tys acc
   | Integer (label_opt, ty_ann) ->
-    assert (is_hadoop_vint ty_ann);
+(*    assert (is_hadoop_vint ty_ann);*)
     let source' = next_placeholder :: source in
     let target' = next_placeholder :: target in
     let stmt =
@@ -306,7 +314,9 @@ let rec analyse_type_writebytestochannel_dynamic
         begin
           match v with
           | Ann_Str _ -> failwith "TODO"
-          | Ann_Int _ -> failwith "TODO"
+          | Ann_Int _ ->
+            (*FIXME was: failwith "TODO"*)
+            (stmts, names, next_placeholder)
           | Ann_Ident length_field ->
             let name, name_idx = the label_opt, next_placeholder in
             let length_field_idx = next_placeholder - 1 in
@@ -319,7 +329,9 @@ let rec analyse_type_writebytestochannel_dynamic
               If1 (Gt (Naasty_aux.nested_fields (length_field_idx :: source), Int_Value 0),
                    Increment (offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt], name :: length_field :: names, next_placeholder - 2)
-          | Ann_BinaryExp (_, _, _) -> failwith "TODO"
+          | Ann_BinaryExp (_, _, _) ->
+            (*FIXME was: failwith "TODO"*)
+            (stmts, names, next_placeholder)
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
@@ -380,7 +392,7 @@ let rec analyse_type_bcts_static
     (*FIXME accumulate target, in case we have nested records*)
     List.fold_right (analyse_type_bcts_static target) tys acc
   | Integer (label_opt, ty_ann) ->
-    assert (is_hadoop_vint ty_ann);
+(*    assert (is_hadoop_vint ty_ann);*)
     let naas_ty, st =
       Translation.naasty_of_flick_type
         initial_state (*FIXME instead of re-translating the type, could pass an
@@ -415,7 +427,9 @@ let rec analyse_type_bcts_dynamic
         begin
           match v with
           | Ann_Str _ -> failwith "TODO"
-          | Ann_Int _ -> failwith "TODO"
+          | Ann_Int _ ->
+            (*FIXME was: failwith "TODO"*)
+            (stmts, names, next_placeholder)
           | Ann_Ident length_field ->
             let name, name_idx = the label_opt, next_placeholder in
             let length_field_idx = next_placeholder - 1 in
@@ -430,7 +444,9 @@ let rec analyse_type_bcts_dynamic
               If1 (Gt (Naasty_aux.nested_fields (length_field_idx :: target), Int_Value 0),
                    Increment (offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt], length_field :: name :: names, next_placeholder - 2)
-          | Ann_BinaryExp (_, _, _) -> failwith "TODO"
+          | Ann_BinaryExp (_, _, _) ->
+            (*FIXME was: failwith "TODO"*)
+            (stmts, names, next_placeholder)
         end
       | _ -> failwith "Too many sizes specified for a string."
     end

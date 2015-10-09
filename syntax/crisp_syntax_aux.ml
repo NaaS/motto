@@ -348,9 +348,17 @@ let rec type_unify (ty1 : type_value) (ty2 : type_value) : type_value option =
     end
 
   | (ChanType (_, ct1), ChanType (_, ct2)) ->
-    match channel_type_unify ct1 ct2 with
-    | None -> None
-    | Some ct -> Some (ChanType (None, ct))
+    begin
+      match channel_type_unify ct1 ct2 with
+      | None -> None
+      | Some ct -> Some (ChanType (None, ct))
+    end
+
+  | _, _ ->
+    let ty1_s = type_value_to_string true false min_indentation ty1 in
+    let ty2_s = type_value_to_string true false min_indentation ty2 in
+    failwith ("Could not unify type '" ^ ty1_s ^ "' with '" ^ ty2_s ^ "'")
+
 and channel_type_unify (ct1 : channel_type) (ct2 : channel_type) : channel_type option =
   match ct1, ct2 with
   | (ChannelSingle (ty1A, ty2A), ChannelSingle (ty1B, ty2B)) ->

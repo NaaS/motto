@@ -25,9 +25,7 @@ include "mc_type.cp"
 #  else:
 #    cache[request.key] => client
 
-fun MCD : {l} => (integer/integer client, [integer/integer]{l} backends) -> ()
-#fun MCD : (integer/integer client, [integer/integer]{l} backends)
-#fun MCD : (integer/integer client, [integer/integer] backends) -> ()
+fun MCD : {no_backends, req_opcode} => (type mc_command/type mc_command client, [type mc_command/type mc_command]{no_backends} backends) -> ()
   let x = ?? client
 #  if x > hash (10):
 ##    backends[0] ! x
@@ -36,12 +34,10 @@ fun MCD : {l} => (integer/integer client, [integer/integer]{l} backends) -> ()
 ##    backends[l] ! x
 #    <>
 #  let l = 0
-  let y = hash (10) mod l
-  backends[hash (10) mod l] ! x
+  let y = hash (10) mod no_backends
+  backends[hash (10) mod no_backends] ! x
   let z =
-    switch l:
-      3:
+    switch x.opcode:
+      req_opcode:
         4
-      5:
-        6
   backends[hash (10) mod l] ! z

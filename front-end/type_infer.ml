@@ -801,11 +801,17 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         let ty_s = type_value_to_string true false min_indentation ty in
         raise (Type_Inference_Exc ("Type not fully defined: " ^ ty_s, e, st))
       end;
-    let e'_ty, _ = ty_of_expr ~strict st e' in
-    let _ =
+    if !Config.cfg.Config.skip_type_check then
+      (*In this mode, we don't check types -- we just believe whatever the user
+         tells us, and whatever is superficially evident.*)
+      ()
+    else
+      begin
+      let e'_ty, _ = ty_of_expr ~strict st e' in
       if strict then
         if not (type_match ty e'_ty) then
-          raise (Type_Inference_Exc ("Unable to match type annotation with expression", e, st)) in
+          raise (Type_Inference_Exc ("Unable to match type annotation with expression", e, st))
+      end;
     (ty, st)
 
   | Meta_quoted mis ->

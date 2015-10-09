@@ -489,7 +489,9 @@ let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
         else
           List.nth tys' (idx1 - 1)
           |> forget_label
-      | _ -> raise (Type_Inference_Exc ("Was expecting record or tuple type in order to project label " ^ label, e, st)) in
+      | ty ->
+        let ty_s = type_value_to_string true false min_indentation ty in
+        raise (Type_Inference_Exc ("Was expecting record or tuple type in order to project label '" ^ label ^ "' but found " ^ ty_s, e, st)) in
     (l_ty, st)
 
     (*also used to form Coproducts, as well as make function calls (both to

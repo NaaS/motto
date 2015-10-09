@@ -73,7 +73,8 @@ let rec count_var_references_in_naasty_expr (st : state)
   | Int_Value _
   | Nullptr
   | Bool_Value _
-  | Literal _ ->
+  | Literal _
+  | Const _ ->
     table
   | Not e
   | Abs e
@@ -300,7 +301,8 @@ let variables_to_be_erased : inliner_table_entry list -> inliner_table_entry lis
 let rec naasty_expression_weight = function
   | Int_Value _
   | Bool_Value _ -> 0
-  | Var _ -> 1
+  | Var _
+  | Const _ -> 1
   | Abs e
   | Not e
   | Dereference e
@@ -369,7 +371,8 @@ let rec free_vars (expr : naasty_expression) (acc : Identifier_Set.t) : Identifi
   | Var id -> Identifier_Set.add id acc
 
   | Int_Value _
-  | Bool_Value _ -> acc
+  | Bool_Value _
+  | Const _ -> acc
 
   | Cast
       (_ (*we don't count any identifiers used in types*),
@@ -450,7 +453,8 @@ let rec subst_expr (subst : substitution) (expr : naasty_expression) : naasty_ex
   | Int_Value _
   | Nullptr
   | Bool_Value _
-  | Literal _ -> expr
+  | Literal _
+  | Const _ -> expr
   | Cast (ty, e) -> unary_op_inst e (fun e' -> Cast (ty, e'))
   | Not e -> unary_op_inst e (fun e' -> Not e')
   | Abs e -> unary_op_inst e (fun e' -> Abs e')

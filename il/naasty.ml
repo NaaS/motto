@@ -67,6 +67,7 @@ type template_parameter =
   | Term_Parameter of naasty_expression
 and naasty_expression =
   | Var of identifier
+  | Const of identifier
   | Int_Value of int
   | Char_Value of int
   | Bool_Value of bool

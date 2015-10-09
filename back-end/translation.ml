@@ -362,7 +362,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       let translated =
         try_local_name value_name local_name_map
         |> check_and_resolve_name st
-        |> (fun x -> Var x) (*whither eta?*)
+        |> (fun x -> if symbol_is_di value_name st then Const x else Var x)
         |> lift_assign assign_acc
         |> Naasty_aux.concat
       in (mk_seq sts_acc translated, ctxt_acc,
@@ -1465,7 +1465,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     log (toplevel_decl_to_string (Function (split_io_channels f))); 
     (*FIXME might need to prefix function names with namespace, within the
             function body*)
-    let (dis(*FIXME currently not doing anything with "dis"*), (chans, arg_tys), res_tys) =
+    let (dis, (chans, arg_tys), res_tys) =
       Crisp_syntax_aux.extract_function_types fn_decl.fn_params in
     (*local_name_map is local to function
      blocks, so we start out with an empty
@@ -1508,7 +1508,14 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           failwith "Currently state and exceptions are not handled in functions"
         else e in
 
-    let init_statmt = Skip in
+    let init_statmt =
+      (*For each dependency index, add a comment stating that it's assumed
+        to be in scope*) (*FIXME how can handle dependency index translation
+                                 better?*)
+      List.fold_right (fun di stmt ->
+        concat [Commented (Skip, "Assumed to be in scope: " ^ di); stmt])
+        dis
+        Skip(*Initially the program is empty*) in
     let body'', st4 =
       if n_res_ty = Unit_Type then
         let init_ctxt = [] in

@@ -211,6 +211,7 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
 let rec size_of_naasty_expression : naasty_expression -> int = function
   | Minus (Int_Value 0, Int_Value _)
   | Var _
+  | Const _
   | Int_Value _
   | Char_Value _
   | Bool_Value _
@@ -270,6 +271,7 @@ and string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
       fst (string_of_naasty_expression ~st_opt e1) ^ " + " ^
       fst (string_of_naasty_expression ~st_opt e2)
     | Var id -> id_name st_opt id
+    | Const id -> id_name st_opt id
     | Call_Function (id, template_params, es) ->
       let template_params_s =
         if template_params = [] then ""
@@ -729,6 +731,10 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
     let id', st' =
       substitute fresh names false id st id (fun x -> x)
     in (Var id', st')
+  | Const id ->
+    let id', st' =
+      substitute fresh names false id st id (fun x -> x)
+    in (Const id', st')
   | Int_Value _
   | Char_Value _
   | Bool_Value _ -> (scheme, st)
@@ -911,6 +917,7 @@ let rec nested_fields (field_idents : identifier list) : naasty_expression =
 let rec contains_functor_app : naasty_expression -> bool = function
   | Call_Function (_, _, _) -> true
   | Var _
+  | Const _
   | Int_Value _
   | Char_Value _
   | Bool_Value _ -> false

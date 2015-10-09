@@ -721,7 +721,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         st')
 
   | LocalDef ((name, ty_opt), e) ->
-    let (naasty_ty, st') =
+    let (naasty_ty, st) =
       match ty_opt with
       | None ->
         (*FIXME currently defaulting to Int, but we should use type inference
@@ -730,34 +730,33 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         let naasty_ty = Int_Type (None, default_int_metadata) in
         let (_, st) =
           (*FIXME should probably use mk_fresh*)
-          extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty) ~ty_opt:(Some naasty_ty) name
+          extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty)
+            ~ty_opt:(Some naasty_ty) name
           (*FIXME should update the label info in the naasty_ty for this symbol;
                   currently only its Flick type mentions the identifier.*)
         in (naasty_ty, st)
       | Some ty ->
         let ty = Crisp_syntax_aux.update_empty_label name ty in
-        let naasty_ty, st' = naasty_of_flick_type st ty in
-(*        let (_, st'') =
-          (*FIXME should probably use mk_fresh*)
+        let naasty_ty, st = naasty_of_flick_type st ty in
+        let _, st = add_symbol name (Term Value) ~src_ty_opt:(Some ty)
+                      ~ty_opt:(Some naasty_ty) st in
+(*        (*FIXME should probably use mk_fresh*)
           extend_scope_unsafe (Term Value) st' ~src_ty_opt:(Some ty) ~ty_opt:(Some naasty_ty) name
 *)
-        let st'' = st'
-
-        in naasty_ty, st'' in
+        naasty_ty, st in
 (*    FIXME the next line was "inlined" in the previous block, which contains
             that decides how to extend the symbol table.
       let (_, name_idx, st'') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) name 0 st' in*)
-      let st'' = st' in
       let name_idx =
-        match lookup_name (Term Value) st' name with
+        match lookup_name (Term Value) st name with
         | None -> failwith ("Did not find index for symbol '" ^ name ^ "'")
         | Some idx -> idx in
-      let (sts_acc', ctxt_acc', assign_acc', _, st''') =
-        naasty_of_flick_expr st'' e local_name_map sts_acc (name_idx :: ctxt_acc)
+      let (sts_acc', ctxt_acc', assign_acc', _, st) =
+        naasty_of_flick_expr st e local_name_map sts_acc (name_idx :: ctxt_acc)
           [name_idx] in
       assert (assign_acc' = []);
       let local_name_map' =
-        extend_local_names local_name_map Value name name_idx st''' in
+        extend_local_names local_name_map Value name name_idx st in
       (*The recursive call to naasty_of_flick_expr takes care of assigning to
         name_idx. Now we take care of assigning name_idx to assign_acc.*)
       let translated =
@@ -766,7 +765,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       in (mk_seq sts_acc' translated, ctxt_acc',
           [](*Having assigned to assign_accs, we can forget them.*),
           local_name_map',
-          st''')
+          st)
 
   | Update (value_name, expression) ->
     (*NOTE similar to how we handle LocalDef, except that we require that

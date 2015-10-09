@@ -916,6 +916,60 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         local_name_map,
         st4)
 
+  | CaseOf (e, cases) ->
+    (*NOTE this is a generalised if..then..else statement*)
+    (*FIXME this behaves similar to a Hoare-style switch (but lacks a "default"
+            case (though it should have one, to ensure totality), rather than
+            as a more general ML-syle case..of*)
+    let ty =
+      (*FIXME use type inference*)
+      (Int_Type (None, default_int_metadata)) in
+    let (_, e_result_idx, st) =
+      mk_fresh (Term Value) ~ty_opt:(Some ty) "e_" 0 st in
+    let (sts_acc, ctxt_acc, assign_acc', _, st) =
+      naasty_of_flick_expr st e local_name_map sts_acc
+        (e_result_idx :: ctxt_acc) [e_result_idx] in
+    assert (assign_acc' = []); (* We shouldn't get anything back to assign to *)
+    let (_, switch_result_idx, st) =
+      (*FIXME here we use Int_Type, but this should be inferred from the
+        expression*)
+      mk_fresh (Term Value)
+        ~ty_opt:(Some
+                  (*FIXME use type inference*)
+                   (Int_Type (None, default_int_metadata))) "switchresult_" 0 st in
+    let ctxt_acc = switch_result_idx :: ctxt_acc in
+
+    (*NOTE we preserve assign_acc since we use it at the end of the function.
+           assign_acc' should only consist of the empty list -- that is,
+           we shouldn't be returned with anything to assign to.*)
+
+    let ((cases : (naasty_expression * naasty_statement) list),
+         (sts_acc, ctxt_acc, assign_acc', st)) =
+      fold_map ([], (sts_acc, ctxt_acc, assign_acc, st))
+        (fun (sts_acc, ctxt_acc, assign_acc, st) (case_e, case_body) ->
+           let (_, e_result_idx, st) =
+             mk_fresh (Term Value) ~ty_opt:(Some ty) "case_e_" 0 st in
+           let (sts_acc, ctxt_acc, assign_acc', _, st) =
+             naasty_of_flick_expr st case_e local_name_map sts_acc
+               (e_result_idx :: ctxt_acc) [e_result_idx] in
+
+           let (case_body_naasty, ctxt_acc, assign_acc', _, st) =
+             naasty_of_flick_expr st case_body local_name_map Skip
+               ctxt_acc [switch_result_idx] in
+
+           ((Var e_result_idx, case_body_naasty),
+            (sts_acc, ctxt_acc, assign_acc, st))
+      ) cases in
+
+    let translated =
+      Naasty.Switch (Var e_result_idx, cases) in
+    let nstmt =
+      lift_assign assign_acc (Var switch_result_idx)
+      |> Naasty_aux.concat in
+    (Naasty_aux.concat [sts_acc; translated; nstmt], ctxt_acc,
+     [], local_name_map, st);
+
+
 (*TODO
    list related, but constant:
    | Str s ->

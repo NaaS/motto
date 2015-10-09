@@ -126,6 +126,7 @@ type naasty_statement =
   | St_of_E of naasty_expression
   | Label of string * naasty_statement
   | GotoLabel of string
+  | Switch of naasty_expression * (naasty_expression * naasty_statement) list
 
 type naasty_function = {
   id : identifier;

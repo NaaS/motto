@@ -437,6 +437,25 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     string_of_naasty_statement ~st_opt no_indent stmt ^ terminal
   | GotoLabel lbl ->
     indn indent ^ "goto " ^ lbl ^ terminal
+  | Switch (e, cases) ->
+    let e_to_str e =
+      (*FIXME this function seems to be generally useful -- lift to higher
+              scope?*)
+      match string_of_naasty_expression ~st_opt e with
+      | s, true -> s
+      | s, false ->
+        (*Ensure that condition is bracketed*)
+        "(" ^ s ^ ")" in
+    let case_s (e, stmt) =
+      let e_s, _ = string_of_naasty_expression ~st_opt e in
+      indn (indent + default_indentation) ^ e_s ^ ":\n" ^
+      string_of_naasty_statement ~st_opt (indent + (2 * default_indentation)) stmt ^
+      "\n" ^
+      indn (indent + 2 * default_indentation) ^ "break"(*FIXME add "break" to Naasty*) ^
+      terminal in
+    indn indent ^ "switch " ^ e_to_str e ^ " {\n" ^
+    String.concat "\n" (List.map case_s cases) ^
+    "\n" ^ indn indent ^ "}"
 
 let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent naasty_function =
   let arg_types_s =

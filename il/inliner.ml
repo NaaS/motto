@@ -146,6 +146,11 @@ let rec count_var_references_in_naasty_stmt (st : state)
   | Continue
   | Skip -> table
   | Commented (stmt, _) -> count_var_references_in_naasty_stmt st stmt table
+  | Switch (e, cases) ->
+    List.fold_right (fun (e, stmt) table ->
+      count_var_references_in_naasty_expr st e table
+      |> count_var_references_in_naasty_stmt st stmt)
+      cases (count_var_references_in_naasty_expr st e table)
 
 let inliner_table_entry_to_string ?st_opt:((st_opt : state option) = None)
       (entry : inliner_table_entry) =
@@ -520,6 +525,12 @@ let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = true)
     If1 (cond', stmt'')
   | Return e_opt ->
     Return (bind_opt (fun e -> Some (subst_expr subst e)) None e_opt)
+  | Switch (e, cases) ->
+    let e' = subst_expr subst e in
+    let cases' =
+      List.map (fun (e, stmt) ->
+        (subst_expr subst e, subst_stmt subst stmt)) cases in
+    Switch (e', cases')
   | _ ->
     raise (Inliner_Exc ("Unsupported subst to inline: " ^
               string_of_naasty_statement no_indent stmt, None, Some stmt))

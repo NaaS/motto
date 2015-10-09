@@ -275,6 +275,11 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
   | Seq (stmt1, stmt2) ->
     inliner_analysis st stmt1 ctxt_acc table
     |> inliner_analysis st stmt2 ctxt_acc
+
+  | Switch (_, cases) ->
+    List.fold_right (fun (_, stmt) table ->
+      inliner_analysis st stmt ctxt_acc table) cases table
+
   | _ -> table
 
 (*
@@ -628,6 +633,11 @@ let rec erase_vars ?aggressive:(aggressive : bool = false) (stmt : naasty_statem
   | If1 (cond, stmt') ->
     let stmt'' = erase_vars ~aggressive stmt' idents in
     If1 (cond, stmt'')
+  | Switch (e, cases) ->
+    let cases' =
+      List.map (fun (e, stmt) ->
+        (e, erase_vars ~aggressive stmt idents)) cases in
+    Switch (e, cases')
   | _ -> stmt
 
 let table_to_string st table : string =

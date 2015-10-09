@@ -25,7 +25,7 @@ include "mc_type.cp"
 #  else:
 #    cache[request.key] => client
 
-fun MCD : {no_backends, req_opcode} => (type mc_command/type mc_command client, [type mc_command/type mc_command]{no_backends} backends) -> ()
+fun MCD : {no_backends, req_opcode} => (mc_command/mc_command client, [mc_command/mc_command]{no_backends} backends) -> ()
   let x = ?? client
   switch x.opcode:
     req_opcode:

@@ -104,9 +104,12 @@ and naasty_expression =
        We use this for including expressions in the IL which we currently
        don't have a good way of encoding in the IL -- such as
        TaskEvent::OUT_OF_DATA.
-       FIXME eventually we need a better way of handling this. We also need to
-             register target-level functions such as "peek_channel" etc.
-             I think we could use a map-based approach, as in the Functions module.*)
+       FIXME eventually we need a better way of handling this. At least, we
+             should provide some type information for a Literal, to ensure
+             consistency at compile time.
+             We should also somehow register target-level functions such as
+             "peek_channel" etc.  I think we could use a map-based approach, as
+             in the Functions module.*)
   | Literal of string
 
 type naasty_statement =

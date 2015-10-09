@@ -1074,7 +1074,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let size, st'' =
       Naasty_aux.add_symbol "size" (Term Value)
         (*FIXME type should be "size_t"*)
-        ~ty_opt:(Some (Int_Type (None, default_int_metadata))) st' in
+        ~ty_opt:(Some (Size_Type None)) st' in
     let outputs, st'' =
       let ty =
         Array_Type (None, Int_Type (None, default_int_metadata), Max 5(*FIXME*)) in

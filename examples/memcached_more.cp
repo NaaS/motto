@@ -27,14 +27,8 @@ include "mc_type.cp"
 
 fun MCD : {no_backends, req_opcode} => (type mc_command/type mc_command client, [type mc_command/type mc_command]{no_backends} backends) -> ()
   let x = ?? client
-#  if x > hash (10):
-##    backends[0] ! x
-#    <>
-#  else:
-##    backends[l] ! x
-#    <>
-#  let l = 0
   switch x.opcode:
     req_opcode:
-      backends[hash (x.key) mod no_backends] ! x
+      let target = hash (x.key typed integer) mod no_backends
+      backends[target] ! x
       ? client

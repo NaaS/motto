@@ -25,6 +25,8 @@ fun Wc_node : (k_v/- x, k_v/- y, -/k_v z) -> ()
   else: if v2.key < v1.key:
     y => z
   else:
-    v1.value := v1.value + v2.value # * in-place update for record field
-    v1 => z
+#    v1.value := v1.value + v2.value # * in-place update for record field
+#    v1 => z # Overload "=>" syntax to have values (and not only channels) on
+             # the LHD
+    z ! v1 with value = v1.value + v2.value
     x, y => _ # * discarding next items from multiple channels

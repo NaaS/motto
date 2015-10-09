@@ -448,7 +448,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
         "(" ^ s ^ ")" in
     let case_s (e, stmt) =
       let e_s, _ = string_of_naasty_expression ~st_opt e in
-      indn (indent + default_indentation) ^ e_s ^ ":\n" ^
+      indn (indent + default_indentation) ^ "case " ^ e_s ^ ":\n" ^
       string_of_naasty_statement ~st_opt (indent + (2 * default_indentation)) stmt ^
       "\n" ^
       indn (indent + 2 * default_indentation) ^ "break"(*FIXME add "break" to Naasty*) ^

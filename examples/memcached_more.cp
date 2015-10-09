@@ -34,10 +34,7 @@ fun MCD : {no_backends, req_opcode} => (type mc_command/type mc_command client, 
 ##    backends[l] ! x
 #    <>
 #  let l = 0
-  let y = hash (10) mod no_backends
-  backends[hash (10) mod no_backends] ! x
-  let z =
-    switch x.opcode:
-      req_opcode:
-        4
-  backends[hash (10) mod l] ! z
+  switch x.opcode:
+    req_opcode:
+      backends[hash (x.key) mod no_backends] ! x
+      ? client

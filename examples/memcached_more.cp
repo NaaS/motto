@@ -30,5 +30,6 @@ fun MCD : {no_backends, req_opcode} => (mc_command/mc_command client, [mc_comman
   switch x.opcode:
     req_opcode:
       let target = hash (x.key typed integer) mod no_backends
-      backends[target] ! x
-      ? client
+#      backends[target] ! x
+#      ? client
+      client => backends[target]

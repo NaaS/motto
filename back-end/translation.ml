@@ -786,7 +786,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | Some ty -> ty in
 *)
     let (sts_acc', ctxt_acc', assign_acc', _, st') =
-      naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc [name_idx] in
+      naasty_of_flick_expr st expression local_name_map sts_acc ctxt_acc [name_idx] in
     assert (assign_acc' = []);
     (*The recursive call to naasty_of_flick_expr takes care of assigning to
       name_idx. Now we take care of assigning name_idx to assign_acc.*)

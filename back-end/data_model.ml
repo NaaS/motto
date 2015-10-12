@@ -48,7 +48,8 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
   | String (label_opt, ty_ann) ->
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
-      | [] -> failwith "Strings need to be given an indication of size."
+      | [] -> (*failwith "Strings need to be given an indication of size."*)
+        (stmts, names, next_placeholder)
       | [(_, v)] ->
         begin
           match v with
@@ -191,7 +192,8 @@ let rec analyse_type_bstc_dynamic
   | String (label_opt, ty_ann) ->
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
-      | [] -> failwith "Strings need to be given an indication of size."
+      | [] -> (*failwith "Strings need to be given an indication of size."*)
+        (stmts, names, next_placeholder)
       | [(_, v)] ->
         begin
           match v with
@@ -309,7 +311,8 @@ let rec analyse_type_writebytestochannel_dynamic
   | String (label_opt, ty_ann) ->
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
-      | [] -> failwith "Strings need to be given an indication of size."
+      | [] -> (*failwith "Strings need to be given an indication of size."*)
+        (stmts, names, next_placeholder)
       | [(_, v)] ->
         begin
           match v with
@@ -422,7 +425,8 @@ let rec analyse_type_bcts_dynamic
   | String (label_opt, ty_ann) ->
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
-      | [] -> failwith "Strings need to be given an indication of size."
+      | [] -> (*failwith "Strings need to be given an indication of size."*)
+        (stmts, names, next_placeholder)
       | [(_, v)] ->
         begin
           match v with

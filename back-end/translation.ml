@@ -338,7 +338,10 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         | Some i -> i
       end
     with
-    | State_Exc s ->
+    | State_Exc (s, st'_opt) -> (*FIXME is this mapping of exceptions still needed?*)
+      assert (match st'_opt with
+              | None -> false
+              | Some st' -> st = st');
       raise (Translation_Expr_Exc ("State_Exc: " ^ s,
                                    Some e, Some local_name_map, Some sts_acc,
                                    st)) in
@@ -996,6 +999,39 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
    channel primitives:
      Exchange
 *)
+
+  | Send (false, dest, Receive (false, chan)) ->
+    (*This is an abbreviation for "forwarding" a value from one channel to
+       another*)
+    (*FIXME would be neater to factor out this transformation into a
+            separate function that's called before calling the translation
+            (on the transformed program).*)
+
+    let i = string_of_int st.next_symbol in
+    let name = "_forward_idx_" ^ i in
+(*
+    FIXME the above 2 lines work, but aren't very clean. It would be nicer to
+          set things up so that the freshness of names is managed through the
+          usual (same) mechanism; something like the following:
+    let i, st =
+    (string_of_int st.next_symbol,
+     st (*{ st with next_symbol = 1 + st.next_symbol }*)) in
+    let (name, _, st) =
+      mk_fresh (Term Value)
+        ~src_ty_opt:(Some (Integer (None, [])(*FIXME use type inference*)))
+        ~ty_opt:(Some (Int_Type (None, default_int_metadata)(*FIXME use type inference*)))
+        ("forward_idx_" ^ i ^ "_") 0 st in
+*)
+
+    let e' =
+      (*This is the idiom used to forward between channels
+        in the ICL backend, since the interpretation of "Receive"
+        side-effects and removes the value.*)
+      Crisp_syntax.Seq (LocalDef ((name, None), Peek (false, chan)),
+           Seq (Send (false, dest, Variable name),
+                Receive (false, chan))) in
+    naasty_of_flick_expr st e' local_name_map sts_acc ctxt_acc assign_acc
+
   | Receive (channel_inverted, channel_identifier) ->
     (*NOTE only data-model instances can be communicated via channels.
            also need to ensure that #include the data-model instance output*)

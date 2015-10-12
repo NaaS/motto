@@ -1062,12 +1062,21 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem inputs ctxt_acc' then ctxt_acc' else inputs :: ctxt_acc' in
     let (chan_name, opt) = channel_identifier in
-    let (chan_index,chan_type) =  input_map chan_name st'' opt in
+    let (chan_index, _) =  input_map chan_name st'' opt in
+   
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata)))
-        ("chan_index_") 0 st'' in
+        (chan_name ^ "_index_") 0 st'' in
+    let (sts_acc, ctxt_acc', assign_acc, _, st'') =
+      naasty_of_flick_expr st'' chan_index local_name_map sts_acc (chan_index_idx :: ctxt_acc') [chan_index_idx] in
+(*
+    let (_, chan_index_idx, st'') =
+      mk_fresh (Term Value)
+        (*Array indices are int-typed*)
+        ~ty_opt:(Some (Int_Type (None, default_int_metadata)))
+        ("chan_index_") 0 st'' in *)
     let translated =
       St_of_E (Call_Function
                  (consume_channel,
@@ -1138,9 +1147,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       mk_fresh (Term Value)
         (*Array indices are int-typed*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata)))
-        ("consume_index_") 0 st'' in 
+        (chan_name ^ "_consume_index_") 0 st'' in 
     let (sts_acc, ctx_acc', assign_acc', local_name_map, st'') = 
-      naasty_of_flick_expr st'' chan_index local_name_map sts_acc ctxt_acc' [chan_index_idx] in
+      naasty_of_flick_expr st'' chan_index local_name_map sts_acc (chan_index_idx :: ctxt_acc') [chan_index_idx] in
     let translated =
       Assign (Var te,
               (*FIXME how is value of "te" used?*)
@@ -1186,15 +1195,15 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc in
     let (chan_name, opt) = channel_identifier in
-    let (chan_index,chan_type) =  input_map chan_name st'' opt in
+    let (chan_index, chan_type) =  input_map chan_name st'' opt in
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata)))
-        ("chan_index_") 0 st'' in
+        (chan_name ^ "_index_") 0 st'' in
  
     let (sts_acc, ctx_acc', assign_acc', local_name_map, st'') = 
-      naasty_of_flick_expr st'' chan_index local_name_map sts_acc ctxt_acc' [chan_index_idx] in
+      naasty_of_flick_expr st'' chan_index local_name_map sts_acc (chan_index_idx :: ctxt_acc') [chan_index_idx] in
 
     let naasty_ty =
       (*FIXME use type inference*)
@@ -1319,39 +1328,30 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 (*Split a (possibly bidirectional) Crisp channel into a collection of
   unidirectional NaaSty channels.*)
 let unidirect_channel (st : state) (Channel (channel_type, channel_name)) : naasty_type list * state =
-  let subchan ty direction suffix is_array st =
+  let subchan ty direction is_array st =
     let ty', st' = naasty_of_flick_type st ty in
-    let _, name_idx, st'' =
-      mk_fresh (Term Value) ~ty_opt:(Some ty')
-        (channel_name ^ suffix) 0(*FIXME const*) st'
-    in ([Chan_Type (Some name_idx, is_array, Input, ty')], st'') in
+    let name_idx, st'' =
+      add_symbol channel_name (Term Channel_Name) ~ty_opt:(Some ty') ~src_ty_opt:(Some (ChanType (Some channel_name, channel_type))) st' (* ~src_ty_opt ~ty_opt name *)
+    in ([Chan_Type (Some name_idx, is_array, direction, ty')], st'') in
   match channel_type with
   | ChannelSingle (receive_ty, send_ty) ->
     let is_array = false in
-    let rec_ty, st' = match receive_ty with
-      | Empty -> ([], st)
-      | ty ->
-        subchan ty Input unidir_chan_receive_suffix is_array st in
-    let sen_ty, st'' = match send_ty with
-      | Empty -> ([], st')
-      | ty ->
-        subchan ty Output unidir_chan_send_suffix is_array st'
-    in (rec_ty @ sen_ty, st'')
+    let ty, st' = match receive_ty, send_ty with
+      | Empty, typ -> subchan typ Output is_array st
+      | typ, Empty -> subchan typ Input is_array st
+      | _, _ -> failwith "Not a unidirectional channel."
+    in (ty, st')
   | ChannelArray (receive_ty, send_ty, dependency) ->
 (* NOTE Dependencies aren't fully supported. We're increasing support for
         them in order to be able to use them, since we need them for the
         NaaS use-cases.
     assert (dependency = None);*)
     let is_array = true in
-    let rec_ty, st' = match receive_ty with
-      | Empty -> ([], st)
-      | ty ->
-        subchan ty Input unidir_chan_receive_suffix is_array st in
-    let sen_ty, st'' = match send_ty with
-      | Empty -> ([], st')
-      | ty ->
-        subchan ty Output unidir_chan_send_suffix is_array st'
-    in (rec_ty @ sen_ty, st'')
+    let ty, st' = match receive_ty, send_ty with
+      | Empty, typ -> subchan typ Output is_array st
+      | typ, Empty -> subchan typ Input is_array st
+      | _, _ -> failwith "Not a unidirectional channel."
+    in (ty, st')
 
 (*Turns a Flick function body into a NaaSty one. The content of processes could
   also be regarded to be function bodies.*)
@@ -1377,7 +1377,7 @@ let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
       in mk_seq (Declaration (ty, None)) stmt) ctxt' body
   in (body', st')
 
-let split_io_channels f =
+let split_io_channels f st =
   let replace_channels f chans =
     let rec replace f =
       let rec get_name n chans dir =
@@ -1403,7 +1403,7 @@ let split_io_channels f =
       | Hole ->
         f
       | Send (inv, (c_name, idx_opt), e) ->
-        let name = get_name c_name chans "out" in
+        let name = get_name c_name chans "receive" in
         let idx_opt' =
           match idx_opt with
           | None -> None
@@ -1411,7 +1411,7 @@ let split_io_channels f =
         in
         Send (inv, (name, idx_opt'), replace e)
       | Receive (inv, (c_name, idx_opt)) ->
-        let name = get_name c_name chans "in" in
+        let name = get_name c_name chans "send" in
         let idx_opt' =
           match idx_opt with
           | None -> None
@@ -1419,7 +1419,7 @@ let split_io_channels f =
         in
         Receive (inv, (name, idx_opt'))
       | Peek (inv, (c_name, idx_opt)) ->
-        let name = get_name c_name chans "in" in
+        let name = get_name c_name chans "receive" in
         let idx_opt' =
           match idx_opt with
           | None -> None
@@ -1509,11 +1509,11 @@ let split_io_channels f =
       | ChannelArray (_, Empty, _) ->
         (Channel (ctype, cname))::(split t) 
       | ChannelSingle (v1, v2) ->
-        (Channel (ChannelSingle (v1, Empty), cname ^ "_in"))::
-        (Channel (ChannelSingle (Empty, v2), cname ^ "_out"))::(split t)
+        (Channel (ChannelSingle (v1, Empty), cname ^ "_receive"))::
+        (Channel (ChannelSingle (Empty, v2), cname ^ "_send"))::(split t)
       | ChannelArray (v1, v2, dep) ->
-        (Channel (ChannelArray (v1, Empty, dep), cname ^ "_in"))::
-        (Channel (ChannelArray (Empty, v2, dep), cname ^ "_out"))::(split t)
+        (Channel (ChannelArray (v1, Empty, dep), cname ^ "_receive"))::
+        (Channel (ChannelArray (Empty, v2, dep), cname ^ "_send"))::(split t)
   in  
   match f.fn_params with
   | FunType (dis, FunDomType (channels, values), ret) ->
@@ -1523,10 +1523,18 @@ let split_io_channels f =
       | ProcessBody (s, expression, e) ->
         ProcessBody (s, replace_channels expression channels', e)
     in
-    { fn_name = f.fn_name;
+    ({fn_name = f.fn_name;
       fn_params = FunType (dis, FunDomType (channels', values), ret);
       fn_body = fn_body';
+    },
+    { st with crisp_funs =
+      List.map (fun (f_name, (b, f_type)) -> match f_name with
+        | n when f_name = f.fn_name ->
+          (f_name, (b, FunType (dis, FunDomType (channels', values), ret)))
+        | _ -> (f_name, (b, f_type))
+      ) st.crisp_funs
     }
+    )
 
 let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
   (naasty_declaration * state) =
@@ -1537,8 +1545,9 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       |> naasty_of_flick_type st
     in (Type_Decl ty', st')
   | Function f ->
-    let fn_decl = split_io_channels f in
-    log (toplevel_decl_to_string (Function (split_io_channels f))); 
+    let fn_decl, st = split_io_channels f st in
+    (* log (toplevel_decl_to_string (Function fn_decl)); *)
+
     (*FIXME might need to prefix function names with namespace, within the
             function body*)
     let (dis, (chans, arg_tys), res_tys) =
@@ -1647,6 +1656,9 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           (*Add "Return result_idx" to end of function body*)
           Seq (body', Return (Some (Var result_idx))) in
         (body'', st4) in
+
+    (* for DEBUG *)
+    log (State_aux.state_to_str false st4); 
 
     let (fn_idx, st5) = (*FIXME code style here sucks*)
       match lookup_term_data (Term Function_Name) st4.term_symbols fn_decl.fn_name with

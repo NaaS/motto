@@ -89,7 +89,7 @@ let input_map (chan_name : string) (st : state) (index : expression option) : ex
       | "backend_in" ->  Plus ((Int 1),(the index))
       | _ -> failwith ("Expected channel name to be one from client or backend but got " ^ chan_name)
       end in
-   (expr,chan_type)
+   (expr, chan_type)
   
 (* output_map is similar to input map for mapping output channels *)
 let output_map (chan_name : string) (st : state)  (index : expression option) : expression * Crisp_syntax.type_value =

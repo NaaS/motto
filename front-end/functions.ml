@@ -44,6 +44,10 @@ let function_db : function_db =
     ty = FunType ([], FunDomType ([], [def_undefined]), FunRetType [Integer (None, [])]);
     impl = (fun x -> Int (Hashtbl.hash x))
    };
+   {name = "bind";
+    ty = FunType ([], FunDomType ([], [def_undefined; Undefined "Y"]), FunRetType [flick_unit_type]);
+    impl = (fun x -> failwith "TODO")
+   };
   ]
 
 let export_fun (e : function_entry) : (function_name * (bool * function_type)) =

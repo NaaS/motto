@@ -9,8 +9,6 @@ open Crisp_syntax
 open Naasty
 open Task_model
 
-exception State_Exc of string
-
 (*If forbid_shadowing then names can only be declared once. This could be overly
   restrictive for normal use. If not forbid_shadowing, then the intermediate
   language's names become handled in a hashcons-like way.*)
@@ -101,6 +99,8 @@ type state =
 *)
   }
 
+exception State_Exc of string * state option
+
 (*The initial state consists of empty values for most things, except for
   the symbol table, which is initialised with interpreted functions.
   This initialisation gives us initial_next_symbol, initial_term_symbols, and
@@ -166,13 +166,15 @@ let check_identifier_kind scope result_kind =
     | Term ik -> forget_label_in_identifier_kind ik
     | _ ->
       raise (State_Exc
-        ("check_identifier_kind: Expecting scope to be term. Instead found " ^ scope_to_str scope)) in
+        ("check_identifier_kind: Expecting scope to be term. Instead found " ^
+         scope_to_str scope, None)) in
   if result_kind = Undetermined then
-    raise (State_Exc "check_identifier_kind: Identifier kind for value record in symbol table cannot be undetermined" (*FIXME give more info*))
+    raise (State_Exc ("check_identifier_kind: Identifier kind for value record
+    in symbol table cannot be undetermined" (*FIXME give more info*), None))
   else if query_kind <> Undetermined && query_kind <> result_kind then
     raise (State_Exc ("check_identifier_kind: Mismatching identifier kinds! Was expecting " ^
               string_of_identifier_kind query_kind ^ " but found " ^
-              string_of_identifier_kind result_kind))
+              string_of_identifier_kind result_kind, None))
   else true
 
 (*Flags are used to use this function to carry out the same query but with different
@@ -189,6 +191,7 @@ let check_identifier_kind scope result_kind =
 let lookup_term_data ?filter_scope:(filter_scope : bool = false)
       ?unexceptional:(unexceptional : bool = false)
       ?only_checking:(only_checking : bool = false)
+      ?st_opt:(st_opt : state option = None)
       (scope : scope) (symbols : ('a * 'b * term_symbol_metadata) list)
       (id : 'a) : ('b * term_symbol_metadata) option =
   if only_checking && scope = Type then None
@@ -198,7 +201,7 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
       match scope with
       | Term ik -> ik
       | _ -> raise (State_Exc ("Expecting scope to be term. Instead found " ^
-                               scope_to_str scope)) in
+                               scope_to_str scope, st_opt)) in
     (*NOTE would be more efficient if we used better data structures, rather
            than indexing ad hoc.*)
     let l' =
@@ -215,7 +218,7 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
               end
             else
               raise (State_Exc ("Identifier kind in symbol table for '" ^
-                                Debug.stringify x ^ " cannot be undetermined"))
+                                Debug.stringify x ^ " cannot be undetermined", st_opt))
           else if filter_scope then
             query_kind = Undetermined || query_kind = result_kind
           else if query_kind <> Undetermined && query_kind <> result_kind then
@@ -227,7 +230,7 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
             else
               raise (State_Exc ("id '" ^ Debug.stringify id ^ "' : Mismatching identifier kinds! Was expecting " ^
                         string_of_identifier_kind query_kind ^ " but found " ^
-                        string_of_identifier_kind result_kind))
+                        string_of_identifier_kind result_kind, st_opt))
           else true in
         x = id && scope_check) symbols in
     if !failed then None
@@ -242,7 +245,7 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
             List.map (fun (_, y, _) -> Debug.stringify y) l'
             |> String.concat ", " in
           raise (State_Exc ("Found multiple resolvants for symbol " ^
-                            Debug.stringify id ^ ": " ^ ys_s ^ "."))
+                            Debug.stringify id ^ ": " ^ ys_s ^ ".", st_opt))
 
 (*For simplicity (and to defend against the possibility that identifiers and
   type identifiers occupy the same namespace) the lookup is made on both
@@ -251,6 +254,7 @@ let lookup_term_data ?filter_scope:(filter_scope : bool = false)
   query and the data, and to detect a malformed state (i.e., having an
   Undetermined identifier in the state).*)
 let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b * term_symbol_metadata) list)
+      ?st_opt:(st_opt : state option = None)
       (type_symbols : ('a * 'b * 'd) list)
       (id_to_str : 'a -> string) (res_to_str : 'b -> string)
       (id : 'a) : 'b option =
@@ -260,14 +264,14 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b * term_symbol_me
       None
     else Some (List.assoc id l') in
   let term_lookup l =
-    match lookup_term_data ~only_checking:true scope symbols id with
+    match lookup_term_data ~st_opt ~only_checking:true scope symbols id with
     | None -> None
     | Some (idx, _) -> Some idx in
   let type_lookup = type_lookup type_symbols in
   let normal_lookup = term_lookup symbols in
   if term_type_separation && type_lookup <> None && normal_lookup <> None then
     raise (State_Exc ("Somehow the symbol " ^ id_to_str id ^
-              " is being used for both a type and a non-type"))
+              " is being used for both a type and a non-type", st_opt))
   else match scope with
     | Type ->
       begin
@@ -279,7 +283,7 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b * term_symbol_me
           else
             raise (State_Exc ("Type symbol " ^ id_to_str id ^
                       " was used in term, getting idx " ^
-                      res_to_str idx))
+                      res_to_str idx, st_opt))
       end
     | Term _ -> (*NOTE the identifier kind will be checked during the call to
                        normal_lookup*)
@@ -292,15 +296,15 @@ let lookup (swapped : bool) (scope : scope) (symbols : ('a * 'b * term_symbol_me
           else
             raise (State_Exc ("Symbol " ^ id_to_str id ^
                       " was used in type, getting idx " ^
-                      res_to_str idx))
+                      res_to_str idx, st_opt))
       end
 
 (*Lookup functions for names and indices. Note that (string) names are used for
 identifiers in the Crisp AST, but (numeric) indices are used in the NaaSty AST.*)
 let lookup_name (scope : scope) (st : state) (id : string) : identifier option =
-  lookup false scope st.term_symbols st.type_symbols (fun x -> x) string_of_int id
+  lookup ~st_opt:(Some st) false scope st.term_symbols st.type_symbols (fun x -> x) string_of_int id
 let lookup_id (scope : scope) (st : state) (id : identifier) : string option =
-  lookup true scope (List.map swap_1_2 st.term_symbols)
+  lookup ~st_opt:(Some st) true scope (List.map swap_1_2 st.term_symbols)
     (List.map swap_1_2 st.type_symbols) string_of_int (fun x -> x) id
 
 (*Updates the type associated with a symbol in the symbol table*)
@@ -313,7 +317,8 @@ let update_symbol_type (id : identifier) (ty : naasty_type)
         | None -> (name, idx, Some ty)
         | Some ty' ->
             if ty <> ty' then
-              raise (State_Exc "Different types associated with same symbol!")
+              raise (State_Exc ("Different types associated with same symbol!",
+                               Some st))
             (*Here we are being lenient, because we could fail even if we try to
               assign the same type to the same symbol twice.*)
             else (name, idx, ty_opt)
@@ -328,7 +333,8 @@ let update_symbol_type (id : identifier) (ty : naasty_type)
           | None -> { metadata with naasty_type = Some ty }
           | Some ty' ->
               if ty <> ty' then
-                raise (State_Exc "Different types associated with same symbol!")
+                raise (State_Exc ("Different types associated with same
+                symbol!", Some st))
               (*Here we are being lenient, because we could fail even if we try to
                 assign the same type to the same symbol twice.*)
               else metadata in
@@ -351,7 +357,7 @@ let lookup_symbol_type (id : identifier)
       if id = idx then
         if check_identifier_kind scope metadata.identifier_kind then
           metadata.naasty_type
-        else raise (State_Exc "Failed kind-check")
+        else raise (State_Exc ("Failed kind-check", Some st))
       else acc) in
   match scope with
   | Term _ -> term_symbol_lookup st.term_symbols None

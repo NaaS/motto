@@ -531,7 +531,7 @@ specific_channel:
 
 (*A list containing at least one specific_channel*)
 specific_channel_list:
-  | e = specific_channel; COMMA; es = specific_channel_list {e :: es}
+  | e = specific_channel; SEMICOLON; es = specific_channel_list {e :: es}
   | e = specific_channel {[e]}
 
 expression:
@@ -545,6 +545,7 @@ expression:
        Crisp_syntax.Receive (false, chan)) srcs in
      List.fold_right (fun e acc ->
        Crisp_syntax.Seq (e, acc)) rest e1}
+
   | META_OPEN; meta_line = expression; META_CLOSE
     {Crisp_syntax.Meta_quoted [Crisp_syntax.interpret_e_as_mi meta_line]}
 (* FIXME currently disabled since causes shift/reduce conflicts

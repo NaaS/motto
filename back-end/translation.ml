@@ -1201,6 +1201,44 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         local_name_map,
         st'')
 
+  | Can ((Peek (channel_inverted, channel_identifier)) as e) ->
+    (*FIXME currently only "can" over "peek" is supported*)
+
+    (*To produce code in this form:
+        auto data = NaasData::peek_channel<MemcachedDMData>(rxBuffer);
+        if (data == nullptr) continue;
+      we first translate the "peek" statement, then replace its "return" statement
+      with an assignment that indicates whether the peek could take place or not.
+    *)
+
+    let (_, can_result_idx, st) =
+      mk_fresh (Term Value) ~ty_opt:(Some (Bool_Type None)) "can_" 0 st in
+    let (peek_sts_acc, ctxt_acc, _, _, st) =
+      naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc [] in
+
+    let peek_sts_acc =
+      let all_but_last, last =
+        match List.rev (Naasty_aux.unconcat [peek_sts_acc] []) with
+        | last :: rest -> rest, last
+        | _ -> failwith "Impossible"(*List couldn't be empty*) in
+      match last with
+      | If1 (condition, result) ->
+        (*"condition" encodes a check to see if the peek was successful*)
+        let last' =
+          If (condition,
+           Assign (Var can_result_idx, Bool_Value false),
+           Assign (Var can_result_idx, Bool_Value true)) in
+        Naasty_aux.mk_seq (Naasty_aux.concat all_but_last) last'
+      | _ ->
+        raise (Translation_Expr_Exc ("in 'can peek': unexpected program returned",
+                Some e, Some local_name_map, Some peek_sts_acc, st)) in
+
+    let translated =
+      lift_assign assign_acc (Var can_result_idx)
+      |> Naasty_aux.concat in
+    (Naasty_aux.concat [sts_acc; peek_sts_acc; translated],
+     (can_result_idx :: ctxt_acc), [], local_name_map, st)
+
   | _ -> raise (Translation_Expr_Exc ("TODO: " ^ expression_to_string no_indent e,
                                       Some e, Some local_name_map, Some sts_acc, st))
   with
@@ -1313,6 +1351,7 @@ let split_io_channels f =
         | _::t -> get_name n t dir
       in
       match f with
+      | Can _
       | Bottom
       | True
       | False

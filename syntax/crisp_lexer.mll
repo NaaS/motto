@@ -156,6 +156,8 @@ rule main = parse
   | "dictionary" {TYPE_DICTIONARY}
   | "ref" {TYPE_REF}
 
+  | "can" {CAN}
+
   | "(|" {FAT_BRACKET_OPEN}
   | "(type|" {FAT_TYPE_BRACKET_OPEN}
   | "|)" {FAT_BRACKET_CLOSE}

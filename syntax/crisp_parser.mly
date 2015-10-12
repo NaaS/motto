@@ -119,6 +119,8 @@
 
 %token BAR
 
+%token CAN
+
 (*Names*)
 (*
 %token <string> UPPER_ALPHA
@@ -134,6 +136,7 @@
 %right BAR
 %nonassoc local_def
 %nonassoc ite
+%nonassoc CAN
 %nonassoc ARR_BOTH
 %right ARR_RIGHT
 %left ARR_LEFT
@@ -535,6 +538,9 @@ specific_channel_list:
   | e = specific_channel {[e]}
 
 expression:
+  | CAN; e = expression
+    {Crisp_syntax.Can e}
+
   | srcs = specific_channel_list; ARR_RIGHT; dest = specific_channel;
     {let e1 :: rest = List.map (fun chan ->
        Crisp_syntax.Send (false, dest, Crisp_syntax.Receive (false, chan))) srcs in

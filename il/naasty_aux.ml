@@ -977,3 +977,16 @@ let add_usertyped_symbol (typ_name : label) (term_name : label) (st : state) : i
   | _, _ ->
     failwith ("Impossible: '" ^ typ_name ^ "' type and '" ^ term_name ^
               "' variable not both declared")
+
+(*Break up a statement into consituent statement sequence, if possible.*)
+let rec unconcat (stmt : naasty_statement) (sts : naasty_statement list) : naasty_statement list =
+  match stmt with
+  | Seq (stmt1, stmt2) ->
+    unconcat stmt1 sts @ unconcat stmt2 sts
+  | _ -> List.rev (stmt :: sts)
+
+let rec unconcat (source : naasty_statement list) (result : naasty_statement list) : naasty_statement list =
+  match source with
+  | [] -> List.rev result
+  | (Seq (stmt1, stmt2) :: rest) -> unconcat (stmt1 :: stmt2 :: rest) result
+  | (x :: xs) -> unconcat xs (x :: result)

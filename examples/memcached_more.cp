@@ -1,6 +1,6 @@
 include "mc_type.cp"
 
-fun MCD : {no_backends, req_opcode} => (mc_command/mc_command client, [mc_command/mc_command]{no_backends} backends) -> ()
+fun MCD_req : {no_backends, req_opcode} => (mc_command/mc_command client, [mc_command/mc_command]{no_backends} backends) -> ()
   let x = ?? client
   switch x.opcode:
     req_opcode:
@@ -9,3 +9,16 @@ fun MCD : {no_backends, req_opcode} => (mc_command/mc_command client, [mc_comman
 # The above line abbreviates the following two:
 #      backends[target] ! x # Note that x was "peeked" from the channel "client".
 #      ? client
+
+fun MCD_resp : {no_backends, req_opcode} => (mc_command/mc_command client, [mc_command/mc_command]{no_backends} backends) -> ()
+  for i in 0 .. (no_backends - 1):
+    if can ?? backends[i]: # i.e., "continue", don't "return" with OUT_OF_DATA otherwise
+      backends[i] => client
+    else: <>
+
+#fun MCD_resp : {no_backends, req_opcode} => (mc_command/mc_command client, [mc_command/mc_command]{no_backends} backends) -> ()
+#  for c in unordered backends:
+#    c => client
+#
+#fun MCD_resp : {no_backends, req_opcode} => (mc_command/mc_command client, [mc_command/mc_command]{no_backends} backends) -> ()
+#  backends => client

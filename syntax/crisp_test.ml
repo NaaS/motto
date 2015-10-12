@@ -165,6 +165,7 @@ let string_of_token = function
   | QUESTIONQUESTION -> "QUESTIONQUESTION"
 
   | BAR -> "BAR"
+  | CAN -> "CAN"
 ;;
 
 let test filepath =

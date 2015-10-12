@@ -242,6 +242,7 @@ and channel_inverted = bool
 and channel_identifier = channel_name * expression option
 
 and expression =
+  | Can of expression
   | Bottom
 
     (*This is used for channels, to indicate that the channel is being passed
@@ -368,6 +369,9 @@ let rec channel_identifier_to_string (c_name, idx_opt) =
   | None -> ""
   | Some idx -> "[" ^ expression_to_string min_indentation idx ^ "]"
 and expression_to_string indent = function
+  | Can e ->
+    indn indent ^ "can " ^ expression_to_string min_indentation e
+
   | Bottom -> "_|_"
   | InvertedVariable value_name -> indn indent ^ "-" ^ value_name
   | Variable value_name -> indn indent ^ value_name

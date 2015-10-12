@@ -522,7 +522,8 @@ let extend_scope_unsafe (scope : scope) (st : state)
 
 (*Adds a fresh identifier to the scope, based on a specific prefix, to which
   we concatenate a numeric suffix/index*)
-let mk_fresh (scope : scope) ?src_ty_opt:(src_ty_opt = None) ?ty_opt:(ty_opt = None) (id : string) (min_idx : int) (st : state) :
+let mk_fresh (scope : scope) ?src_ty_opt:(src_ty_opt = None)
+      ?ty_opt:(ty_opt = None) (id : string) (min_idx : int) (st : state) :
   string * Naasty.identifier * state =
   if min_idx < 0 then
     failwith "min_idx must be non-negative"

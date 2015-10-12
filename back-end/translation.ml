@@ -104,10 +104,10 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
       end in
   match ty with
   | Undefined _ -> failwith "Cannot translate undefined type"
-  | Disjoint_Union (_, _) -> failwith "Unsupported"
+  | Disjoint_Union (_, _) -> failwith "Unsupported (disjoint union type)"
   | List (_, _, _, _) ->
     (*Lists can be turned into arrays*)
-    failwith "Unsupported"
+    failwith "Unsupported (list type)"
   | Dictionary (label_opt, idx_ty, type_name) ->
     failwith "TODO -- link to dictionary provided by libNaaS" (*TODO*)
   | Empty -> failwith "Cannot translate empty type"
@@ -118,7 +118,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
     (Unit_Type, st)
   | Tuple (_, _) ->
     (*Tuples can be turned into records*)
-    failwith "Unsupported"
+    failwith "Unsupported (tuple type)"
   | UserDefinedType (label_opt, type_name) ->
     let type_name' = check_and_resolve_typename type_name in
     let (label_opt', st') = check_and_generate_name Value ty label_opt st in

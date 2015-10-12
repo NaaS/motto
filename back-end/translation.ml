@@ -1574,25 +1574,53 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
         failwith "Currently only functions with single return type are supported." in
 
     (*FIXME other parts of the body (i.e, state and exceptions) currently are
-            not being processed.*)
-    let fn_expr_body =
+            not being processed.
+            We generate comments stating what state we expect to find.*)
+    let fn_expr_body, state_comments, decl_var_indices, st'' =
       match fn_decl.fn_body with
       | ProcessBody (sts, e, excs) ->
-        if sts <> [] || excs <> [] then
-          failwith "Currently state and exceptions are not handled in functions"
-        else e in
+        if excs <> [] then
+          failwith "Currently exceptions are not handled in functions"
+        else
+          let add_decl var_kind label ty_opt initial_e st =
+            let comment =
+              var_kind ^ " variable '" ^ label ^ "' assumed to be in scope, and initialised to " ^
+              expression_to_string min_indentation initial_e in
+            let (idx, st') =
+              let naasty_ty, st =
+                match ty_opt with
+                | None -> failwith "Currently expecting state variables to be explicitly typed"
+                | Some ty -> naasty_of_flick_type st ty in
+              extend_scope_unsafe (Term Value) st ~src_ty_opt:ty_opt
+                ~ty_opt:(Some naasty_ty) label in
+            (comment, idx, st') in
+          let comments, decl_var_indices, st'' =
+            List.fold_right (fun state_decl (comments, indices, st) ->
+              match state_decl with
+              | LocalState (label, ty_opt, initial_e) ->
+                let comment, idx, st' =
+                  add_decl "Local" label ty_opt initial_e st in
+                (comment :: comments, idx :: indices, st')
+              | GlobalState (label, ty_opt, initial_e) ->
+                let comment, idx, st' =
+                  add_decl "Global" label ty_opt initial_e st in
+                (comment :: comments, idx :: indices, st')) sts ([], [], st'') in
+          e, comments, decl_var_indices, st'' in
 
     let init_statmt =
       (*For each dependency index, add a comment stating that it's assumed
         to be in scope*) (*FIXME how can handle dependency index translation
                                  better?*)
-      List.fold_right (fun di stmt ->
-        concat [Commented (Skip, "Assumed to be in scope: " ^ di); stmt])
-        dis
+      let di_comments =
+        List.map (fun di ->
+          "Dependency index assumed to be in scope: " ^ di) dis in
+      List.fold_right (fun comment stmt ->
+        concat [Commented (Skip, comment); stmt])
+        (state_comments @ di_comments)
         Skip(*Initially the program is empty*) in
     let body'', st4 =
       if n_res_ty = Unit_Type then
-        let init_ctxt = [] in
+        let init_ctxt = decl_var_indices in
         let init_assign_acc = [] in
         let body', st4 =
           naasty_of_flick_function_expr_body init_ctxt init_assign_acc init_statmt
@@ -1606,7 +1634,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           mk_fresh (Term Value) ~ty_opt:(Some n_res_ty) "result_" 0 st'' in
         (*Add type declaration for result_idx, which should be the same as res_ty
           since result_idx will carry the value that's computed in this function.*)
-        let init_ctxt = [result_idx] in
+        let init_ctxt = decl_var_indices @ [result_idx] in
         let init_assign_acc = [result_idx] in
         let body', st4 =
           naasty_of_flick_function_expr_body init_ctxt init_assign_acc init_statmt
@@ -1636,8 +1664,8 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                   passes (inlining and variable erasure)*)
                 let arg_idxs = List.map (fun x ->
                   idx_of_naasty_type x
-                  |> the) n_arg_tys in
-                  Inliner.init_table arg_idxs in
+                  |> the) n_arg_tys
+                in Inliner.init_table arg_idxs in
 
               let _ =
                 if !Config.cfg.Config.verbosity > 0 then

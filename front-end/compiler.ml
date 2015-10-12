@@ -44,45 +44,48 @@ let type_check_blob (st : State.state) (chans : channel list)
    (*if type check fails, then this pair of types specifies what was expected
      and what was found instead*)
    (type_value * type_value)) =
-  let st' =
-    List.fold_right (fun ((Channel (ct, name)) : channel) (st : state) ->
-        let scope = Term Channel_Name in
-        Naasty_aux.extend_scope_unsafe scope st
-          ~src_ty_opt:(Some (ChanType (Some name, ct))) name
-        |> snd) chans st
-    |> List.fold_right (fun (arg : type_value) (st : state) ->
-        let scope = Term Value(*FIXME*) in
-        let label =
-          match Crisp_syntax_aux.label_of_type arg with
-          | None -> failwith "Came across anonymous parameter"(*FIXME give more info*)
-          | Some lbl -> lbl in
-        Naasty_aux.extend_scope_unsafe scope st ~src_ty_opt:(Some arg)
-          label
-        |> snd) args in
+  if !Config.cfg.Config.skip_type_check then
+    (true, (Undefined "X"(*FIXME const*), Undefined "Y"(*FIXME const*)))
+  else
+    let st' =
+      List.fold_right (fun ((Channel (ct, name)) : channel) (st : state) ->
+          let scope = Term Channel_Name in
+          Naasty_aux.extend_scope_unsafe scope st
+            ~src_ty_opt:(Some (ChanType (Some name, ct))) name
+          |> snd) chans st
+      |> List.fold_right (fun (arg : type_value) (st : state) ->
+          let scope = Term Value(*FIXME*) in
+          let label =
+            match Crisp_syntax_aux.label_of_type arg with
+            | None -> failwith "Came across anonymous parameter"(*FIXME give more info*)
+            | Some lbl -> lbl in
+          Naasty_aux.extend_scope_unsafe scope st ~src_ty_opt:(Some arg)
+            label
+          |> snd) args in
 
-  (*FIXME currently ignoring state and exceptions.
-          exceptions are straightforward to type check: just add a name
-            to the typing context, and check the exception body.
-          state is less straightforward: i think i should hoist its info
-            globally (where it morally belongs) and perhaps classify variables
-            using a scheme like that below, to ensure that variables aren't
-            used in the wrong context (but also that, if shared, variables can
-            be used in different functions):
+    (*FIXME currently ignoring state and exceptions.
+            exceptions are straightforward to type check: just add a name
+              to the typing context, and check the exception body.
+            state is less straightforward: i think i should hoist its info
+              globally (where it morally belongs) and perhaps classify variables
+              using a scheme like that below, to ensure that variables aren't
+              used in the wrong context (but also that, if shared, variables can
+              be used in different functions):
 
-            type variable_scope =
-              | Local
-              | Global
-            type variable_affinity =
-              | Unique
-              | Shared*)
-  let (st_decls, e, ex_decls) = Crisp_syntax_aux.extract_process_body_bits pb in
+              type variable_scope =
+                | Local
+                | Global
+              type variable_affinity =
+                | Unique
+                | Shared*)
+    let (st_decls, e, ex_decls) = Crisp_syntax_aux.extract_process_body_bits pb in
 
-  let actual_ret =
-    ty_of_expr ~strict:true st' e
-    |> fst
-    |> forget_label in
-  let ret = forget_label ret in
-  (Crisp_syntax_aux.type_match ret actual_ret, (ret, actual_ret))
+    let actual_ret =
+      ty_of_expr ~strict:true st' e
+      |> fst
+      |> forget_label in
+    let ret = forget_label ret in
+    (Crisp_syntax_aux.type_match ret actual_ret, (ret, actual_ret))
 
 (*Gather declaration information from a program, and encode in the state.
   For instance, we gather function names and signatures and extend the symbol

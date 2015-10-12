@@ -144,6 +144,11 @@ let rec param_table : param_entry list =
       literally -- no attempt is made to rename to avoid collisions.
       A single global namespace is assumed, so the programmer needs to ensure
       that all names are unique.";};
+    { key = "--disable_data_model_checks";
+      parameter_desc = "";
+      action = (fun () ->
+        cfg := { !cfg with disable_data_model_checks = true });
+      desc = "Disable checks done in the Data_model module.";};
   ] in
 
 while !arg_idx < Array.length Sys.argv do

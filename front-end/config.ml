@@ -50,6 +50,9 @@ type configuration =
       A single global namespace is assumed, so the programmer needs to ensure
       that all names are unique.*)
     naive_internal_naming : bool;
+    (*When this flag is set, checks built into the Data_model module are
+      disabled. This is useful to debugging and development.*)
+    disable_data_model_checks : bool;
   }
 
 let cfg : configuration ref = ref {
@@ -71,4 +74,5 @@ let cfg : configuration ref = ref {
   dependency_valuation = [];
   front_end_and_state = false;
   naive_internal_naming = false;
+  disable_data_model_checks = false;
 }

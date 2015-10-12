@@ -48,15 +48,18 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
   | String (label_opt, ty_ann) ->
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
-      | [] -> (*failwith "Strings need to be given an indication of size."*)
-        (stmts, names, next_placeholder)
+      | [] ->
+        if !Config.cfg.Config.disable_data_model_checks then
+          (stmts, names, next_placeholder)
+        else failwith "Strings need to be given an indication of size."
       | [(_, v)] ->
         begin
           match v with
           | Ann_Str _ -> failwith "TODO"
           | Ann_Int _ ->
-            (*FIXME was: failwith "TODO"*)
-            (stmts, names, next_placeholder)
+            if !Config.cfg.Config.disable_data_model_checks then
+              (stmts, names, next_placeholder)
+            else failwith "TODO"
           | Ann_Ident s ->
             let stmt =
               (*next_placeholder stands for the contents of "s"*)
@@ -65,8 +68,9 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
             let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
             in (stmts @(*FIXME naive*) [commented_stmt], s :: names, next_placeholder - 1)
           | Ann_BinaryExp (_, _, _) ->
-            (*FIXME was: failwith "TODO"*)
-            (stmts, names, next_placeholder)
+            if !Config.cfg.Config.disable_data_model_checks then
+              (stmts, names, next_placeholder)
+            else failwith "TODO"
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
@@ -192,15 +196,18 @@ let rec analyse_type_bstc_dynamic
   | String (label_opt, ty_ann) ->
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
-      | [] -> (*failwith "Strings need to be given an indication of size."*)
-        (stmts, names, next_placeholder)
+      | [] ->
+        if !Config.cfg.Config.disable_data_model_checks then
+          (stmts, names, next_placeholder)
+        else failwith "Strings need to be given an indication of size."
       | [(_, v)] ->
         begin
           match v with
           | Ann_Str _ -> failwith "TODO"
           | Ann_Int _ ->
-            (*FIXME was: failwith "TODO"*)
-            (stmts, names, next_placeholder)
+            if !Config.cfg.Config.disable_data_model_checks then
+              (stmts, names, next_placeholder)
+            else failwith "TODO"
           | Ann_Ident length_field ->
             let name, name_idx = the label_opt, next_placeholder in
             let length_field_idx = next_placeholder - 1 in
@@ -221,8 +228,9 @@ let rec analyse_type_bstc_dynamic
                    Increment (write_offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt1; stmt2], length_field :: name :: names, next_placeholder - 2)
           | Ann_BinaryExp (_, _, _) ->
-            (*FIXME was: failwith "TODO"*)
-            (stmts, names, next_placeholder)
+            if !Config.cfg.Config.disable_data_model_checks then
+              (stmts, names, next_placeholder)
+            else failwith "TODO"
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
@@ -311,15 +319,18 @@ let rec analyse_type_writebytestochannel_dynamic
   | String (label_opt, ty_ann) ->
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
-      | [] -> (*failwith "Strings need to be given an indication of size."*)
-        (stmts, names, next_placeholder)
+      | [] ->
+        if !Config.cfg.Config.disable_data_model_checks then
+          (stmts, names, next_placeholder)
+        else failwith "Strings need to be given an indication of size."
       | [(_, v)] ->
         begin
           match v with
           | Ann_Str _ -> failwith "TODO"
           | Ann_Int _ ->
-            (*FIXME was: failwith "TODO"*)
-            (stmts, names, next_placeholder)
+            if !Config.cfg.Config.disable_data_model_checks then
+              (stmts, names, next_placeholder)
+            else failwith "TODO"
           | Ann_Ident length_field ->
             let name, name_idx = the label_opt, next_placeholder in
             let length_field_idx = next_placeholder - 1 in
@@ -333,8 +344,9 @@ let rec analyse_type_writebytestochannel_dynamic
                    Increment (offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt], name :: length_field :: names, next_placeholder - 2)
           | Ann_BinaryExp (_, _, _) ->
-            (*FIXME was: failwith "TODO"*)
-            (stmts, names, next_placeholder)
+            if !Config.cfg.Config.disable_data_model_checks then
+              (stmts, names, next_placeholder)
+            else failwith "TODO"
         end
       | _ -> failwith "Too many sizes specified for a string."
     end
@@ -425,15 +437,18 @@ let rec analyse_type_bcts_dynamic
   | String (label_opt, ty_ann) ->
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
-      | [] -> (*failwith "Strings need to be given an indication of size."*)
-        (stmts, names, next_placeholder)
+      | [] ->
+        if !Config.cfg.Config.disable_data_model_checks then
+          (stmts, names, next_placeholder)
+        else failwith "Strings need to be given an indication of size."
       | [(_, v)] ->
         begin
           match v with
           | Ann_Str _ -> failwith "TODO"
           | Ann_Int _ ->
-            (*FIXME was: failwith "TODO"*)
-            (stmts, names, next_placeholder)
+            if !Config.cfg.Config.disable_data_model_checks then
+              (stmts, names, next_placeholder)
+            else failwith "TODO"
           | Ann_Ident length_field ->
             let name, name_idx = the label_opt, next_placeholder in
             let length_field_idx = next_placeholder - 1 in
@@ -449,8 +464,9 @@ let rec analyse_type_bcts_dynamic
                    Increment (offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt], length_field :: name :: names, next_placeholder - 2)
           | Ann_BinaryExp (_, _, _) ->
-            (*FIXME was: failwith "TODO"*)
-            (stmts, names, next_placeholder)
+            if !Config.cfg.Config.disable_data_model_checks then
+              (stmts, names, next_placeholder)
+            else failwith "TODO"
         end
       | _ -> failwith "Too many sizes specified for a string."
     end

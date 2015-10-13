@@ -638,6 +638,9 @@ let rec erase_vars ?aggressive:(aggressive : bool = false) (stmt : naasty_statem
       List.map (fun (e, stmt) ->
         (e, erase_vars ~aggressive stmt idents)) cases in
     Switch (e, cases')
+  | Commented (stmt', comment) ->
+    let stmt'' = erase_vars ~aggressive stmt' idents in
+    Commented (stmt'', comment)
   | _ -> stmt
 
 let table_to_string st table : string =

@@ -79,5 +79,5 @@ let cfg : configuration ref = ref {
   front_end_and_state = false;
   naive_internal_naming = false;
   disable_data_model_checks = false;
-  disable_simplification = true; (*FIXME disabled by default*)
+  disable_simplification = false;
 }

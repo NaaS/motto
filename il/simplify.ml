@@ -73,11 +73,12 @@ let rec simplify_stmt (stmt : naasty_statement) : naasty_statement =
       simplify_stmt (Increment (x, Int_Value z))
     else stmt
   | Assign (e1, e2) ->
-    Assign  (simplify_expr e1, simplify_expr e1)
+    Assign (simplify_expr e1, simplify_expr e2)
   | Increment (idx, e) ->
     Increment  (idx, simplify_expr e)
   | For ((id, condition, increment), body) ->
-    For ((id, simplify_expr condition, simplify_stmt increment), simplify_stmt body)
+    For ((id, simplify_expr condition, simplify_stmt increment),
+         simplify_stmt body)
 
   | If (Bool_Value b, stmt1, stmt2) ->
     if b then stmt1 else stmt2
@@ -99,4 +100,19 @@ let rec simplify_stmt (stmt : naasty_statement) : naasty_statement =
             List.map (fun (e, stmt) ->
               (e,(*We leave the guard alone*)
                simplify_stmt stmt)) cases)
-  | _ -> stmt
+  | Return e_opt ->
+    begin
+      match e_opt with
+      | None -> stmt
+      | Some e' -> Return (Some (simplify_expr e'))
+    end
+
+  | Label (s, stmt) ->
+    Label (s, simplify_stmt stmt)
+  | Commented (stmt, str) ->
+    Commented (simplify_stmt stmt, str)
+
+  | Skip
+  | Break
+  | Continue
+  | GotoLabel _-> stmt

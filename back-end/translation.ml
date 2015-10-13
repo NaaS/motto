@@ -1707,6 +1707,10 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
               in
                 inlined_body init_table st5 body''
                 |> var_erased_body init_table st5
+                |> (fun body ->
+                  if !Config.cfg.Config.disable_simplification then
+                    body
+                  else Simplify.simplify_stmt body)
           },
         st5)
 

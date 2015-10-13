@@ -1,3 +1,7 @@
+# Compile with:
+#
+#   ./motto.byte -I examples/ --no_type_check --disable_data_model_checks -o test examples/load_balance.cp
+
 #include "naas.cp"
 #include "http.cp"
 

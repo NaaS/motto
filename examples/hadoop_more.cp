@@ -1,6 +1,8 @@
 
 type k_v : record
-  key : integer
+  key_len : integer
+  key : string
+  value_len : integer
   value : integer
 
 fun Wc_node : (k_v/- x, k_v/- y, -/k_v z) -> ()
@@ -9,13 +11,13 @@ fun Wc_node : (k_v/- x, k_v/- y, -/k_v z) -> ()
   let v1 = ??x
   let v2 = ??y
 
-  if v1.key = -1 and v2.key = -1:
+  if v1.key_len = -1 and v2.key_len = -1:
     x => z # This syntax means that we're "forwarding" a value from channel x
            # to channel y. The value is consumed from channel x.
     y => _ # This is used to discard the next item on channel y.
-  else: if v1.key = -1:
+  else: if v1.key_len = -1:
     y => z
-  else: if v2.key = -1:
+  else: if v2.key_len = -1:
     x => z
 
   else: if v1.key < v2.key:

@@ -1068,6 +1068,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         (*Array indices are int-typed*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata)))
         ("chan_index_") 0 st'' in
+    let (sts_acc, ctx_acc', _, local_name_map, st'') =
+      naasty_of_flick_expr st'' chan_index local_name_map sts_acc ctxt_acc' [chan_index_idx] in
     let translated =
       St_of_E (Call_Function
                  (consume_channel,

@@ -14,7 +14,7 @@ let expand_includes (include_directories : string list) (p : Crisp_syntax.progra
     List.fold_right (fun decl acc ->
       match decl with
       | Include source_file ->
-        let path =
+        let path_opt =
           List.fold_right (fun path_prefix path_found ->
             match path_found with
             | Some _ -> path_found
@@ -24,8 +24,12 @@ let expand_includes (include_directories : string list) (p : Crisp_syntax.progra
                 Some path
               else None)
             (""(*implicitly, we start with the current directory*) ::
-             include_directories) None
-          |> the in
+             include_directories) None in
+        let path =
+          match path_opt with
+          | None ->
+            failwith ("Could not find the inclusion file '" ^ source_file ^ "'")
+          | Some path -> path in
         let inclusion =
           Crisp_parse.parse_file path
           |> (fun p -> match p with

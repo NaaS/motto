@@ -35,6 +35,7 @@ fun LB : {no_backends, backend_choices} => (http_request/http_response client, h
   else: <> #FIXME this line will be made redundant
 
 #  client <=> backend
-  client => backend
+  if can ?? client:
+    client => backend
+  else: <>
   backend => client
-

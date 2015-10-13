@@ -126,7 +126,7 @@ let rec count_var_references_in_naasty_stmt (st : state)
   | Increment (_, expr)
   | St_of_E expr ->
     count_var_references_in_naasty_expr st expr table
-  | For ((ty, expr, stmt), body) ->
+  | For ((_, expr, stmt), body) ->
     count_var_references_in_naasty_expr st expr table
     |> count_var_references_in_naasty_stmt st stmt
     |> count_var_references_in_naasty_stmt st body
@@ -234,6 +234,12 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
                 resolve_idx (Term Value) no_prefix (Some st) idx,
                Some st, Some stmt))
 
+  | Assign (_, _) ->
+    (*The lvalue is not a Var (because we've already checked that), so this
+      lvalue isn't a temporary variable that we generated. So we don't bother
+      trying to inline it.*)
+    table
+
   | Increment (idx, expr) ->
     let no_idx_entries =
       List.fold_right (fun (entry : inliner_table_entry) acc ->
@@ -280,10 +286,12 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
     List.fold_right (fun (_, stmt) table ->
       inliner_analysis st stmt ctxt_acc table) cases table
 
+  | Label (_, stmt') ->
+    inliner_analysis st stmt' ctxt_acc table
+
   (*FIXME the next 3 phrases include statements/expressions, should we include
           them in the analysis?*)
   | St_of_E _
-  | Commented _
   | Return _
 
   | Skip
@@ -632,6 +640,13 @@ let rec erase_vars ?aggressive:(aggressive : bool = false) (stmt : naasty_statem
           if contains_functor_app e then St_of_E e
           else Skip
     else stmt
+
+  | Assign (_, _) ->
+    (*The lvalue is not a Var (because we've already checked that), so this
+      lvalue isn't a temporary variable that we generated. So we don't bother
+      trying to erase it.*)
+    stmt
+
   | For ((ty, cond, inc), body) ->
     let body' = erase_vars ~aggressive body idents in
     For ((ty, cond, inc), body')

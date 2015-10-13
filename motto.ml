@@ -149,6 +149,11 @@ let rec param_table : param_entry list =
       action = (fun () ->
         cfg := { !cfg with disable_data_model_checks = true });
       desc = "Disable checks done in the Data_model module.";};
+    { key = "--disable_simplification";
+      parameter_desc = "";
+      action = (fun () ->
+        cfg := { !cfg with disable_simplification = true });
+      desc = "Disable simplification transformation done on IL.";};
   ] in
 
 while !arg_idx < Array.length Sys.argv do

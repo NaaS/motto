@@ -1657,6 +1657,11 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
             arg_tys = n_arg_tys;
             ret_ty = n_res_ty;
             body =
+              let body'' =
+                if !Config.cfg.Config.disable_simplification then
+                  body''
+                else Simplify.simplify_stmt body'' in
+
               (*Initialise table for the inliner and for variable erasure.
                 Mention the parameters in the initial table*)
               let init_table =

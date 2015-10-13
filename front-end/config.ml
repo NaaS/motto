@@ -53,6 +53,10 @@ type configuration =
     (*When this flag is set, checks built into the Data_model module are
       disabled. This is useful to debugging and development.*)
     disable_data_model_checks : bool;
+    (*Simplification involves evaluating expressions and commands at compile
+      time, where possible. This transformation is done on the IL, not the
+      source language.*)
+    disable_simplification : bool;
   }
 
 let cfg : configuration ref = ref {
@@ -75,4 +79,5 @@ let cfg : configuration ref = ref {
   front_end_and_state = false;
   naive_internal_naming = false;
   disable_data_model_checks = false;
+  disable_simplification = true; (*FIXME disabled by default*)
 }

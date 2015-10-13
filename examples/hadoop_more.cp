@@ -5,7 +5,7 @@ type k_v : record
   value_len : integer
   value : integer
 
-fun Wc_node : (k_v/k_v x, k_v/- y, -/k_v z) -> ()
+fun Wc_node : (k_v/- x, k_v/- y, -/k_v z) -> ()
   # Instead of "vs" could have pattern matching, to give v1 and v2
 #  let vs = peek_all ([x, y]) # let [v1,v2] <= [x,y]
   let v1 = ??x

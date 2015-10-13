@@ -5,15 +5,13 @@
 
 open General
 open Crisp_syntax
+open Crisp_syntax_aux
 open Crisp_type_annotation
 open Naasty
 open Naasty_aux
 open State
 open Task_model
 open State_aux
-
-let log m =
-  print_endline (Printf.sprintf "\027[36m %s\027[m%!" m)
 
 let require_annotations = false
 
@@ -1062,8 +1060,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem inputs ctxt_acc' then ctxt_acc' else inputs :: ctxt_acc' in
     let (chan_name, opt) = channel_identifier in
-    let (chan_index, _) =  input_map chan_name st'' opt in
-   
+    let chan_index = the opt in
+    (* let (chan_index, _) = input_map chan_name st'' opt in *)
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)
@@ -1141,14 +1139,15 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       if List.mem outputs ctxt_acc' then ctxt_acc' else outputs :: ctxt_acc' in
 (*FIXME calculate channel offset*)
     let (chan_name, opt) = channel_identifier in
-    let (chan_index,chan_type) =  output_map chan_name st'' opt in
+    let (_, chan_type) =  output_map chan_name st'' opt in
+    let chan_index = the opt in
     let (naasty_chan_type, st'')  = naasty_of_flick_type st'' chan_type  in
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata)))
         (chan_name ^ "_consume_index_") 0 st'' in 
-    let (sts_acc, ctx_acc', assign_acc', local_name_map, st'') = 
+    let (sts_acc, ctxt_acc', assign_acc', local_name_map, st'') =
       naasty_of_flick_expr st'' chan_index local_name_map sts_acc (chan_index_idx :: ctxt_acc') [chan_index_idx] in
     let translated =
       Assign (Var te,
@@ -1195,14 +1194,15 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem inputs ctxt_acc then ctxt_acc else inputs :: ctxt_acc in
     let (chan_name, opt) = channel_identifier in
-    let (chan_index, chan_type) =  input_map chan_name st'' opt in
+    (* let (chan_index, chan_type) =  input_map chan_name st'' opt in *)
+    let chan_index = the opt in
     let (_, chan_index_idx, st'') =
       mk_fresh (Term Value)
         (*Array indices are int-typed*)
         ~ty_opt:(Some (Int_Type (None, default_int_metadata)))
         (chan_name ^ "_index_") 0 st'' in
  
-    let (sts_acc, ctx_acc', assign_acc', local_name_map, st'') = 
+    let (sts_acc, ctxt_acc', assign_acc', local_name_map, st'') =
       naasty_of_flick_expr st'' chan_index local_name_map sts_acc (chan_index_idx :: ctxt_acc') [chan_index_idx] in
 
     let naasty_ty =
@@ -1378,16 +1378,8 @@ let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
   in (body', st')
 
 let split_io_channels f st =
-  let replace_channels f chans =
+  let replace_channels f c_sidx (* a list of tupples of the form (channel, start index)*) =
     let rec replace f =
-      let rec get_name n chans dir =
-        match chans with
-        | [] ->
-          (*FIXME make error more informative: dump stack*)
-          failwith ("Couldn't find channel name: " ^ n)
-        | (Channel (ctype, cname))::_ when cname = n || cname = (n ^ "_" ^ dir) -> cname
-        | _::t -> get_name n t dir
-      in
       match f with
       | Can _
       | Bottom
@@ -1403,27 +1395,30 @@ let split_io_channels f st =
       | Hole ->
         f
       | Send (inv, (c_name, idx_opt), e) ->
-        let name = get_name c_name chans "receive" in
+        let (Channel (_, name), idx) =
+          List.find (fun (Channel (typ, n), _) -> n = (c_name ^ "_send")) c_sidx in
         let idx_opt' =
           match idx_opt with
-          | None -> None
-          | Some e -> Some (replace e)
+          | None -> Some idx
+          | Some e -> Some (Crisp_syntax.Plus (idx, replace e))
         in
         Send (inv, (name, idx_opt'), replace e)
       | Receive (inv, (c_name, idx_opt)) ->
-        let name = get_name c_name chans "send" in
+        let (Channel (_, name), idx) =
+          List.find (fun (Channel (typ, n), _) -> n = (c_name ^ "_recv")) c_sidx in
         let idx_opt' =
           match idx_opt with
-          | None -> None
-          | Some e -> Some (replace e)
+          | None -> Some idx
+          | Some e -> Some (Crisp_syntax.Plus (idx, replace e))
         in
         Receive (inv, (name, idx_opt'))
       | Peek (inv, (c_name, idx_opt)) ->
-        let name = get_name c_name chans "receive" in
+        let (Channel (_, name), idx) =
+          List.find (fun (Channel (typ, n), _) -> n = (c_name ^ "_recv")) c_sidx in
         let idx_opt' =
           match idx_opt with
-          | None -> None
-          | Some e -> Some (replace e)
+          | None -> Some idx
+          | Some e -> Some (Crisp_syntax.Plus (idx, replace e))
         in
         Peek (inv, (name, idx_opt'))
       | TypeAnnotation (e, ty) -> TypeAnnotation (replace e, ty) 
@@ -1497,31 +1492,38 @@ let split_io_channels f st =
     in
       replace f
   in
-  let rec split channels =
+  let rec split channels i_index o_index =
     match channels with
     | [] -> []
     | (Channel (ctype, cname))::t ->
-      print_endline (channel_type_to_string ctype);
       match ctype with
-      | ChannelSingle (Empty, _)
-      | ChannelSingle (_, Empty)
-      | ChannelArray (Empty, _, _)
-      | ChannelArray (_, Empty, _) ->
-        (Channel (ctype, cname))::(split t) 
+      | ChannelSingle (Empty, _) ->
+        (Channel (ctype, cname ^ "_send"), o_index)::
+          (split t i_index (Crisp_syntax.Plus (o_index, Int 1)))
+      | ChannelArray (Empty, _, dep) ->
+        (Channel (ctype, cname ^ "_send"), o_index)::
+          (split t i_index (Crisp_syntax.Plus (o_index, Variable (the dep))))
+      | ChannelSingle (_, Empty) ->
+        (Channel (ctype, cname ^ "_recv"), i_index)::
+          (split t (Crisp_syntax.Plus (i_index, Int 1)) o_index)
+      | ChannelArray (_, Empty, dep) ->
+        (Channel (ctype, cname ^ "_recv"), i_index)::
+          (split t (Crisp_syntax.Plus (i_index, Variable (the dep))) o_index)
       | ChannelSingle (v1, v2) ->
-        (Channel (ChannelSingle (v1, Empty), cname ^ "_receive"))::
-        (Channel (ChannelSingle (Empty, v2), cname ^ "_send"))::(split t)
+        split ((Channel (ChannelSingle (v1, Empty), cname))::
+               (Channel (ChannelSingle (Empty, v2), cname))::t) i_index o_index
       | ChannelArray (v1, v2, dep) ->
-        (Channel (ChannelArray (v1, Empty, dep), cname ^ "_receive"))::
-        (Channel (ChannelArray (Empty, v2, dep), cname ^ "_send"))::(split t)
+        split ((Channel (ChannelArray (v1, Empty, dep), cname))::
+               (Channel (ChannelArray (Empty, v2, dep), cname))::t) i_index o_index
   in  
   match f.fn_params with
   | FunType (dis, FunDomType (channels, values), ret) ->
-    let channels' = split channels in
+    let chan_start_idx = split channels (Crisp_syntax.Int 0) (Crisp_syntax.Int 0) in
+    let channels' = List.map fst chan_start_idx in
     let fn_body' =
       match f.fn_body with
       | ProcessBody (s, expression, e) ->
-        ProcessBody (s, replace_channels expression channels', e)
+        ProcessBody (s, replace_channels expression chan_start_idx, e)
     in
     ({fn_name = f.fn_name;
       fn_params = FunType (dis, FunDomType (channels', values), ret);
@@ -1546,7 +1548,6 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     in (Type_Decl ty', st')
   | Function f ->
     let fn_decl, st = split_io_channels f st in
-    (* log (toplevel_decl_to_string (Function fn_decl)); *)
 
     (*FIXME might need to prefix function names with namespace, within the
             function body*)
@@ -1657,14 +1658,16 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           Seq (body', Return (Some (Var result_idx))) in
         (body'', st4) in
 
-    (* for DEBUG *)
-    log (State_aux.state_to_str false st4); 
-
     let (fn_idx, st5) = (*FIXME code style here sucks*)
       match lookup_term_data (Term Function_Name) st4.term_symbols fn_decl.fn_name with
       | None ->
         failwith ("Function name " ^ fn_decl.fn_name ^ " not found in symbol table.")
       | Some (idx, _) -> (idx, st4) in
+
+    let _ =
+      if !Config.cfg.Config.verbosity > 1 then
+        log (State_aux.state_to_str false st5) in 
+    
     (Fun_Decl
           {
             id = fn_idx;

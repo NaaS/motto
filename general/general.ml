@@ -3,6 +3,9 @@
    Nik Sultana, Cambridge University Computer Lab, February 2015
 *)
 
+let log m =
+  print_endline (Printf.sprintf "\027[36m %s\027[m%!" m)
+
 let bind_opt (f : 'a -> 'b) (default : 'b) (x_opt : 'a option) : 'b =
   match x_opt with
   | None -> default

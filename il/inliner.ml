@@ -280,7 +280,16 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
     List.fold_right (fun (_, stmt) table ->
       inliner_analysis st stmt ctxt_acc table) cases table
 
-  | _ -> table
+  (*FIXME the next 3 phrases include statements/expressions, should we include
+          them in the analysis?*)
+  | St_of_E _
+  | Commented _
+  | Return _
+
+  | Skip
+  | Break
+  | Continue
+  | GotoLabel _ -> table
 
 (*
    Remove entries where update_count <> 1 and ref_count <> 1,
@@ -641,7 +650,13 @@ let rec erase_vars ?aggressive:(aggressive : bool = false) (stmt : naasty_statem
   | Commented (stmt', comment) ->
     let stmt'' = erase_vars ~aggressive stmt' idents in
     Commented (stmt'', comment)
-  | _ -> stmt
+
+  | St_of_E _
+  | Return _
+  | Skip
+  | Break
+  | Continue
+  | GotoLabel _ -> stmt
 
 let table_to_string st table : string =
   List.map (fun entry ->

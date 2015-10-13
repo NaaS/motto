@@ -1240,17 +1240,19 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   | Can ((Peek (channel_inverted, channel_identifier)) as e) ->
     (*FIXME currently only "can" over "peek" is supported*)
 
-    (*To produce code in this form:
+    (*To produce code similar to this form:
         auto data = NaasData::peek_channel<MemcachedDMData>(rxBuffer);
         if (data == nullptr) continue;
       we first translate the "peek" statement, then replace its "return" statement
       with an assignment that indicates whether the peek could take place or not.
+      We than wrap the rest of the computation in the branch where the peek
+      _can_ take place.
     *)
 
     let (_, can_result_idx, st) =
       mk_fresh (Term Value) ~ty_opt:(Some (Bool_Type None)) "can_" 0 st in
     let (peek_sts_acc, ctxt_acc, _, _, st) =
-      naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc [] in
+      naasty_of_flick_expr st e local_name_map Skip ctxt_acc [] in
 
     let peek_sts_acc =
       let all_but_last, last =

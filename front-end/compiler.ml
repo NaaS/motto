@@ -49,7 +49,11 @@ let type_check_blob (st : State.state) (chans : channel list)
      and what was found instead*)
    (type_value * type_value)) =
   if !Config.cfg.Config.skip_type_check then
-    (true, (Undefined "X"(*FIXME const*), Undefined "Y"(*FIXME const*)))
+    (*If we're instructed to skip type checking, then we simply state that the
+      expected types (of formal parameters) and actual types (that would have
+      been inferred from the actual parameter) match. Additionally we provide an
+      equation that's trivial to solve (ret=ret) to justify this.*)
+    (true, (ret, ret))
   else
     let st' =
       List.fold_right (fun ((Channel (ct, name)) : channel) (st : state) ->

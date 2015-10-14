@@ -1079,8 +1079,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                    Address_of (Var size)]))
     (*FIXME we should lift_assign*)
     in (Naasty_aux.concat [sts_acc; translated],
-        (*add declaration for the fresh name we have for this tuple instance*)
-        chan_index_idx :: ctxt_acc',
+        (*chan_index_idx is the only fresh name we've created, and we've already
+          added it to ctxt_acc' earlier*)
+        ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
         st'')
@@ -1153,8 +1154,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                               Address_of (Var size)]))
     (*FIXME we should lift_assign*)
     in (Naasty_aux.concat [sts_acc; translated],
-        (*add declaration for the fresh name we have for this tuple instance*)
-        chan_index_idx :: ctxt_acc',
+        (*chan_index_idx is the only fresh name we've created, and we've already
+          added it to ctxt_acc' earlier*)
+        ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
         st'')
@@ -1236,7 +1238,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
         in (Naasty_aux.concat [sts_acc; peek_with_check; assignments],
         (*add declaration for the fresh name we have for this tuple instance*)
-        chan_index_idx :: ret_func :: peek_idx :: ctxt_acc',
+        ret_func :: peek_idx :: ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
         st'')

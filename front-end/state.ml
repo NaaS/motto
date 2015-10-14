@@ -372,7 +372,7 @@ let lookup_function_type (st : state) (function_name : string) : (bool * functio
 (*Check whether a symbol is a dependency index.
   This info can be used to restrict the usage or behaviour of that symbol
   in the target language -- for instance, by setting it to be constant.*)
-let symbol_is_di (id : string) (st : state) : bool =
-  match lookup_term_data (Term Value) st.term_symbols id with
+let symbol_is_di (id : int) (st : state) : bool =
+  match lookup_id (Term Value) st id with
   | None -> failwith "symbol_is_di: symbol not in table" (*FIXME give more info*)
-  | Some (_, md) -> md.dependency_index
+  | Some x -> true 

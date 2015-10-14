@@ -363,7 +363,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       let translated =
         try_local_name value_name local_name_map
         |> check_and_resolve_name st
-        |> (fun x -> if symbol_is_di value_name st then Const x else Var x)
+        |> (fun x -> if symbol_is_di x st then Const x else Var x)
         |> lift_assign assign_acc
         |> Naasty_aux.concat
       in (mk_seq sts_acc translated, ctxt_acc,
@@ -600,7 +600,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         Skip (*At the start of the translation, the body is completely empty,
                thus Skip.*)
         (body_result_idx :: ctxt_acc'') [body_result_idx] in
-    assert (assign_acc''' = []);
+        assert (assign_acc''' = []);
 
     (*As always, we assign to any waiting variables. In the case of loops, we
       can only do this if an acc has been defined.*)
@@ -613,8 +613,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
     let for_stmt =
       For ((idx_ty, condition, increment), mk_seq body tail_statement) in
-    (Naasty_aux.concat [sts_acc''; for_stmt; nstmt], ctxt_acc''', [],
-     local_name_map, st4)
+      (Naasty_aux.concat [sts_acc''; for_stmt; nstmt], ctxt_acc''', [], local_name_map, st4)
 
   | Crisp_syntax.ITE (be, e1, e2_opt) -> 
      (*FIXME: if are expressions, so they should assume the value of either the then or the else branch, so 
@@ -1220,6 +1219,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                      (Int_Type (None, default_int_metadata))],
                   [ArrayElement (Var inputs, Var chan_index_idx)])) in
     let condition = Equals (Var peek_idx, Nullptr) in
+
     let naasty_ty =
       (*FIXME use type inference*)
       Int_Type (None, default_int_metadata) in
@@ -1239,7 +1239,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       |> lift_assign assign_acc
       |> Naasty_aux.concat
 
-    in (Naasty_aux.concat [sts_acc; peek_with_check; assignments],
+        in (Naasty_aux.concat [sts_acc; peek_with_check; assignments],
         (*add declaration for the fresh name we have for this tuple instance*)
         chan_index_idx :: ret_func :: peek_idx :: ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
@@ -1381,7 +1381,6 @@ let split_io_channels f st =
   let replace_channels f c_sidx (* a list of tupples of the form (channel, start index)*) =
     let rec replace f =
       match f with
-      | Can _
       | Bottom
       | True
       | False
@@ -1421,6 +1420,7 @@ let split_io_channels f st =
           | Some e -> Some (Crisp_syntax.Plus (idx, replace e))
         in
         Peek (inv, (name, idx_opt'))
+      | Can e -> Can (replace e)
       | TypeAnnotation (e, ty) -> TypeAnnotation (replace e, ty) 
       | And (b1, b2) -> And (replace b1, replace b2)
       | Or (b1, b2) -> Or (replace b1, replace b2)

@@ -154,6 +154,13 @@ let rec param_table : param_entry list =
       action = (fun () ->
         cfg := { !cfg with disable_simplification = true });
       desc = "Disable simplification transformation done on IL.";};
+    { key = "--default_nonstrict_type_checking";
+      parameter_desc = "";
+      action = (fun () ->
+        cfg := { !cfg with default_nonstrict_type_checking = true });
+      desc = "Weaken the checking done during type inference. This makes type
+      inference less computationally demanding, at the risk of missing
+      deeply-nested badly-typed expressions.";};
   ] in
 
 while !arg_idx < Array.length Sys.argv do

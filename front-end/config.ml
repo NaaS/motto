@@ -57,6 +57,10 @@ type configuration =
       time, where possible. This transformation is done on the IL, not the
       source language.*)
     disable_simplification : bool;
+    (*This flag effects the type inference algorithm. Parts of the algorithm can
+      check an expression more deeply to see if it is well-typed. When this flag
+      is set, those checks are disabled.*)
+    default_nonstrict_type_checking : bool;
   }
 
 let cfg : configuration ref = ref {
@@ -80,4 +84,5 @@ let cfg : configuration ref = ref {
   naive_internal_naming = false;
   disable_data_model_checks = false;
   disable_simplification = false;
+  default_nonstrict_type_checking = false;
 }

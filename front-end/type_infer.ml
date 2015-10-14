@@ -55,8 +55,10 @@ let assert_not_undefined_type ty e st =
      else: ...
 *)
 (*NOTE currently we don't support dependently-typed lists*)
-let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
-  : type_value * state =
+let rec ty_of_expr
+          ?strict:(strict : bool =
+                    not !Config.cfg.Config.default_nonstrict_type_checking)
+          (st : state) (e : expression) : type_value * state =
   match e with
   | Variable label ->
     let scope =

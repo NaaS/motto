@@ -30,6 +30,30 @@ let assert_not_undefined_type ty e st =
   if (undefined_ty ty) then
     raise (Type_Inference_Exc ("Type should not be Undefined", e, st))
 
+(*Type inference algorithm for Crisp expressions. Given a typing context
+  (encoded in "st") and an expression "e", we return a type and a state.
+
+  The returned state could be different from the original since in the course of
+  type-inference we might have come across an expression that extends the typing
+  contexts (and thus extends the state). There is only one kind of expression
+  that can extend the typing context: LocalDef. This introduces a (typed) symbol
+  into the context, and the type inference of subsequent expressions might
+  depend on this typing.
+  For example:
+     let x = 3   # x is introduced, and typed "integer" based on the type of "3".
+     x + 4       # the expression on this line can now be typed "integer", based
+                 #  on the types of "x" and "4" and "+".
+  Other expression forms, such as "if..then..else" apply only a local extension
+  to the typing context -- that is, any LocalDef occurring in a conditional
+  expression does not effect the global scope, since the symbol introduced by
+  that LocalDef is scoped inside the expression in which it occurs.
+  For example:
+     if (let x = 3
+         x <> 4):
+       x - 5 # Unless "x" was in scope before we encountered the "if", then
+             # this expression cannot be typed.
+     else: ...
+*)
 (*NOTE currently we don't support dependently-typed lists*)
 let rec ty_of_expr ?strict:(strict : bool = false) (st : state) (e : expression)
   : type_value * state =

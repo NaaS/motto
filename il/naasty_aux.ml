@@ -482,8 +482,12 @@ let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent pro
   |> String.concat "\n"
 
 (*Extends a scope by adding a mapping between a name and an index.
+
+  Furthermore we don't update the labels of the src/IL types associated with
+  that name. For a safer version of this function, see extend_scope_unsafe.
+
   NOTE we don't check for clashes! thus the _unsafe prefix*)
-let extend_scope_unsafe (scope : scope) (st : state)
+let extend_scope_unsafe' (scope : scope) (st : state)
       ?src_ty_opt:(src_ty_opt = None) ?ty_opt:(ty_opt = None)
       ?dependency_index:(dependency_index = false)
       ?decl_scope_opt:(decl_scope_opt = None) (id : string) : Naasty.identifier * state =
@@ -519,6 +523,50 @@ let extend_scope_unsafe (scope : scope) (st : state)
        term_symbols = (id, st.next_symbol, metadata) :: st.term_symbols;
        next_symbol = 1 + st.next_symbol;
      })
+
+(*Extends a scope by adding a mapping between a name and an index.
+
+  Calls extend_scope_unsafe' to get the basic work done, then it updates
+  labels of the src/IL types to ensure consistency.
+
+  NOTE we don't check for clashes! thus the _unsafe prefix*)
+let extend_scope_unsafe (scope : scope) (st : state)
+      ?src_ty_opt:(src_ty_opt = None) ?ty_opt:(ty_opt = None)
+      ?dependency_index:(dependency_index = false)
+      ?decl_scope_opt:(decl_scope_opt = None) (id : string) : Naasty.identifier * state =
+  let (idx, st) =
+    extend_scope_unsafe' scope st ~src_ty_opt ~ty_opt ~dependency_index
+      ~decl_scope_opt id in
+  (*Now update the labels in the types that are associated with id, in the
+    newly-updated stage.*)
+  let st' =
+     { st with
+       term_symbols =
+         List.map (fun ((id', idx', md) as data) ->
+           if not (id' = id || idx' = idx) then data
+           else
+             begin
+               print_endline ("Have " ^ id' ^ "=" ^ id ^ " and " ^
+                             string_of_int idx' ^ "=" ^ string_of_int idx);
+(*FIXME currently disabled this since it's failed by how we handle TaskEvent
+        at present.
+               assert (id' = id && idx' = idx);*)
+               let md' =
+               { md with
+                 source_type =
+                   bind_opt (fun ty ->
+                     Crisp_syntax_aux.set_empty_label ty
+                     |> Crisp_syntax_aux.update_empty_label id
+                     |> (fun x -> Some x)) None md.source_type;
+                 naasty_type =
+                   bind_opt (fun ty ->
+                     set_empty_identifier ty
+                     |> update_empty_identifier idx
+                     |> (fun x -> Some x)) None md.naasty_type;
+               } in
+               (id', idx', md')
+             end) st.term_symbols } in
+  (idx, st')
 
 (*Adds a fresh identifier to the scope, based on a specific prefix, to which
   we concatenate a numeric suffix/index*)

@@ -30,6 +30,38 @@ let extract_function_types (FunType (dis, FunDomType (chans, arg_tys), FunRetTyp
 let extract_process_body_bits (ProcessBody (st_decls, e, ex_decls)) =
   (st_decls, e, ex_decls)
 
+(*Removes the label of a type. It can be used in combination with
+  update_empty_label to update the label ofma type.*)
+let set_empty_label (ty : type_value) =
+  match ty with
+  | UserDefinedType (_, type_name) ->
+    UserDefinedType (None, type_name)
+  | String (_, type_annotation) ->
+    String (None, type_annotation)
+  | Integer (_, type_annotation) ->
+    Integer (None, type_annotation)
+  | Boolean (_, type_annotation) ->
+    Boolean (None, type_annotation)
+  | RecordType (_, tys, type_annotation) ->
+    RecordType (None, tys, type_annotation)
+  | Disjoint_Union (_, tys) ->
+    Disjoint_Union (None, tys)
+  | List (_, ty, dep_idx_opt, type_annotation) ->
+    List (None, ty, dep_idx_opt, type_annotation)
+  | Empty -> Empty
+  | IPv4Address _ ->
+    IPv4Address None
+  | Tuple (_, tys) ->
+    Tuple (None, tys)
+  | Dictionary (_, idx_ty, ty) ->
+    Dictionary (None, idx_ty, ty)
+  | Reference (_, ty) ->
+    Reference (None, ty)
+  | Undefined _ -> ty (*Undefined's parameter is not a label, but a schematic
+                        varable name*)
+  | ChanType (_, ct) ->
+    ChanType (None, ct)
+
 (*Sets the label of a type unless it's already defined. This is used to bridge
   the gap between Flick and NaaSty, since the latter expects all type
   declarations to be associated with their names, while the former distributes
@@ -80,6 +112,11 @@ let update_empty_label label (ty : type_value) =
   | Reference (label_opt, ty) ->
     if label_opt = None then
       Reference (Some label, ty)
+    else failwith "Cannot set an already-set label"
+  | Undefined _ -> ty
+  | ChanType (label_opt, ct) ->
+    if label_opt = None then
+      ChanType (Some label, ct)
     else failwith "Cannot set an already-set label"
 
 (*Assuming that the given declaration is a type declaration, this function

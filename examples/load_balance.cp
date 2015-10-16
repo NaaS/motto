@@ -39,3 +39,11 @@ fun LB : {no_backends, backend_choices} => (http_request/http_response client, h
     client => backend
   else: <>
   backend => client
+
+#fun LB_response : {no_backends} => (http_request/http_response client, http_response/http_request backend) -> ()
+#  for i in 0 .. (no_backends - 1):
+#    if can ?? backends[i]:
+#      let x = ?? backends[i]
+#      client ! x
+#      ? backends[i]
+#    else: <>

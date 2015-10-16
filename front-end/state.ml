@@ -374,6 +374,7 @@ let lookup_function_type (st : state) (function_name : string) : (bool * functio
   This info can be used to restrict the usage or behaviour of that symbol
   in the target language -- for instance, by setting it to be constant.*)
 let symbol_is_di (id : int) (st : state) : bool =
-  match lookup_id (Term Value) st id with
+  match lookup_term_data ~st_opt:(Some st) (Term Value)
+          (List.map (fun (x, y, z) -> (y, x, z)) st.term_symbols) id with
   | None -> failwith "symbol_is_di: symbol not in table" (*FIXME give more info*)
-  | Some x -> true 
+  | Some (_, md) -> md.dependency_index

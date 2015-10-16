@@ -22,7 +22,10 @@ exception Inliner_Exc of string * state option * naasty_statement option
 type inliner_table_entry =
   {
     id : identifier;
+    (*Parameter to a function or process*)
     parameter : bool;
+    (*Counter introduced in a for-loop*)
+    cursor : bool;
     update_count : int;
     ref_count : int;
     initialisation : naasty_expression option;
@@ -34,6 +37,7 @@ let init_table = List.map (fun idx ->
   {
     id = idx;
     parameter = true;
+    cursor = false;
     update_count = 0;
     ref_count = 0;
     initialisation = None;
@@ -200,6 +204,7 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
         {
           id = idx;
           parameter = false;
+          cursor = false;
           update_count = if expr_opt = None then 0 else 1;
           ref_count = 0;
           initialisation = expr_opt;
@@ -233,6 +238,9 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
           if entry.initialisation <> None then
             raise (Inliner_Exc ("Variable has already been initialised",
                                 Some st, Some stmt))
+          else if entry.cursor then
+            raise (Inliner_Exc ("Currently cannot manually assign to cursor",
+                                Some st, Some stmt))
           else
             { entry with update_count = entry.update_count + 1;
                          assignment = Some expr }
@@ -265,6 +273,9 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
           if entry.initialisation <> None then
             raise (Inliner_Exc ("Variable has already been initialised",
                                 Some st, Some stmt))
+          else if entry.cursor then
+            raise (Inliner_Exc ("Currently cannot manually increment cursor",
+                                Some st, Some stmt))
           else
             { entry with update_count = entry.update_count + 1;
                          assignment = Some (Plus (Var idx, expr)) }
@@ -278,8 +289,34 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
   | Commented (stmt', _) ->
     inliner_analysis st stmt' ctxt_acc table
 
-  | For ((cursor, test, update), body) ->
-    inliner_analysis st body ctxt_acc table
+  | For ((cursor, _(*test*), _(*update*)), body) ->
+    begin
+    match idx_of_naasty_type cursor with
+    | None ->
+      raise (Inliner_Exc ("Cursor must contain an identifier name, not just mention a type!" ,
+                          Some st, Some stmt))
+    | Some idx ->
+      let no_idx_entries =
+        List.fold_right (fun (entry : inliner_table_entry) acc ->
+          if entry.id = idx then acc + 1 else acc) table 0 in
+      assert (no_idx_entries >= 0);
+      if no_idx_entries = 0 then
+        {
+          id = idx;
+          parameter = false;
+          cursor = true;
+          update_count = 0;(*Cursor is updated at each iteration, so we
+                             disregard this metric*)
+          ref_count = 0;
+          initialisation = None;(*NOTE We could extract this?*)
+          assignment = None;
+        } :: table
+      else
+        raise (Inliner_Exc
+                 ("Impossible: multiple declarations of the same cursor idx",
+                  Some st, Some stmt))
+    end
+    |> inliner_analysis st body ctxt_acc
 
   | If (cond, then_body, else_body) ->
     inliner_analysis st then_body ctxt_acc table

@@ -42,12 +42,18 @@ let init_table = List.map (fun idx ->
 
 let rec count_var_references_in_naasty_expr (st : state)
   (expr : naasty_expression) (table : inliner_table_entry list) : inliner_table_entry list =
+  if !Config.cfg.Config.verbosity > 1 then
+    print_endline ("count_var_references_in_naasty_expr: " ^
+               fst(string_of_naasty_expression ~st_opt:(Some st) expr));
   match expr with
   | Var idx ->
     let no_idx_entries =
       List.fold_right (fun (entry : inliner_table_entry) acc ->
         if entry.id = idx then acc + 1 else acc) table 0 in
     assert (no_idx_entries >= 0);
+    if !Config.cfg.Config.verbosity > 1 then
+      print_endline
+        ("Saw Var " ^ resolve_idx (Term Undetermined) no_prefix (Some st) idx);
     if no_idx_entries = 1 then
       (*Increment times we've referenced this idx*)
       List.map (fun (entry : inliner_table_entry) ->
@@ -73,8 +79,12 @@ let rec count_var_references_in_naasty_expr (st : state)
   | Int_Value _
   | Nullptr
   | Bool_Value _
-  | Literal _
-  | Const _ ->
+  | Literal _ ->
+    table
+  | Const idx ->
+    if !Config.cfg.Config.verbosity > 1 then
+      print_endline
+        ("Saw Const " ^ resolve_idx (Term Undetermined) no_prefix (Some st) idx);
     table
   | Not e
   | Abs e
@@ -688,7 +698,7 @@ let mk_subst st init_table body =
   let _ =
     if !Config.cfg.Config.verbosity > 0 then
       table_to_string st table
-      |> (fun s -> print_endline ("Inliner table:" ^ s))
+      |> (fun s -> print_endline ("Inliner table in mk_subst:" ^ s))
 
 in
   inliner_to_subst table
@@ -707,7 +717,21 @@ in
         subst)
 
 let mk_erase_ident_list st init_table body : identifier list =
-  inliner_analysis st body [] init_table
-  |> count_var_references_in_naasty_stmt st body
-  |> variables_to_be_erased
-  |> List.map (fun record -> record.id)
+  let result =
+    inliner_analysis st body [] init_table
+    |> count_var_references_in_naasty_stmt st body
+    |> (fun table ->
+       if !Config.cfg.Config.verbosity > 0 then
+         table_to_string st table
+         |> (fun s ->
+           print_endline ("Inliner table for mk_erase_ident_list:" ^ s));
+       table)
+    |> variables_to_be_erased
+    |> List.map (fun record -> record.id) in
+
+  let _ =
+    if !Config.cfg.Config.verbosity > 0 then
+      List.map (resolve_idx (Term Undetermined) no_prefix (Some st)) result
+      |> String.concat ", "
+      |> (fun s -> print_endline ("Variables to be deleted:" ^ s))
+  in result

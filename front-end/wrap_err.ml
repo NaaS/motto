@@ -135,6 +135,23 @@ let wrap (f : 'a -> 'b) (x : 'a) : 'b =
     end;
     exit 1
 
+  | Naasty_aux.Naasty_aux_Exc (msg, st_opt) ->
+    begin
+    if not !cfg.unexceptional then
+      let st_s =
+        match st_opt with
+        | None -> ""
+        | Some st ->
+          "state :\n" ^
+            State_aux.state_to_str ~summary_types:(!Config.cfg.Config.summary_types)
+             true st in
+      print_endline
+       ("Intermedate Language error: " ^ msg ^ "\n" ^
+(*FIXME        "in file " ^ source_file ^ "\n" ^*)
+        st_s)
+    end;
+    exit 1
+
   | e ->
     if !cfg.unexceptional then exit 1
     else raise e

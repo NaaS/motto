@@ -159,7 +159,8 @@ let forget_label_in_identifier_kind (ik : identifier_kind) =
     Field (forget_label tv)
 
 (*scope contains the query_kind*)
-let check_identifier_kind scope result_kind =
+let check_identifier_kind ?id_opt:(id_opt : identifier option = None)
+      ?st_opt:(st_opt : state option = None) scope result_kind =
   let result_kind = forget_label_in_identifier_kind result_kind in
   let query_kind =
     match scope with
@@ -170,11 +171,11 @@ let check_identifier_kind scope result_kind =
          scope_to_str scope, None)) in
   if result_kind = Undetermined then
     raise (State_Exc ("check_identifier_kind: Identifier kind for value record
-    in symbol table cannot be undetermined" (*FIXME give more info*), None))
+    in symbol table cannot be undetermined" (*FIXME give more info*), st_opt))
   else if query_kind <> Undetermined && query_kind <> result_kind then
     raise (State_Exc ("check_identifier_kind: Mismatching identifier kinds! Was expecting " ^
               string_of_identifier_kind query_kind ^ " but found " ^
-              string_of_identifier_kind result_kind, None))
+              string_of_identifier_kind result_kind, st_opt))
   else true
 
 (*Flags are used to use this function to carry out the same query but with different
@@ -327,7 +328,7 @@ let update_symbol_type (id : identifier) (ty : naasty_type)
     List.map (fun ((name, idx, metadata) as original) ->
       if id = idx then
         begin
-        ignore(check_identifier_kind scope metadata.identifier_kind);
+        ignore(check_identifier_kind ~id_opt:(Some id) ~st_opt:(Some st) scope metadata.identifier_kind);
         let metadata' =
           match metadata.naasty_type with
           | None -> { metadata with naasty_type = Some ty }
@@ -355,7 +356,7 @@ let lookup_symbol_type (id : identifier)
   let term_symbol_lookup =
     List.fold_right (fun (_, idx, metadata) acc ->
       if id = idx then
-        if check_identifier_kind scope metadata.identifier_kind then
+        if check_identifier_kind ~id_opt:(Some id) ~st_opt:(Some st) scope metadata.identifier_kind then
           metadata.naasty_type
         else raise (State_Exc ("Failed kind-check", Some st))
       else acc) in

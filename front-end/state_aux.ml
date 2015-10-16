@@ -29,7 +29,9 @@ let state_to_str ?indentation:(indentation : string = "  ")
   let str_of_term_symbol_metadata md =
     "{source_type=" ^ str_of_src_ty_opt md.source_type ^ "; " ^
     "naasty_type=" ^ str_of_ty_opt md.naasty_type ^ "; " ^
-    "identifier_kind=" ^ string_of_identifier_kind ~summary_types md.identifier_kind ^ "}" in
+    "identifier_kind=" ^ string_of_identifier_kind ~summary_types
+                           md.identifier_kind ^ "; " ^
+    "di=" ^ string_of_bool md.dependency_index ^ "}" in
   let type_decls_l =
     List.map (fun (type_name, src_type, nst_type) ->
       let nst_type_s = str_of_ty_opt nst_type in

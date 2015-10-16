@@ -585,7 +585,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let local_name_map'' =
       extend_local_names local_name_map' Value label idx st''' in
 
-    let condition = LEq (Var from_idx, Var to_idx) in
+    let condition = LEq (Var idx, Var to_idx) in
     let increment = Increment (idx, Int_Value 1) in
 
     (*The tail statement is added to the body, it's the last statement executed
@@ -613,7 +613,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
           |> Naasty_aux.concat in
 
     let for_stmt =
-      For ((idx_ty, condition, increment), mk_seq body tail_statement) in
+      For (((idx_ty, Var from_idx), condition, increment), mk_seq body tail_statement) in
       (Naasty_aux.concat [sts_acc''; for_stmt; nstmt], ctxt_acc''', [], local_name_map, st4)
 
   | Crisp_syntax.ITE (be, e1, e2_opt) -> 

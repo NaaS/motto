@@ -386,10 +386,11 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
   | Increment (id, e) ->
     indn indent ^ id_name st_opt id ^ " += " ^
     fst (string_of_naasty_expression ~st_opt e) ^ terminal
-  | For ((id, condition, increment), body) ->
+  | For (((id, id_init), condition, increment), body) ->
     (*FIXME check if the target syntax is correct*)
     indn indent ^ "for (" ^
-    string_of_naasty_type ~st_opt no_indent id ^ "; " ^
+    string_of_naasty_type ~st_opt no_indent id ^ " = " ^
+    fst (string_of_naasty_expression ~st_opt id_init) ^ "; " ^
     fst (string_of_naasty_expression ~st_opt condition) ^ "; " ^
     string_of_naasty_statement ~st_opt no_indent ~print_semicolon:false increment ^ ") {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) body ^
@@ -895,12 +896,13 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
     in (St_of_E e', st')
   | Break -> (Break, st)
   | Continue -> (Continue, st)
-  | For ((id, condition, increment), body) ->
+  | For (((id, id_init), condition, increment), body) ->
     let id', st' = instantiate_type fresh names st id in
+    let (id_init', st') = instantiate_expression fresh names st' condition in
     let (condition', st'') = instantiate_expression fresh names st' condition in
     let (increment', st''') = instantiate_statement fresh names st'' increment in
     let (body', st4) = instantiate_statement fresh names st''' body
-    in (For ((id', condition', increment'), body'), st4)
+    in (For (((id', id_init'), condition', increment'), body'), st4)
   | Label (lbl, stmt) ->
     let (stmt', st') = instantiate_statement fresh names st stmt
     in (Label (lbl, stmt'), st')

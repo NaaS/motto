@@ -140,8 +140,9 @@ let rec count_var_references_in_naasty_stmt (st : state)
   | Increment (_, expr)
   | St_of_E expr ->
     count_var_references_in_naasty_expr st expr table
-  | For ((_, expr, stmt), body) ->
-    count_var_references_in_naasty_expr st expr table
+  | For (((_, cursor_init), expr, stmt), body) ->
+    count_var_references_in_naasty_expr st cursor_init table
+    |> count_var_references_in_naasty_expr st expr
     |> count_var_references_in_naasty_stmt st stmt
     |> count_var_references_in_naasty_stmt st body
   | If (be, e1, e2) ->
@@ -289,7 +290,7 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
   | Commented (stmt', _) ->
     inliner_analysis st stmt' ctxt_acc table
 
-  | For ((cursor, _(*test*), _(*update*)), body) ->
+  | For (((cursor, cursor_init), _(*test*), _(*update*)), body) ->
     begin
     match idx_of_naasty_type cursor with
     | None ->
@@ -308,7 +309,7 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
           update_count = 0;(*Cursor is updated at each iteration, so we
                              disregard this metric*)
           ref_count = 0;
-          initialisation = None;(*NOTE We could extract this?*)
+          initialisation = Some cursor_init;
           assignment = None;
         } :: table
       else
@@ -582,11 +583,12 @@ let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = true)
         subst_expr subst e1
       else e1 in
     Assign (e1', subst_expr subst e2)
-  | For ((ty, cond, inc), body) ->
+  | For (((cursor, cursor_init), cond, inc), body) ->
+    let cursor_init' = subst_expr subst cursor_init in
     let cond' = subst_expr subst cond in
     let inc' = subst_stmt subst inc in
     let body' = subst_stmt subst body in
-    For ((ty, cond', inc'), body')
+    For (((cursor, cursor_init'), cond', inc'), body')
   | If (cond, stmt1, stmt2) ->
     let cond' = subst_expr subst cond in
     let stmt1' = subst_stmt subst stmt1 in
@@ -694,9 +696,9 @@ let rec erase_vars ?aggressive:(aggressive : bool = false) (stmt : naasty_statem
       trying to erase it.*)
     stmt
 
-  | For ((ty, cond, inc), body) ->
+  | For (((cursor, cursor_init), cond, inc), body) ->
     let body' = erase_vars ~aggressive body idents in
-    For ((ty, cond, inc), body')
+    For (((cursor, cursor_init), cond, inc), body')
   | If (cond, stmt1, stmt2) ->
     let stmt1' = erase_vars ~aggressive stmt1 idents in
     let stmt2' = erase_vars ~aggressive stmt2 idents in

@@ -118,8 +118,11 @@ type naasty_statement =
   | Seq of naasty_statement * naasty_statement
   | Assign of naasty_expression * naasty_expression
   | Increment of identifier * naasty_expression
-  | For of (naasty_type * naasty_expression * naasty_statement) *
-           naasty_statement
+  | For of ((naasty_type(*cursor variable*) *
+             naasty_expression(*cursor's initial value*)) *
+            naasty_expression(*termination predicate*) *
+            naasty_statement(*statement run after each execution of loop body*)) *
+            naasty_statement(*body of loop*)
   | If of naasty_expression * naasty_statement * naasty_statement
   | If1 of naasty_expression * naasty_statement
   | Break

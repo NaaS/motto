@@ -282,8 +282,18 @@ let parse_program source_file =
 
 let front_end ?st:(st : state = initial_state) (cfg : Config.configuration ref) (program : Crisp_syntax.program) =
   expand_includes !cfg.Config.include_directories program
-  |> selfpair
-  |> apfst (collect_decl_info st)
+  |> (fun prog ->
+    if !Config.cfg.Config.translate then
+      (*FIXME this transformation relates to the back-end, yet it's applied
+              in the front-end. Can this weird organised by systematised better?*)
+      let prog', st' =
+        Icl_backend.ICL_Backend.preprocess st prog
+      in (collect_decl_info st' prog'), prog'(*FIXME sucky code style*)
+    else (collect_decl_info st prog), prog)
+  |> (fun ((st, p) as data) ->
+    (if !Config.cfg.Config.verbosity > 0 then
+      print_endline ("Preprocessed program:\n" ^ program_to_string p);
+       data))
   |> apfst check_distinct_parameter_names
   |> apsnd split_declaration_kinds
   |> (fun ((st, p) as data) ->

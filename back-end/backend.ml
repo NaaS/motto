@@ -16,6 +16,9 @@ sig
   type unit_name = string
   (*Contents of a unit*)
   type unit_contents = string
+  (*Transform a program before compiling it*)
+  val preprocess : State.state -> Crisp_syntax.program ->
+    Crisp_syntax.program * State.state
   (*Translate to a list of compilation units*)
   val translate : State.state -> compilation_record ->
     (unit_name * unit_contents) list

@@ -331,8 +331,9 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       begin
         match lookup_name (Term Undetermined) st identifier with
         | None ->
-          raise (Translation_Expr_Exc ("Undeclared identifier: " ^ identifier,
-                                       Some e, Some local_name_map, Some sts_acc, st))
+          raise (Translation_Expr_Exc
+                   ("Undeclared identifier: " ^ identifier,
+                    Some e, Some local_name_map, Some sts_acc, st))
         | Some i -> i
       end
     with
@@ -997,38 +998,6 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
      Exchange
 *)
 
-  | Send (false, dest, Receive (false, chan)) ->
-    (*This is an abbreviation for "forwarding" a value from one channel to
-       another*)
-    (*FIXME would be neater to factor out this transformation into a
-            separate function that's called before calling the translation
-            (on the transformed program).*)
-
-    let i = string_of_int st.next_symbol in
-    let name = "_forward_idx_" ^ i in
-(*
-    FIXME the above 2 lines work, but aren't very clean. It would be nicer to
-          set things up so that the freshness of names is managed through the
-          usual (same) mechanism; something like the following:
-    let i, st =
-    (string_of_int st.next_symbol,
-     st (*{ st with next_symbol = 1 + st.next_symbol }*)) in
-    let (name, _, st) =
-      mk_fresh (Term Value)
-        ~src_ty_opt:(Some (Integer (None, [])(*FIXME use type inference*)))
-        ~ty_opt:(Some (Int_Type (None, default_int_metadata)(*FIXME use type inference*)))
-        ("forward_idx_" ^ i ^ "_") 0 st in
-*)
-
-    let e' =
-      (*This is the idiom used to forward between channels
-        in the ICL backend, since the interpretation of "Receive"
-        side-effects and removes the value.*)
-      Crisp_syntax.Seq (LocalDef ((name, None), Peek (false, chan)),
-           Seq (Send (false, dest, Variable name),
-                Receive (false, chan))) in
-    naasty_of_flick_expr st e' local_name_map sts_acc ctxt_acc assign_acc
-
   | Receive (channel_inverted, channel_identifier) ->
     (*NOTE only data-model instances can be communicated via channels.
            also need to ensure that #include the data-model instance output*)
@@ -1217,10 +1186,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                   [ArrayElement (Var inputs, Var chan_index_idx)])) in
     let condition = Equals (Var peek_idx, Nullptr) in
 
-    let naasty_ty =
-      (*FIXME use type inference*)
-      Int_Type (None, default_int_metadata) in
-    let ret_func, st'' = Naasty_aux.add_symbol "TaskEvent" ~ty_opt:(Some naasty_ty) (Term Value) st'' in
+    let ret_func, st'' =
+      Naasty_aux.add_symbol "TaskEvent" (Term Function_Name) st'' in
     let ret_type =
       Call_Function(ret_func, [],
         [Literal "TaskEvent::OUT_OF_DATA"(*FIXME const -- store centrally, as with Data_model_consts*);
@@ -1363,15 +1330,26 @@ let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
   assert (waiting' = []);
   let body' =
     List.fold_right (fun idx stmt ->
-      let ty =
-        match lookup_symbol_type idx (Term Value)(*all ctxt symbols are term-level*)
+      let decl =
+        (* FIXME could perhaps use "Value" rather than "Undetermined" kind,
+                 but currently this seem to interact badly with the (ad hoc) way
+                 we're handling the symbol for TaskEvent.*)
+        match lookup_symbol_type idx (Term Undetermined)(*all ctxt symbols are term-level*)
                 st' with
         | None ->
+          (* FIXME should raise this exception, but currently this seems to
+                   interact badly with the (ad hoc) way we're handling the symbol for
+                   TaskEvent
           raise (Translation_Expr_Exc ("Couldn't resolve type of ctxt idx " ^
                              string_of_int idx, Some flick_body,
                              Some local_name_map, Some init_statmt, st'))
-        | Some ty -> ty
-      in mk_seq (Declaration (ty, None)) stmt) ctxt' body
+             *)
+          (*FIXME this is temporary -- we get this problem for "TaskEvent"
+                  symbol since it's not being cleanly introduced into the symbol
+                  table*)
+          Commented (Skip, "Could not resolve type of idx" ^ string_of_int idx)
+        | Some ty -> Declaration (ty, None)
+      in mk_seq decl stmt) ctxt' body
   in (body', st')
 
 let split_io_channels f st =
@@ -1676,6 +1654,12 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                   body''
                 else Simplify.simplify_stmt body'' in
 
+              let _ =
+                if !Config.cfg.Config.verbosity > 0 then
+                print_endline ("Program prior to optimisation: " ^
+                  string_of_naasty_statement ~st_opt:(Some st5)
+                        0 body'') in
+
               (*Initialise table for the inliner and for variable erasure.
                 Mention the parameters in the initial table*)
               let init_table =
@@ -1716,7 +1700,12 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                   let body' =
                     Inliner.mk_erase_ident_list st init_table body
                     |> Inliner.erase_vars body in
-                  if body = body' then body
+                  if body = body' then
+                    begin
+                      if !Config.cfg.Config.verbosity > 0 then
+                        print_endline ("(Variable erasure didn't change anything at this iteration)");
+                      body
+                    end
                   else var_erased_body init_table st body'
               in
                 inlined_body init_table st5 body''

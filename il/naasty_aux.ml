@@ -550,7 +550,8 @@ let extend_scope_unsafe (scope : scope) (st : state)
            if not (id' = id || idx' = idx) then data
            else
              begin
-               print_endline ("Have " ^ id' ^ "=" ^ id ^ " and " ^
+               if !Config.cfg.Config.verbosity > 1 then
+                 print_endline ("Have " ^ id' ^ "=" ^ id ^ " and " ^
                              string_of_int idx' ^ "=" ^ string_of_int idx);
 (*FIXME currently disabled this since it's failed by how we handle TaskEvent
         at present.

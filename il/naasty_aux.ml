@@ -9,6 +9,8 @@ open Naasty
 open State
 
 
+exception Naasty_aux_Exc of string * state option
+
 type lbl = string
 
 let prog_indentation = 0
@@ -24,8 +26,10 @@ let resolve_idx (scope : scope) (prefix : string) (st_opt : state option) (i : i
   | Some st ->
     begin
       match lookup_id scope st i with
-      | None -> failwith ("Could not resolve idx " ^ string_of_int i ^ " in " ^
-                          scope_to_str scope ^ " scope")
+      | None ->
+        raise (Naasty_aux_Exc
+                 ("Could not resolve idx " ^ string_of_int i ^
+                  " in " ^ scope_to_str scope ^ " scope", st_opt))
       | Some name -> name
     end
 let no_prefix = ""

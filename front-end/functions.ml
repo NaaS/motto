@@ -56,15 +56,6 @@ let export_fun (e : function_entry) : (function_name * (bool * function_type)) =
 let export_funs : (function_name * (bool * function_type)) list =
   List.map export_fun function_db
 
-(*
-let lookup_function (fn : function_name) : function_entry option =
-  let result =
-    List.filter (fun e -> e.name = fn) function_db in
-  match result with
-  | [] -> None
-  | [e] -> Some e
-  | _ -> raise (Functions_Exc ("Found multiple definitions", fn, None))
-*)
 let apply_function (fn : function_name) (args : expression list) : expression =
   let result =
     List.filter (fun e -> e.name = fn) function_db in

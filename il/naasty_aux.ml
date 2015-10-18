@@ -1012,3 +1012,74 @@ let rec unconcat (source : naasty_statement list) (result : naasty_statement lis
   | [] -> List.rev result
   | (Seq (stmt1, stmt2) :: rest) -> unconcat (stmt1 :: stmt2 :: rest) result
   | (x :: xs) -> unconcat xs (x :: result)
+
+(*Count the number of assignments to a specific variable, at the top-level
+  of a statement (i.e., we don't descend into "for", "if", "switch" and other
+  blocks.*)
+let rec count_toplevel_assignments idx stmt acc =
+  match stmt with
+  | Declaration _(*We ignore declarations -- we don't treat them as being assignments*)
+  | Break
+  | Continue
+  | Return _
+  | Skip
+  | St_of_E _
+  | GotoLabel _
+  | Switch _
+  | For _
+  | If _
+  | If1 _ -> acc
+
+  | Seq (stmt1, stmt2) ->
+    count_toplevel_assignments idx stmt1 acc
+    |> count_toplevel_assignments idx stmt2
+  | Assign (Var idx', _) ->
+    if idx = idx' then acc + 1 else acc
+  | Assign _ ->
+    acc(*FIXME we don't currenty handle assigning to arrays etc*)
+  | Increment (idx', _) ->
+    if idx = idx' then acc + 1 else acc
+  | Commented (stmt, _) ->
+    count_toplevel_assignments idx stmt acc
+  | Label (_, stmt) ->
+    count_toplevel_assignments idx stmt acc
+
+let rec last_return_expression (stmt : naasty_statement) : naasty_expression option option =
+  match stmt with
+  | Return e -> Some e
+  | Declaration _
+  | Break
+  | Continue
+  | Skip
+  | St_of_E _
+  | GotoLabel _
+  | Switch _
+  | For _
+  | If _
+  | If1 _
+  | Assign _
+  | Increment _
+  | Commented _
+  | Label _ -> None
+  | Seq (_, stmt') -> last_return_expression stmt'
+
+let rec all_but_last_return_expression (stmt_acc : naasty_statement)
+          (stmt : naasty_statement) : naasty_statement option =
+  match stmt with
+  | Return _ -> Some stmt_acc
+  | Declaration _
+  | Continue
+  | Break
+  | Skip
+  | St_of_E _
+  | GotoLabel _
+  | Switch _
+  | For _
+  | If _
+  | If1 _
+  | Assign _
+  | Increment _
+  | Commented _
+  | Label _ -> None
+  | Seq (stmt1, stmt2) ->
+    all_but_last_return_expression (mk_seq stmt_acc stmt1) stmt2

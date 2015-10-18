@@ -1650,10 +1650,20 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           naasty_of_flick_function_expr_body init_ctxt init_assign_acc init_statmt
             fn_expr_body local_name_map st''' in
         let body'' =
-          assert (n_res_ty <> Unit_Type); (*Unit functions should have been
-                                            handled in a different branch.*)
-          (*Add "Return result_idx" to end of function body*)
-          Seq (body', Return (Some (Var result_idx))) in
+          begin
+            assert (n_res_ty <> Unit_Type); (*Unit functions should have been
+                                              handled in a different branch.*)
+(*NOTE originally this transformation was applied here, but at this point we get
+       false positives: we might assign some X to result_idx, but not assign
+       anything to X. This is subsequently optimised such that result_idx is X,
+       and we end up with the same problem we sought to eradicate: we return an
+       uninitialised value. This problem is fixed by first applying all the
+      optimisations we can, and only then applying this transformation.
+              let body' = Icl_transformations.ensure_result_is_assigned_to
+                          result_idx body' in*)
+            (*Add "Return result_idx" to end of function body*)
+            Seq (body', Return (Some (Var result_idx)))
+          end in
         (body'', st4) in
 
     let (fn_idx, st5) = (*FIXME code style here sucks*)
@@ -1737,6 +1747,35 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                   if !Config.cfg.Config.disable_simplification then
                     body
                   else Simplify.simplify_stmt body)
+                |> (fun body ->
+                  let result =
+                    match last_return_expression body with
+                    | None ->
+                      failwith "Body does not have 'return' statement"
+                    | Some naasty_e_opt -> naasty_e_opt in
+                  match result with
+                  | None ->
+                    (*The return doesn't carry an expression, so there's no need
+                      to apply the transformation. Simply return the body as it
+                      is*)
+                    body
+                  | Some e ->
+                    begin
+                      match e with
+                      | Var result_idx ->
+                        Icl_transformations.ensure_result_is_assigned_to
+                          result_idx body
+                      | _ ->
+                        (*We return some expression. We assume that its
+                         subexpressions have all been assigned to, so we
+                         return the expression as it is.
+                         FIXME check if this assumption is sensible.*)
+                        body
+                    end)
+                (*Re-apply these transformations, since we might have introduced
+                  an introduction by Icl_transformations.ensure_result_is_assigned_to*)
+                |> inlined_body init_table st5
+                |> var_erased_body init_table st5
           },
         st5)
 

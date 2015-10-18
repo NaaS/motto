@@ -1036,7 +1036,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem (size, true) ctxt_acc then ctxt_acc else (size, true) :: ctxt_acc in
     let ctxt_acc' =
-      if List.mem (inputs, true) ctxt_acc' then ctxt_acc' else (inputs, true) :: ctxt_acc' in
+      if List.mem (inputs, false) ctxt_acc' then ctxt_acc' else (inputs, false) :: ctxt_acc' in
     let (chan_name, opt) = channel_identifier in
     let chan_index = the opt in
     (* let (chan_index, _) = input_map chan_name st'' opt in *)
@@ -1113,7 +1113,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ctxt_acc' =
       if List.mem (size, true) ctxt_acc' then ctxt_acc' else (size, true) :: ctxt_acc' in
     let ctxt_acc' =
-      if List.mem (outputs, true) ctxt_acc' then ctxt_acc' else (outputs, true) :: ctxt_acc' in
+      if List.mem (outputs, false) ctxt_acc' then ctxt_acc' else (outputs, false) :: ctxt_acc' in
 (*FIXME calculate channel offset*)
     let (chan_name, opt) = channel_identifier in
     let (_, chan_type) =  output_map chan_name st'' opt in
@@ -1171,7 +1171,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
                    (Int_Type (None, default_int_metadata))) st' in
     (*FIXME code style here sucks*)
     let ctxt_acc' =
-      if List.mem (inputs, true) ctxt_acc then ctxt_acc else (inputs, true) :: ctxt_acc in
+      if List.mem (inputs, false) ctxt_acc then ctxt_acc else (inputs, false) :: ctxt_acc in
     let (chan_name, opt) = channel_identifier in
     (* let (chan_index, chan_type) =  input_map chan_name st'' opt in *)
     let chan_index = the opt in

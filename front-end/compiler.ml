@@ -112,7 +112,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
             Naasty_aux.extend_scope_unsafe (Term Function_Name) st
               ~ty_opt:None(*FIXME put function's type here?*) fn_name
           else
-            failwith ("Function name '" ^ fn_name ^ "' isn't fresh.") in
+            failwith ("Function name '" ^ fn_name ^ "' is not fresh.") in
 
         let (dis, (chans, arg_tys), ret_tys) =
           Crisp_syntax_aux.extract_function_types fn_params in
@@ -146,7 +146,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
             | (false, (expected_ty, actual_ty)) ->
               let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
               let actual_ty_s = type_value_to_string true false min_indentation actual_ty in
-              failwith ("Types don't check in function '" ^ fn_name ^ "'. Expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
+              failwith ("Types do not check in function '" ^ fn_name ^ "'. Expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
         (*NOTE order of declarations isn't preserved within term_symbols*)
         st'
       | Some (_, _) -> failwith ("Function '" ^ fn_name ^ "' declared more than once")

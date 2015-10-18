@@ -488,7 +488,7 @@ let rec ty_of_expr
                  field_ty = def_undefined)) field_tys in
           if not field_exists_in_record then
             raise (Type_Inference_Exc ("Label '" ^ label ^
-                                       "' doesn't belong to a field in record", e, st))
+                                       "' does not belong to a field in record", e, st))
         | _ ->
           (*FIXME give more info*)
           raise (Type_Inference_Exc ("Expected record type", e, st)) in
@@ -644,7 +644,7 @@ let rec ty_of_expr
              in if e_ty_anonymous <> disj_ty_anonymous then
                let e_ty_anonymous_s = type_value_to_string true false min_indentation e_ty_anonymous in
                let disj_ty_anonymous_s = type_value_to_string true false min_indentation disj_ty_anonymous in
-               raise (Type_Inference_Exc ("Disjunct " ^ label ^ " has doesn't match expected type: expected " ^ disj_ty_anonymous_s ^ " but found " ^ e_ty_anonymous_s, e, st))
+               raise (Type_Inference_Exc ("Disjunct " ^ label ^ " has does not match expected type: expected " ^ disj_ty_anonymous_s ^ " but found " ^ e_ty_anonymous_s, e, st))
         ) expected_disjunct_heads (*FIXME give more info*) in
     (*within cases, the head must be a Functor_App, a disjunct of ty.*)
     let actual_disjuncts, body_tys =
@@ -703,7 +703,7 @@ let rec ty_of_expr
         if forget_label ty <> acc then
           let ty_s = type_value_to_string true false min_indentation ty in
           let acc_s = type_value_to_string true false min_indentation acc in
-          raise (Type_Inference_Exc ("Bodies don't all have the same type: " ^ ty_s ^ " vs " ^ acc_s, e, st))
+          raise (Type_Inference_Exc ("Bodies do not all have the same type: " ^ ty_s ^ " vs " ^ acc_s, e, st))
         else acc) (List.tl body_tys) (List.hd body_tys |> forget_label) in
     (ty, st)
 

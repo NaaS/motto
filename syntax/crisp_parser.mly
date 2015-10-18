@@ -193,7 +193,7 @@ base_type:
   | TYPE_BOOLEAN {fun name ann -> Crisp_syntax.Boolean (name, ann)}
   | TYPE_IPv4ADDRESS
     {fun name ann ->
-      if ann <> [] then failwith "ipv4_address type shouldn't be annotated"
+      if ann <> [] then failwith "ipv4_address type should not be annotated"
       else Crisp_syntax.IPv4Address name}
 
 (*FIXME need to include termination conditions for lists and string*)
@@ -292,12 +292,12 @@ single_line_type_def:
   | TYPE; type_name = IDENTIFIER
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_type_annotation.type_annotation) ->
-       if ann <> [] then failwith "user-defined type shouldn't be annotated"
+       if ann <> [] then failwith "user-defined type should not be annotated"
        else Crisp_syntax.UserDefinedType (name, type_name)}
   | type_name = IDENTIFIER
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_type_annotation.type_annotation) ->
-       if ann <> [] then failwith "user-defined type shouldn't be annotated"
+       if ann <> [] then failwith "user-defined type should not be annotated"
        else Crisp_syntax.UserDefinedType (name, type_name)}
   | LEFT_S_BRACKET; td = type_def; RIGHT_S_BRACKET
     {fun (name : Crisp_syntax.label option)
@@ -312,12 +312,12 @@ single_line_type_def:
   | TYPE_TUPLE; LEFT_R_BRACKET; tl = singleline_type_list; RIGHT_R_BRACKET
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_type_annotation.type_annotation) ->
-       if ann <> [] then failwith "user-defined type shouldn't be annotated"
+       if ann <> [] then failwith "user-defined type should not be annotated"
        else Crisp_syntax.Tuple (name, tl)}
   | LT; tl = singleline_type_list_ast; GT
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_type_annotation.type_annotation) ->
-       if ann <> [] then failwith "user-defined type shouldn't be annotated"
+       if ann <> [] then failwith "user-defined type should not be annotated"
        else Crisp_syntax.Tuple (name, tl)}
   | TYPE_DICTIONARY; LEFT_S_BRACKET; idx_td = type_def; RIGHT_S_BRACKET; td = type_def
     {fun (name : Crisp_syntax.label option)
@@ -327,7 +327,7 @@ single_line_type_def:
   | TYPE_REF (*FIXME use sigil*); ty = single_line_type_def
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_type_annotation.type_annotation) ->
-       if ann <> [] then failwith "reference types shouldn't be annotated"
+       if ann <> [] then failwith "reference types should not be annotated"
        else Crisp_syntax.Reference (name, ty None ann)}
 
 type_def:
@@ -340,7 +340,7 @@ type_def:
   | TYPE_VARIANT; INDENT; tl = type_lines
     {fun (name : Crisp_syntax.label option)
          (ann : Crisp_type_annotation.type_annotation) ->
-     if ann <> [] then failwith "variant type shouldn't be annotated"
+     if ann <> [] then failwith "variant type should not be annotated"
      else Crisp_syntax.Disjoint_Union (name, tl)}
   | TYPE_RECORD; INDENT; ann = type_annotation; NL;
     tl = type_lines

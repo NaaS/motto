@@ -1343,7 +1343,7 @@ let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
         match lookup_symbol_type idx (Term Undetermined)(*all ctxt symbols are term-level*)
                 st' with
         | None ->
-          raise (Translation_Expr_Exc ("Couldn't resolve type of ctxt idx " ^
+          raise (Translation_Expr_Exc ("Could not resolve type of ctxt idx " ^
                              string_of_int idx, Some flick_body,
                              Some local_name_map, Some init_statmt, st'))
         | Some ty -> Declaration (ty, None)
@@ -1704,7 +1704,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                   if body = body' then
                     begin
                       if !Config.cfg.Config.verbosity > 0 then
-                        print_endline ("(Variable erasure didn't change anything at this iteration)");
+                        print_endline ("(Variable erasure did not change anything at this iteration)");
                       body
                     end
                   else var_erased_body init_table st body'

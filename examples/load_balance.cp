@@ -15,7 +15,7 @@ type http_response : record
   response_data : string
 
 #fun LB : (type http_request/type http_response client, type http_response/type http_request backend; backend_choices : [type channel_metadata])
-fun LB : {no_backends, backend_choices} => (http_request/http_response client, http_response/http_request backend) -> ()
+process LB : {no_backends, backend_choices} => (http_request/http_response client, http_response/http_request backend)
   local set : boolean := False
 
   # FIXME this block should be removed. It serves to make declarations that
@@ -40,7 +40,7 @@ fun LB : {no_backends, backend_choices} => (http_request/http_response client, h
   else: <>
   backend => client
 
-#fun LB_response : {no_backends} => (http_request/http_response client, http_response/http_request backend) -> ()
+#process LB_response : {no_backends} => (http_request/http_response client, http_response/http_request backend)
 #  for i in 0 .. (no_backends - 1):
 #    if can ?? backends[i]:
 #      let x = ?? backends[i]

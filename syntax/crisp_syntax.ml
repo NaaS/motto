@@ -54,6 +54,9 @@ type type_value =
     (*NOTE ChanType should not be contained in any other types -- lists,
            variants, etc*)
   | ChanType of label option * channel_type
+    (*This type carries a type that has no meaning to Flick, it has meaning for
+      a back-end to which Flick is translated.*)
+  | IL_Type of Naasty.naasty_type
 and channel_type =
   | ChannelSingle of type_value * type_value
   | ChannelArray of type_value * type_value * dependency_index option
@@ -134,6 +137,8 @@ let rec type_value_to_string ?summary_types:(summary_types : bool = false)
   | Undefined s -> "undefined(" ^ s ^ ")"
   | ChanType (label_opt, ct) -> "channel " ^
       opt_string (indn indent) label_opt " : " ^ channel_type_to_string ct
+  | IL_Type naasty_ty ->
+    (*FIXME print out the naasty_ty*) "<IL_Type>"
 
 and channel_type_to_string = function
   | ChannelSingle (type_value1, type_value2) ->

@@ -61,6 +61,11 @@ type naasty_type =
                 naasty_type list (*argument types*)
   | Chan_Type of identifier option * bool(*if this is an array of channels*) *
                  chan_direction * naasty_type
+  | Literal_Type of identifier option * string
+
+let is_literal_type = function
+  | Literal_Type _ -> true
+  | _ -> false
 
 type template_parameter =
   | Type_Parameter of naasty_type
@@ -148,3 +153,51 @@ type naasty_declaration =
   | Stmt of naasty_statement
 
 type naasty_program = naasty_declaration list
+
+let update_empty_identifier (idx : identifier) (ty : naasty_type) =
+  match ty with
+  | Int_Type (id_opt, int_metadata) ->
+    if id_opt = None then
+      Int_Type (Some idx, int_metadata)
+    else failwith "Cannot set an already-set index"
+  | Bool_Type id_opt ->
+    if id_opt = None then
+      Bool_Type (Some idx)
+    else failwith "Cannot set an already-set index"
+  | Char_Type id_opt ->
+    if id_opt = None then
+      Char_Type (Some idx)
+    else failwith "Cannot set an already-set index"
+  | Array_Type (id_opt, naasty_type, array_size) ->
+    if id_opt = None then
+      Array_Type (Some idx, naasty_type, array_size)
+    else failwith "Cannot set an already-set index"
+  | Record_Type (ty_ident, fields) ->
+    failwith "Cannot update index of this type."
+  | Unit_Type -> ty
+  | UserDefined_Type (id_opt, ty_ident) ->
+    if id_opt = None then
+      UserDefined_Type (Some idx, ty_ident)
+    else failwith "Cannot set an already-set index"
+  | Pointer_Type (id_opt, naasty_type) ->
+    if id_opt = None then
+      Pointer_Type (Some idx, naasty_type)
+    else failwith "Cannot set an already-set index"
+  | Size_Type id_opt ->
+    if id_opt = None then
+      Size_Type (Some idx)
+    else failwith "Cannot set an already-set index"
+  | Static_Type (id_opt, naasty_type) ->
+    if id_opt = None then
+      Static_Type (Some idx, naasty_type)
+    else failwith "Cannot set an already-set index"
+  | Fun_Type (_, _, _) ->
+    failwith "Cannot update index of this type."
+  | Chan_Type (id_opt, is_array, chan_direction, naasty_type) ->
+    if id_opt = None then
+      Chan_Type (Some idx, is_array, chan_direction, naasty_type)
+    else failwith "Cannot set an already-set index"
+  | Literal_Type (id_opt, s) ->
+    if id_opt = None then
+      Literal_Type (Some idx, s)
+    else failwith "Cannot set an already-set index"

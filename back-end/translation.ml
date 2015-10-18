@@ -238,6 +238,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
         update_symbol_type idx translated_ty (Term ik) st'' in
     let st''' = update_naasty_ty ik translated_ty label_opt st'''
     in (translated_ty, st''')
+  | IL_Type naasty_ty -> naasty_ty, st
   | RecordType (label_opt, tys, type_ann) ->
     if (type_ann <> []) then
       failwith "Record serialisation annotation not supported"; (*TODO*)
@@ -530,7 +531,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let ((sts_acc', ctxt_acc', assign_acc', st'), local_name_map',
          acc_label_idx_opt) =
       match acc_opt with
-      | None -> ((sts_acc, ctxt_acc, assign_acc, st), local_name_map, None)
+      | None -> ((sts_acc, ctxt_acc, [], st), local_name_map, None)
       | Some (acc_label, acc_init) ->
         let acc_init_ty = (*FIXME use type inference*)
           Int_Type (None, default_int_metadata) in
@@ -1068,9 +1069,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       naasty_of_flick_expr st' e local_name_map sts_acc
         (e_idx :: ctxt_acc) [e_idx] in
 
-    (*Add "te" declaration, unless it already exists in ctxt_acc*)
-    let taskevent_ty, te, st' =
-      Naasty_aux.add_usertyped_symbol "TaskEvent" "te" st in
+    (*Add "te" declaration, unless it already exists in ctxt_acc.
+      We set it to be of a type TaskEvent that's "opaque" to the IL*)
+    let te, st' =
+      let taskevent_ty = Literal_Type (None, "TaskEvent") in
+      Naasty_aux.add_symbol "te" (Term Value)
+        ~ty_opt:(Some taskevent_ty) st in
     (*NOTE "size" value tells us how much data has been consumed. Should have
            distinct "size" variable for each occurrence of a channel-related
            function.
@@ -1079,7 +1083,6 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
            wasted space -- FIXME this optimisation could be done by the compiler.*)
     let size, st'' =
       Naasty_aux.add_symbol "size" (Term Value)
-        (*FIXME type should be "size_t"*)
         ~ty_opt:(Some (Size_Type None)) st' in
     let outputs, st'' =
       let ty =
@@ -1204,8 +1207,11 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       |> Naasty_aux.concat
 
         in (Naasty_aux.concat [sts_acc; peek_with_check; assignments],
-        (*add declaration for the fresh name we have for this tuple instance*)
-        ret_func :: peek_idx :: ctxt_acc',
+        (*add declaration for the fresh name we have for this tuple instance.
+          NOTE we don't include ret_func in this list, since it represents
+               a function symbol, and therefore doesn't need to be declared
+               in the same way as variables (which we're concerned with here).*)
+        peek_idx :: ctxt_acc',
         [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
         st'')
@@ -1337,17 +1343,9 @@ let naasty_of_flick_function_expr_body (ctxt : Naasty.identifier list)
         match lookup_symbol_type idx (Term Undetermined)(*all ctxt symbols are term-level*)
                 st' with
         | None ->
-          (* FIXME should raise this exception, but currently this seems to
-                   interact badly with the (ad hoc) way we're handling the symbol for
-                   TaskEvent
           raise (Translation_Expr_Exc ("Couldn't resolve type of ctxt idx " ^
                              string_of_int idx, Some flick_body,
                              Some local_name_map, Some init_statmt, st'))
-             *)
-          (*FIXME this is temporary -- we get this problem for "TaskEvent"
-                  symbol since it's not being cleanly introduced into the symbol
-                  table*)
-          Commented (Skip, "Could not resolve type of idx" ^ string_of_int idx)
         | Some ty -> Declaration (ty, None)
       in mk_seq decl stmt) ctxt' body
   in (body', st')
@@ -1621,6 +1619,9 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
           mk_fresh (Term Value) ~ty_opt:(Some n_res_ty) "result_" 0 st'' in
         (*Add type declaration for result_idx, which should be the same as res_ty
           since result_idx will carry the value that's computed in this function.*)
+        (*FIXME need a transformation such that if result_idx hasn't been
+                assigned to in the body, then it's assigned to some default
+                expression.*)
         let init_ctxt = decl_var_indices @ [result_idx] in
         let init_assign_acc = [result_idx] in
         let body', st4 =

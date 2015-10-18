@@ -331,7 +331,7 @@ let rec preprocess_exp st e : Crisp_syntax.expression * State.state =
   | Meta_quoted _
   | Hole -> e, st
 
-let preprocess_decl st toplevel_decl =
+let rec preprocess_decl st toplevel_decl =
   match toplevel_decl with
   | Type _ -> toplevel_decl, st
   | Function {fn_name; fn_params; fn_body} ->
@@ -342,8 +342,24 @@ let preprocess_decl st toplevel_decl =
         (*NOTE currently we don't recurse into expressions within state_decls
                and excepts_decls*)
         ProcessBody (state_decls, body', excepts_decls), st' in
-    Function {fn_name = fn_name; fn_params = fn_params; fn_body = fn_body'}, st'
-  | Process _ -> failwith "Unsupported"
+      Function {fn_name = fn_name; fn_params = fn_params; fn_body = fn_body'}, st'
+  | Process {process_name; process_type; process_body} ->
+    (*We rewrite a process declaration into a specific type of function
+      declaration*)
+    let fn_params =
+      match process_type with
+      | ProcessType (dis, (chans, args)) ->
+        FunType (dis, FunDomType (chans, args)(*the function signature is
+                                                transformed during post-processing*),
+                 FunRetType [IL_Type Types.task_event_ty]) in
+    let fun_decl =
+      Function
+        {fn_name = process_name;
+         fn_params = fn_params;
+         fn_body = process_body}
+    in
+    preprocess_decl st fun_decl
+
   | Include _ -> toplevel_decl, st
 
 let preprocess st toplevel_decls =

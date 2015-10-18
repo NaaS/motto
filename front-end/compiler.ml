@@ -306,4 +306,5 @@ let front_end ?st:(st : state = initial_state) (cfg : Config.configuration ref) 
 let back_end (cfg : Config.configuration ref) inputs : (string * string) list =
   if !Config.cfg.Config.translate then
     uncurry Icl_backend.translate inputs
+    (*FIXME post-process to fix the function signature*)
   else []

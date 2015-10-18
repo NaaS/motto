@@ -194,8 +194,16 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
     begin
     match idx_of_naasty_type ty with
     | None ->
-      raise (Inliner_Exc ("Declaration must contain an identifier name, not just mention a type!" ,
-                          Some st, Some stmt))
+      if is_literal_type ty then
+        (*FIXME we currently treat Literal_Type as a pass-through, but really
+                should have a flag in the type, such that the flag indicates
+                that the type is already interpreted by the backend, and doesn't
+                need to be declared*)
+        table
+      else
+        raise (Inliner_Exc
+                 ("Declaration must contain an identifier name, not just mention a type!" ,
+                  Some st, Some stmt))
     | Some idx ->
       let no_idx_entries =
         List.fold_right (fun (entry : inliner_table_entry) acc ->
@@ -247,11 +255,21 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
                          assignment = Some expr }
         else entry) table
     else
-      raise (Inliner_Exc ("Impossible: " ^ string_of_int no_idx_entries ^
-                " records for the idx " ^
-                string_of_int idx ^ " -- variable " ^
-                resolve_idx (Term Value) no_prefix (Some st) idx,
-               Some st, Some stmt))
+      begin
+        match lookup_symbol_type idx (Term Value) st with
+        | Some ty when is_literal_type ty ->
+            (*FIXME we currently treat Literal_Type as a pass-through, but really
+                    should have a flag in the type, such that the flag indicates
+                    that the type is already interpreted by the backend, and doesn't
+                    need to be declared*)
+          table
+        | _ ->
+          raise (Inliner_Exc ("Impossible: " ^ string_of_int no_idx_entries ^
+                    " records for the idx " ^
+                    string_of_int idx ^ " -- variable " ^
+                    resolve_idx (Term Value) no_prefix (Some st) idx,
+                   Some st, Some stmt))
+      end
 
   | Assign (_, _) ->
     (*The lvalue is not a Var (because we've already checked that), so this
@@ -294,8 +312,9 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
     begin
     match idx_of_naasty_type cursor with
     | None ->
-      raise (Inliner_Exc ("Cursor must contain an identifier name, not just mention a type!" ,
-                          Some st, Some stmt))
+      raise (Inliner_Exc
+               ("Cursor must contain an identifier name, not just mention a type!" ,
+                Some st, Some stmt))
     | Some idx ->
       let no_idx_entries =
         List.fold_right (fun (entry : inliner_table_entry) acc ->
@@ -668,8 +687,15 @@ let rec erase_vars ?aggressive:(aggressive : bool = false) (stmt : naasty_statem
     begin
     match idx_of_naasty_type ty with
     | None ->
-      raise (Inliner_Exc ("Declaration must contain an identifier name, not just mention a type!",
-                          None, None))
+      if is_literal_type ty then
+        (*FIXME we currently treat Literal_Type as a pass-through, but really
+                should have a flag in the type, such that the flag indicates
+                that the type is already interpreted by the backend, and doesn't
+                need to be declared*)
+        stmt
+      else
+        raise (Inliner_Exc ("Declaration must contain an identifier name, not just mention a type!",
+                            None, None))
     | Some idx ->
       if List.mem idx idents then Skip else stmt
     end

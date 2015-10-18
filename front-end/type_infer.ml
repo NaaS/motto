@@ -205,22 +205,24 @@ let rec ty_of_expr
 
   | Str _ -> (String (None, []), st)
 
-  | LocalDef ((value_name, type_value_opt), e) ->
+  | LocalDef ((value_name, type_value_opt), e') ->
     let ty =
-      let e_ty, _ = ty_of_expr ~strict st e in
+      let e_ty, _ = ty_of_expr ~strict st e' in
       match type_value_opt with
       | None ->
         (*We MUST be able to infer the type of e, either from the type
           annotation, or from e itself. If e's type is Undefined, and no
           annotation is given, then complain.*)
         if undefined_ty e_ty then
-          raise (Type_Inference_Exc ("A ground type cannot be inferred for this expression.", e, st))
+          raise (Type_Inference_Exc
+                   ("A ground type cannot be inferred for this expression.", e, st))
         else e_ty
       | Some ty_value ->
         if type_match ty_value e_ty then
           ty_value
         else
-          raise (Type_Inference_Exc ("Matching failed. A ground type cannot be inferred for this expression.", e, st)) in
+          raise (Type_Inference_Exc
+                   ("Matching failed. A ground type cannot be inferred for this expression.", e, st)) in
     let _ =
       let scope = Term Undetermined (*we actually only want a Value identifier kind,
                                       and this is checked below to provide a more
@@ -239,7 +241,10 @@ let rec ty_of_expr
             match identifier_kind with
             | Value -> ()
             | _ ->
-              raise (Type_Inference_Exc ("Name " ^ value_name ^ " is already used for a non-value identifier, of kind " ^ string_of_identifier_kind identifier_kind, e, st)) in
+              raise (Type_Inference_Exc
+                       ("Name '" ^ value_name ^
+                        "' is already used for a non-value identifier, of kind '" ^
+                        string_of_identifier_kind identifier_kind ^ "'", e, st)) in
           (*Now we check to ensure that the type of the new binding is the same as the old.*)
           match source_type with
           | None -> raise (Type_Inference_Exc ("LocalDef: Missing source type for '" ^ value_name ^ "'", e, st))

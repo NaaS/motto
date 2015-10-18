@@ -389,7 +389,8 @@ let variables_to_be_erased : inliner_table_entry list -> inliner_table_entry lis
 
 let rec naasty_expression_weight = function
   | Int_Value _
-  | Bool_Value _ -> 0
+  | Bool_Value _
+  | Literal _ -> 0
   | Var _
   | Const _ -> 1
   | Abs e
@@ -424,7 +425,7 @@ let rec naasty_expression_weight = function
     List.fold_right (fun (_, e) weight_acc ->
       naasty_expression_weight e + weight_acc) fields 1
   | e ->
-    raise (Inliner_Exc ("naasty_expression_weight", None, Some (St_of_E e)))
+    raise (Inliner_Exc ("Match error for naasty_expression_weight", None, Some (St_of_E e)))
 
 let inliner_table_entry_weight entry =
   bind_opt naasty_expression_weight 0 entry.initialisation +
@@ -461,7 +462,8 @@ let rec free_vars (expr : naasty_expression) (acc : Identifier_Set.t) : Identifi
 
   | Int_Value _
   | Bool_Value _
-  | Const _ -> acc
+  | Const _
+  | Literal _ -> acc
 
   | Cast
       (_ (*we don't count any identifiers used in types*),

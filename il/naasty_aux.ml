@@ -1083,3 +1083,24 @@ let rec all_but_last_return_expression (stmt_acc : naasty_statement)
   | Label _ -> None
   | Seq (stmt1, stmt2) ->
     all_but_last_return_expression (mk_seq stmt_acc stmt1) stmt2
+
+let rec purge_commented_declarations (stmt : naasty_statement) : naasty_statement =
+  match stmt with
+  | Declaration (_, _, b) ->
+    if b then stmt else Skip
+  | Return _
+  | Continue
+  | Break
+  | Skip
+  | St_of_E _
+  | GotoLabel _
+  | Switch _
+  | For _
+  | If _
+  | If1 _
+  | Assign _
+  | Increment _
+  | Commented _
+  | Label _ -> stmt
+  | Seq (stmt1, stmt2) ->
+    mk_seq (purge_commented_declarations stmt1) (purge_commented_declarations stmt2)

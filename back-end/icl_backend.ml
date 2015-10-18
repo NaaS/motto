@@ -84,6 +84,30 @@ let translate_function_compilation_unit (st : state)
        let (translated, st'') =
          if !Config.cfg.Config.translate then
            Translation.naasty_of_flick_program ~st:st' [flick_f]
+(*FIXME only apply this to processes, not all functions*)
+           |> (fun (prog, st') ->
+             let inputs_idx =
+               match lookup_name (Term Value) st' "inputs" with
+               | None -> failwith "Impossible: 'inputs' does not have an idx"
+               | Some idx -> idx in
+             let outputs_idx =
+               match lookup_name (Term Value) st' "outputs" with
+               | None -> failwith "Impossible: 'outputs' does not have an idx"
+               | Some idx -> idx in
+             match prog with
+             | [Fun_Decl {id; (*arg_tys; FIXME sanity check on arg_tys? to make
+                                               sure it's what we expect it to be*)
+                          ret_ty; body}] ->
+               let arg_tys' =
+                 [Literal_Type (Some inputs_idx, "std::vector<Buffer *> &");
+                  Literal_Type (Some outputs_idx, "std::vector<Buffer *> &")] in
+               let body' =
+                (*Filter out declarations of "inputs" and "outputs" in
+                  function body, as well as any other suppressed declarations.*)
+                 Naasty_aux.purge_commented_declarations body in
+               [Fun_Decl {id; arg_tys = arg_tys'; ret_ty; body = body'}], st'
+             | _ ->
+               failwith "Was expecting a function declaration")
          else ([], st') in
        ({Naasty_project.name = name;
          Naasty_project.unit_type = Naasty_project.Cpp;

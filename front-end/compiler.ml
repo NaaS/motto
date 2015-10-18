@@ -175,7 +175,8 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
       { st'' with type_declarations =
                     (type_name, type_value, nst_ty) :: st''.type_declarations}
     | Process {process_name; process_type; process_body} ->
-      (*FIXME work in progress:
+      failwith "Unsupported"
+(*      (*FIXME work in progress:
               some duplication with code that handles function declarations.
               seems like a good idea to kinda treat this as a function*)
       let fn_params =
@@ -213,6 +214,7 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
         st'
       | Some (_, _) -> failwith ("Process '" ^ process_name ^ "' declared more than once")
       end
+*)
     | Include _ ->
       failwith "Inclusions should have been expanded before reaching this point.")
     p st

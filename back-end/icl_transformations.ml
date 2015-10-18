@@ -249,9 +249,18 @@ let rec preprocess_decl st toplevel_decl =
       Function
         {fn_name = process_name;
          fn_params = fn_params;
-         fn_body = process_body}
-    in
-    preprocess_decl st fun_decl
+         fn_body = process_body} (*in
+    let st =
+      (*Mark this declaration as being that of a process, not a function*)
+      { st with
+        crisp_funs = List.map (fun ((name, (b, params)) as record) ->
+          if name = process_name then
+            begin
+              assert b;
+              (name, (false, params))
+            end
+          else record) st.crisp_funs }*)
+    in preprocess_decl st fun_decl
 
   | Include _ -> toplevel_decl, st
 

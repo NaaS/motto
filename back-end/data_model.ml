@@ -94,7 +94,7 @@ let get_channel_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       let ret_ty = Size_Type None in
       let body =
         [
-          Declaration (Size_Type (Some lenI), Some (Int_Value 0));
+          Declaration (Size_Type (Some lenI), Some (Int_Value 0), true);
           Commented (Skip, "Length of fixed-length parts");
           Assign (Var lenI, Call_Function (sizeofI, [], [Var datatype_nameI]));
           Commented (Skip, "Length of variable-length parts");
@@ -155,7 +155,7 @@ let get_stream_len (datatype_name : string) (ty : Crisp_syntax.type_value) =
       let ret_ty = Size_Type None in
       let body =
         [
-          Declaration (Size_Type (Some lenI), Some (Int_Value 0));
+          Declaration (Size_Type (Some lenI), Some (Int_Value 0), true);
           Commented (Skip, "Length of fixed-length parts");
           Naasty_aux.concat body_contents1;
           Commented (Skip, "Length of variable-length parts");
@@ -265,10 +265,10 @@ let bytes_stream_to_channel (datatype_name : string) (ty : Crisp_syntax.type_val
       let fun_name_idx = datatype_bstcI in
       let body =
         [
-          Declaration (Size_Type (Some read_offsetI), Some (Int_Value 0));
-          Declaration (Size_Type (Some write_offsetI), Some (Int_Value 0));
+          Declaration (Size_Type (Some read_offsetI), Some (Int_Value 0), true);
+          Declaration (Size_Type (Some write_offsetI), Some (Int_Value 0), true);
           Declaration (param_data_ty (Some dataI),
-                       Some (Cast (param_data_ty None, Var channelI)));
+                       Some (Cast (param_data_ty None, Var channelI)), true);
 
           Commented (Skip, "Handling fixed-length data");
           Naasty_aux.concat body_contents1;
@@ -380,9 +380,9 @@ let write_bytes_to_channel (datatype_name : string) (ty : Crisp_syntax.type_valu
       let fun_name_idx = datatype_wbtcI in
       let body =
         [
-          Declaration (Size_Type (Some offsetI), Some (Int_Value 0));
+          Declaration (Size_Type (Some offsetI), Some (Int_Value 0), true);
           Declaration (param_data_ty (Some copyI),
-                       Some (Cast (param_data_ty None, Var channelI)));
+                       Some (Cast (param_data_ty None, Var channelI)), true);
 
           Commented (Skip, "Handling fixed-length data");
           Naasty_aux.concat body_contents1;
@@ -501,9 +501,9 @@ let bytes_channel_to_stream (datatype_name : string) (ty : Crisp_syntax.type_val
       let fun_name_idx = datatype_bctsI in
       let body =
         [
-          Declaration (Size_Type (Some offsetI), Some (Int_Value 0));
+          Declaration (Size_Type (Some offsetI), Some (Int_Value 0), true);
           Declaration (param_data_ty (Some dataI),
-                       Some (Cast (param_data_ty None, Var channelI)));
+                       Some (Cast (param_data_ty None, Var channelI)), true);
           Assign (Dereference (Var bytes_readI),
                   Field_In_Record
                     (Dereference (Var dataI),

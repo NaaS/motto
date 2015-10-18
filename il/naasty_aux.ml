@@ -330,14 +330,19 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
   let terminal =
     if print_semicolon then ";" else "" in
   match statement with
-  | Declaration (ty, e_opt) ->
+  | Declaration (ty, e_opt, b) ->
     (*NOTE assuming that types can only be defined globally,
            but they can be used in local variable declarations.*)
     let definition =
       match e_opt with
       | None -> ""
-      | Some e -> " = " ^ fst (string_of_naasty_expression ~st_opt e)
-    in string_of_naasty_type ~st_opt indent ty ^ definition ^ terminal
+      | Some e -> " = " ^ fst (string_of_naasty_expression ~st_opt e) in
+    let prefix_s, trailing_comment_s =
+      if not b then
+        "/*", " -- This declaration is not to be emitted to the back-end*/"
+      else "", ""
+    in indn indent ^ prefix_s ^ string_of_naasty_type ~st_opt no_indent ty ^
+       definition ^ trailing_comment_s ^ terminal
   | Seq (stmt1, stmt2) ->
     string_of_naasty_statement ~st_opt indent stmt1 ^ "\n" ^
     string_of_naasty_statement ~st_opt indent stmt2
@@ -808,7 +813,7 @@ let rec instantiate_expression (fresh : bool) (names : string list) (st : state)
 let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
       (scheme : naasty_statement) : naasty_statement * state =
   match scheme with
-  | Declaration (ty, e_opt) ->
+  | Declaration (ty, e_opt, b) ->
     let (ty', st') = instantiate_type fresh names st ty in
     let (e_opt', st'') =
       match e_opt with
@@ -816,7 +821,7 @@ let rec instantiate_statement (fresh : bool) (names : string list) (st : state)
       | Some e ->
         let (e', st'') = instantiate_expression fresh names st' e
         in (Some e', st'')
-    in (Declaration (ty', e_opt'), st'')
+    in (Declaration (ty', e_opt', b), st'')
   | Seq (stmt1, stmt2) ->
     let (stmt1', st') = instantiate_statement fresh names st stmt1 in
     let (stmt2', st'') = instantiate_statement fresh names st' stmt2

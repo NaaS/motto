@@ -60,11 +60,11 @@ let rec simplify_expr (e : naasty_expression) : naasty_expression =
 
 let rec simplify_stmt (stmt : naasty_statement) : naasty_statement =
   match stmt with
-  | Declaration (ty, e_opt) ->
+  | Declaration (ty, e_opt, b) ->
     begin
       match e_opt with
       | None -> stmt
-      | Some e' -> Declaration (ty, Some (simplify_expr e'))
+      | Some e' -> Declaration (ty, Some (simplify_expr e'), b)
     end
   | Seq (stmt1, stmt2) ->
     Seq (simplify_stmt stmt1, simplify_stmt stmt2)

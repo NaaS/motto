@@ -119,7 +119,13 @@ and naasty_expression =
 
 type naasty_statement =
     (*Should include function prototypes here?*)
-  | Declaration of naasty_type * naasty_expression option
+  | Declaration of naasty_type(*the declared variable and its type*) *
+                   naasty_expression option(*optional initial value*) *
+                   bool(*whether we want this declaration to be emitted, or if
+                         it's only to be used for sanity-checking (so that the
+                         compiler knows that all variables have been handled
+                         correctly, even if they're assumed to be in scope when
+                         emitted).*)
   | Seq of naasty_statement * naasty_statement
   | Assign of naasty_expression * naasty_expression
   | Increment of identifier * naasty_expression

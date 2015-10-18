@@ -127,7 +127,7 @@ let rec count_var_references_in_naasty_expr (st : state)
 let rec count_var_references_in_naasty_stmt (st : state)
   (stmt : naasty_statement) (table : inliner_table_entry list) : inliner_table_entry list =
   match stmt with
-  | Declaration (_, expr_opt) ->
+  | Declaration (_, expr_opt, _) ->
     begin
     match expr_opt with
     | None -> table
@@ -190,7 +190,7 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
   (ctxt_acc : identifier list)
   (table : inliner_table_entry list) : inliner_table_entry list =
   match stmt with
-  | Declaration (ty, expr_opt) ->
+  | Declaration (ty, expr_opt, _) ->
     begin
     match idx_of_naasty_type ty with
     | None ->
@@ -590,10 +590,10 @@ let rec subst_stmt ?subst_assignee:((subst_assignee : bool) = true)
                subst_expr subst e)
   | Commented (stmt', str) ->
     Commented (subst_stmt subst stmt', str)
-  | Declaration (ty, e_opt) ->
+  | Declaration (ty, e_opt, b) ->
     Declaration (ty (*we don't substitute into the type, we don't expect to find
                       expressions there*),
-                 bind_opt (fun e -> Some (subst_expr subst e)) None e_opt)
+                 bind_opt (fun e -> Some (subst_expr subst e)) None e_opt, b)
   | Seq (stmt1, stmt2) ->
     Seq (subst_stmt subst stmt1, subst_stmt subst stmt2)
   | Assign (e1, e2) ->
@@ -683,7 +683,7 @@ let subst_to_string ?st_opt:((st_opt : state option) = None)
   NOTE we need to descend into For, If, etc*)
 let rec erase_vars ?aggressive:(aggressive : bool = false) (stmt : naasty_statement) (idents : identifier list) : naasty_statement =
   match stmt with
-  | Declaration (ty, _) ->
+  | Declaration (ty, _, _) ->
     begin
     match idx_of_naasty_type ty with
     | None ->

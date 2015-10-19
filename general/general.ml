@@ -155,3 +155,11 @@ let list_diff (l1 : 'a list) (l2 : 'a list) : 'a list =
   List.fold_right (fun x acc ->
     if List.mem x l1 then acc
     else x :: acc) l2 []
+
+(*Weaker variant of List.assoc: it only works on assoc-lists where both elements
+  have the same type, and if we don't find the key in the map, then we simply
+  return the input unchanged*)
+let apply_endomap (map : ('a * 'a) list) (x : 'a) : 'a =
+  if List.mem_assoc x map then
+    List.assoc x map
+  else x

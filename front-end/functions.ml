@@ -21,6 +21,10 @@ type function_entry =
 
 type function_db = function_entry list
 
+let icl_backend_string_comparison =
+  (*FIXME put this in an ICL-specific module*)
+  "StringUtility::DiffStrLessThan"
+
 let function_db : function_db =
   [{name = "head";
     ty = FunType ([], FunDomType ([], [List (Some "l", def_undefined, None, [])]), FunRetType [def_undefined]);
@@ -47,6 +51,11 @@ let function_db : function_db =
    {name = "bind";
     ty = FunType ([], FunDomType ([], [def_undefined; Undefined "Y"]), FunRetType [flick_unit_type]);
     impl = (fun x -> failwith "TODO")
+   };
+   {name = icl_backend_string_comparison;
+    ty = FunType ([], FunDomType ([], [String (Some "s1", []); String (Some "s2", [])]),
+                  FunRetType [Boolean (None, [])]);
+    impl = (fun x -> failwith "This function is only implemented in the ICL backend")
    };
   ]
 

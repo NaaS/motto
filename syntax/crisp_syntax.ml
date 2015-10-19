@@ -61,6 +61,10 @@ and channel_type =
   | ChannelSingle of type_value * type_value
   | ChannelArray of type_value * type_value * dependency_index option
 
+let is_string : type_value -> bool = function
+  | String _ -> true
+  | _ -> false
+
 (*NOTE currently only a single unification variable is supported*)
 let def_undefined = Undefined "X"
 

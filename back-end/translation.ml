@@ -12,13 +12,20 @@ open Naasty_aux
 open State
 open Task_model
 open State_aux
+open Translation_aux
+
+(*FIXME must this be an integer -- use type inference?*)
+let int_sty = Integer (None, [])
+let int_ty = Int_Type (None, default_int_metadata)
+
+let lnm_tyinfer st lmn e : type_value * state =
+  apply_lnm_e lmn e
+  |> Type_infer.ty_of_expr st
 
 let require_annotations = false
 
 let unidir_chan_receive_suffix = "_receive_"
 let unidir_chan_send_suffix = "_send_"
-
-type local_name_map = (label * label) list
 
 exception Translation_Type_Exc of string * type_value
 exception Translation_Expr_Exc of
@@ -128,7 +135,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
       failwith "Boolean serialisation annotation not supported"; (*TODO*)
     let ik =
       match default_ik with
-      | None -> Value
+      | None -> Undetermined
       | Some ik -> ik in
     let (label_opt', st') = check_and_generate_name ik ty label_opt st in
     let translated_ty = Bool_Type label_opt' in
@@ -142,7 +149,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
   | Integer (label_opt, type_ann) ->
     let ik =
       match default_ik with
-      | None -> Value
+      | None -> Undetermined
       | Some ik -> ik in
     let (label_opt', st') = check_and_generate_name ik ty label_opt st in
     let translated_ty, st' =
@@ -186,7 +193,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
   | IPv4Address label_opt ->
     let ik =
       match default_ik with
-      | None -> Value
+      | None -> Undetermined
       | Some ik -> ik in
     let (label_opt', st') = check_and_generate_name ik ty label_opt st in
     let metadata = { signed = false; precision = 32; hadoop_vint = false } in
@@ -201,7 +208,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
   | String (label_opt, type_ann) ->
     let ik =
       match default_ik with
-      | None -> Value
+      | None -> Undetermined
       | Some ik -> ik in
     let (label_opt', st') = check_and_generate_name ik ty label_opt st in
     let vlen = Undefined (*FIXME determine from type_ann*) in
@@ -226,7 +233,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
   | Reference (label_opt, ty) ->
     let ik =
       match default_ik with
-      | None -> Value
+      | None -> Undetermined
       | Some ik -> ik in
     let (label_opt', st') = check_and_generate_name ik ty label_opt st in
     let (ty', st'') = naasty_of_flick_type st' ty in
@@ -252,7 +259,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
   | ChanType (label_opt, chan_type) ->  (*FIXME -- THIS IS A DUMMY NOT REAL TRANSLATION *)
     let ik =
       match default_ik with
-      | None -> Value
+      | None -> Undetermined
       | Some ik -> ik in
     let (naasty_label_opt, st) = check_and_generate_name ik ty label_opt st in
     match chan_type with  
@@ -410,14 +417,11 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   | Mod (e1, e2)
   | Quotient (e1, e2)
   | Plus (e1, e2) ->
-    let ty1, ty2 =
+    let ((ty1 : type_value), ty2) =
       match e with
       | Crisp_syntax.And (_, _)
-      | Crisp_syntax.Or (_, _) ->
-        Bool_Type None, Bool_Type None
-
-      | Equals (_, _) (*FIXME for time being we assume that only numbers can be
-                              compared for equality*)
+      | Crisp_syntax.Or (_, _)
+      | Equals (_, _)
       | GreaterThan (_, _)
       | LessThan (_, _)
       | Minus (_, _)
@@ -425,20 +429,30 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | Mod (_, _)
       | Quotient (_, _)
       | Plus (_, _) ->
-        let int_ty =
-          Int_Type (None, default_int_metadata(*FIXME this should be resolvable
-                                                later, when we know more about
-                                                where this function will be called
-                                                from and what kind of numbers it
-                                                uses?*))
-        in int_ty, int_ty
+        let ty1, _(*We don't care if the state was extended during type inference*) =
+          (*It's vital to use lnm_tyinfer and not Type_infer.ty_of_expr
+            directly, since the type inference interprets expressions literally
+            (i.e., it doesn't work modulo local_name_map).*)
+          lnm_tyinfer st local_name_map e1 in
+        let ty2, _ =
+          lnm_tyinfer st local_name_map e2
+        in ty1, ty2
       | _ -> failwith "Impossible" in
-    let (_, e1_result_idx, st') = mk_fresh (Term Value) ~ty_opt:(Some ty1) "x_" 0 st in
+
+    let naasty_ty1, st = naasty_of_flick_type st ty1 in
+    let naasty_ty2, st = naasty_of_flick_type st ty2 in
+
+    Type_infer.assert_identical_types ty1 ty2 e st;
+
+    let (e1_s, e1_result_idx, st') =
+      mk_fresh (Term Value) ~src_ty_opt:(Some ty1) ~ty_opt:(Some naasty_ty1)
+        "x_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', _, st'') =
       naasty_of_flick_expr st' e1 local_name_map sts_acc
         ((e1_result_idx, true) :: ctxt_acc) [e1_result_idx] in
-    let (_, e2_result_idx, st''') =
-      mk_fresh (Term Value) ~ty_opt:(Some ty2) "x_" e1_result_idx st'' in
+    let (e2_s, e2_result_idx, st''') =
+      mk_fresh (Term Value) ~src_ty_opt:(Some ty2) ~ty_opt:(Some naasty_ty1)
+        "x_" e1_result_idx st'' in
     let (sts_acc'', ctxt_acc'', assign_acc'', _, st4) =
       naasty_of_flick_expr st''' e2 local_name_map sts_acc'
         ((e2_result_idx, true) :: ctxt_acc') [e2_result_idx] in
@@ -453,7 +467,17 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | GreaterThan (_, _) ->
         Naasty.Gt (Var e1_result_idx, Var e2_result_idx)
       | LessThan (_, _) ->
-        Naasty.Lt (Var e1_result_idx, Var e2_result_idx)
+        (*Translate this operator differently based on the types of its
+          arguments*)
+        if is_string ty1 then
+          match lookup_name (Term Defined_Function_Name) st4
+                  Functions.icl_backend_string_comparison with
+          | None ->
+            failwith "Could not find string comparison function"(*FIXME give more details*)
+          | Some idx ->
+            Call_Function (idx, [], [Var e1_result_idx; Var e2_result_idx])
+        else
+          Naasty.Lt (Var e1_result_idx, Var e2_result_idx)
       | Minus (_, _) ->
         Naasty.Minus (Var e1_result_idx, Var e2_result_idx)
       | Times (_, _) ->
@@ -541,10 +565,11 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | None -> ((sts_acc, ctxt_acc, [], st), local_name_map, None)
       | Some (acc_label, acc_init) ->
         let acc_init_ty = (*FIXME use type inference*)
-          Int_Type (None, default_int_metadata) in
+          int_ty in
         (*Since this is a newly-declared variable, make sure it's fresh.*)
         let (_, acc_label_idx, st') =
-          mk_fresh (Term Value) ~ty_opt:(Some acc_init_ty) (acc_label ^ "_") 0 st in
+          mk_fresh (Term Value) ~src_ty_opt:(Some int_sty)
+            ~ty_opt:(Some acc_init_ty) (acc_label ^ "_") 0 st in
         let (sts_acc, ctxt_acc, assign_acc, _, st) =
           naasty_of_flick_expr st' acc_init local_name_map sts_acc
             ((acc_label_idx, true) :: ctxt_acc) [acc_label_idx] in
@@ -552,10 +577,6 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
          extend_local_names local_name_map Value acc_label acc_label_idx st',
          Some acc_label_idx) in
     assert (assign_acc' = []);
-
-    (*FIXME move this somewhere more general?*)
-    (*FIXME must this be an integer -- use type inference?*)
-    let int_ty = Int_Type (None, default_int_metadata) in
 
     (*Determine the "from" and "until" values of the loop.
       NOTE we ignore the value we'd get for assign_acc'', since this should be
@@ -565,14 +586,16 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       match range_e with
       | IntegerRange (from_e, until_e)->
         let (_, from_idx, st'') =
-          mk_fresh (Term Value) ~ty_opt:(Some int_ty) "from_" 0 st' in
+          mk_fresh (Term Value) ~src_ty_opt:(Some int_sty)
+            ~ty_opt:(Some int_ty) "from_" 0 st' in
         let (sts_acc'', ctxt_acc'', assign_acc'', _, st''') =
           naasty_of_flick_expr st'' from_e local_name_map sts_acc'
             ((from_idx, true) :: ctxt_acc') [from_idx] in
         assert (assign_acc'' = []);
 
         let (_, to_idx, st4) =
-          mk_fresh (Term Value) ~ty_opt:(Some int_ty) "to_" 0 st''' in
+          mk_fresh (Term Value) ~src_ty_opt:(Some int_sty)
+            ~ty_opt:(Some int_ty) "to_" 0 st''' in
         let (sts_acc''', ctxt_acc''', assign_acc''', _, st5) =
           naasty_of_flick_expr st4 until_e local_name_map sts_acc''
             ((to_idx, true) :: ctxt_acc'') [to_idx] in
@@ -582,7 +605,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       | _ -> failwith "Unsupported iteration range" in
 
     let (_, idx, st''') =
-      mk_fresh (Term Value) ~ty_opt:(Some int_ty) (label ^ "_") 0 st'' in
+      mk_fresh (Term Value) ~src_ty_opt:(Some int_sty)
+        ~ty_opt:(Some int_ty) (label ^ "_") 0 st'' in
     let idx_ty = the (lookup_symbol_type idx (Term Value) st''') in
     let (_, body_result_idx, st''') =
       mk_fresh (Term Value)
@@ -631,7 +655,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
        for unit-typed expressions, in which case we'll implicitly set the else
        branch to unity by using the one-handed If (If1) in NaaSty.*)
     let (_, cond_result_idx, st_before_cond) =
-      mk_fresh (Term Value) ~ty_opt:(Some (Bool_Type None)) "ifcond_" 0 st in
+      mk_fresh (Term Value) ~src_ty_opt:(Some (Boolean (None, [])))
+        ~ty_opt:(Some (Bool_Type None)) "ifcond_" 0 st in
     let (sts_acc_cond, ctxt_acc_cond, assign_acc_cond, _, st_cond) =
       naasty_of_flick_expr st_before_cond be local_name_map sts_acc
         ((cond_result_idx, true) :: ctxt_acc) [cond_result_idx] in
@@ -640,9 +665,10 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       (*FIXME here we use Int_Type, but this should be inferred from the if
         expression*)
       mk_fresh (Term Value)
-        ~ty_opt:(Some
-                  (*FIXME use type inference*)
-                   (Int_Type (None, default_int_metadata))) "ifresult_" 0 st_cond in
+        (*FIXME use type inference*)
+        ~src_ty_opt:(Some int_sty)
+        ~ty_opt:(Some int_ty)
+        "ifresult_" 0 st_cond in
     let (then_block, ctxt_acc_then, assign_acc_then, _, st_then) =
       naasty_of_flick_expr st_before_then e1 local_name_map Skip
         ((if_result_idx, true) :: ctxt_acc_cond) [if_result_idx] in

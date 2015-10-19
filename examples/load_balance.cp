@@ -34,17 +34,15 @@ process LB : {no_backends, backend_choices} => (http_request/http_response clien
     set := True
   else: <> #FIXME this line will be made redundant
 
-#  client <=> backend
+#  client => backend
   if can ?? client:
-    client => backend
+    let y = ? backend
+    backend ! y
+    ? client
   else: <>
-  backend => client
 
-process LB_resp : {no_backends} => (http_request/http_response client, http_response/http_request backends)
-  for i in 0 .. (no_backends - 1):
-    if can ?? backends[i]:
-      backends[i] => client
-#      let x = ? backends[i]
-#      backends[i] ! x # Note that x was "peeked" from the channel "client".
-#      ? client
-    else: <>
+process LB_resp : (http_request/http_response client, http_response/http_request backend)
+#  backend => client
+  let x = ?? backend
+  client ! x # Note that x was "peeked" from the channel "client".
+  ? backend

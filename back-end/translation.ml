@@ -1573,7 +1573,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     (*FIXME other parts of the body (i.e, state and exceptions) currently are
             not being processed.
             We generate comments stating what state we expect to find.*)
-    let fn_expr_body, state_comments, decl_var_indices, st'' =
+    let fn_expr_body, state_comments, decl_vars, st'' =
       match fn_decl.fn_body with
       | ProcessBody (sts, e, excs) ->
         if excs <> [] then
@@ -1599,7 +1599,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
               extend_scope_unsafe (Term Value) st ~src_ty_opt:ty_opt
                 ~ty_opt:(Some naasty_ty) label in
             (comment, idx, st') in
-          let comments, decl_var_indices, st'' =
+          let comments, decl_vars, st'' =
             List.fold_right (fun state_decl (comments, indices, st) ->
               match state_decl with
               | LocalState (label, ty_opt, initial_e) ->
@@ -1612,7 +1612,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                   add_decl "Global" label ty_opt initial_e st in
                 (comment :: comments,
                  (idx, false) :: indices, st')) sts ([], [], st'') in
-          e, comments, decl_var_indices, st'' in
+          e, comments, decl_vars, st'' in
 
     let init_statmt =
       (*For each dependency index, add a comment stating that it's assumed
@@ -1627,7 +1627,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
         Skip(*Initially the program is empty*) in
     let body'', st4 =
       if n_res_ty = Unit_Type then
-        let init_ctxt = decl_var_indices in
+        let init_ctxt = decl_vars in
         let init_assign_acc = [] in
         let body', st4 =
           naasty_of_flick_function_expr_body init_ctxt init_assign_acc init_statmt
@@ -1644,7 +1644,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
         (*FIXME need a transformation such that if result_idx hasn't been
                 assigned to in the body, then it's assigned to some default
                 expression.*)
-        let init_ctxt = decl_var_indices @ [(result_idx, true)] in
+        let init_ctxt = decl_vars @ [(result_idx, true)] in
         let init_assign_acc = [result_idx] in
         let body', st4 =
           naasty_of_flick_function_expr_body init_ctxt init_assign_acc init_statmt
@@ -1700,8 +1700,9 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                   passes (inlining and variable erasure)*)
                 let arg_idxs = List.map (fun x ->
                   idx_of_naasty_type x
-                  |> the) n_arg_tys
-                in Inliner.init_table arg_idxs in
+                  |> the) n_arg_tys in
+                let decl_var_indices = List.map fst decl_vars
+                in Inliner.init_table (arg_idxs @ decl_var_indices) in
 
               let _ =
                 if !Config.cfg.Config.verbosity > 0 then

@@ -874,7 +874,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         ((e_result_idx, true) :: ctxt_acc) [e_result_idx] in
     assert (assign_acc' = []);
     let translated =
-      Field_In_Record (Var e_result_idx, Var name_idx)
+      Field_In_Record (Dereference (Var e_result_idx), Var name_idx)
       |> lift_assign assign_acc
       |> Naasty_aux.concat
     in (Naasty_aux.concat [sts_acc'; translated],
@@ -914,7 +914,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
             I'm going with record.*)
 
     let record_update =
-      Assign (Field_In_Record (Var record_idx, Var field_idx), Var field_body_idx) in
+      Assign (Field_In_Record (Dereference (Var record_idx), Var field_idx), Var field_body_idx) in
     let translated =
       Var record_idx
       |> lift_assign assign_acc
@@ -1673,7 +1673,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       | Some (idx, _) -> (idx, st4) in
 
     let _ =
-(*      if !Config.cfg.Config.verbosity > 1 then *)
+      if !Config.cfg.Config.verbosity > 1 then
         log (State_aux.state_to_str false st5) in 
     
     (Fun_Decl

@@ -15,7 +15,7 @@ type http_response : record
   response_data : string
 
 #fun LB : (type http_request/type http_response client, type http_response/type http_request backend; backend_choices : [type channel_metadata])
-process LB : {no_backends, backend_choices} => (http_request/http_response client, http_response/http_request backend)
+fun LB : {no_backends, backend_choices} => (http_request/http_response client, http_response/http_request backend) -> ()
   local set : boolean := False
 
   # FIXME this block should be removed. It serves to make declarations that
@@ -40,10 +40,11 @@ process LB : {no_backends, backend_choices} => (http_request/http_response clien
   else: <>
   backend => client
 
-#process LB_response : {no_backends} => (http_request/http_response client, http_response/http_request backend)
-#  for i in 0 .. (no_backends - 1):
-#    if can ?? backends[i]:
-#      let x = ?? backends[i]
-#      client ! x
-#      ? backends[i]
-#    else: <>
+fun LB_resp : {no_backends} => (http_request/http_response client, http_response/http_request backend) -> ()
+  for i in 0 .. (no_backends - 1):
+    if can ?? backend[i]:
+#      backends[i] => client
+      let x = ? backend[target]
+      backend[target] ! x # Note that x was "peeked" from the channel "client".
+      ? client
+    else: <>

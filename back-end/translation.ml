@@ -1673,7 +1673,7 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
       | Some (idx, _) -> (idx, st4) in
 
     let _ =
-      if !Config.cfg.Config.verbosity > 1 then
+(*      if !Config.cfg.Config.verbosity > 1 then *)
         log (State_aux.state_to_str false st5) in 
     
     (Fun_Decl

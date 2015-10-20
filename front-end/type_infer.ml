@@ -893,6 +893,6 @@ let rec ty_of_expr
   | Hole -> def_undefined, st
 
   | Can e' ->
-    let e_ty, _ = ty_of_expr ~strict st e in
-    assert_not_undefined_type e_ty e st;
+    let e_ty, _ = ty_of_expr ~strict st e' in
+    assert_not_undefined_type e_ty e' st;
     Boolean (None, []), st

@@ -794,8 +794,12 @@ let rec ty_of_expr
         else if inv && rx_chan_type ct = data_ty then
           data_ty
         else
-          (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Send: Mismatch between type of data and that of channel", e, st))
+          let xx_chan_ty = if not inv then tx_chan_type ct else rx_chan_type ct in
+          let xx_chan_ty_s = type_value_to_string true false min_indentation xx_chan_ty in
+          let data_ty_s = type_value_to_string true false min_indentation data_ty in
+          raise (Type_Inference_Exc
+             ("Send: Mismatch between type of data (" ^ data_ty_s ^
+               ") and that of channel (" ^ xx_chan_ty_s ^ ")", e, st))
       | _ ->
         (*FIXME give more info*)
         raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in

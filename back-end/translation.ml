@@ -110,9 +110,14 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
   match ty with
   | Undefined _ -> failwith "Cannot translate undefined type"
   | Disjoint_Union (_, _) -> failwith "Unsupported (disjoint union type)"
-  | List (_, _, _, _) ->
-    (*Lists can be turned into arrays*)
-    failwith "Unsupported (list type)"
+  | List (label_opt, carried_ty, _, _) ->
+    (*Lists are turned into arrays*)
+    let carried_ty', st =
+      naasty_of_flick_type ~default_ik ~default_label st carried_ty in
+    let (label_opt', st') = check_and_generate_name Value ty label_opt st in
+    let ty' = Array_Type (label_opt', carried_ty', Max 54321(*FIXME const!*)) in
+    let st' = update_naasty_ty Value ty' label_opt st'
+    in (ty', st')
   | Dictionary (label_opt, idx_ty, type_name) ->
     failwith "TODO -- link to dictionary provided by libNaaS" (*TODO*)
   | Empty -> failwith "Cannot translate empty type"
@@ -564,11 +569,11 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       match acc_opt with
       | None -> ((sts_acc, ctxt_acc, [], st), local_name_map, None)
       | Some (acc_label, acc_init) ->
-        let acc_init_ty = (*FIXME use type inference*)
-          int_ty in
+        let acc_init_src_ty, _ = lnm_tyinfer st local_name_map acc_init in
+        let acc_init_ty, st = naasty_of_flick_type st acc_init_src_ty in
         (*Since this is a newly-declared variable, make sure it's fresh.*)
         let (_, acc_label_idx, st') =
-          mk_fresh (Term Value) ~src_ty_opt:(Some int_sty)
+          mk_fresh (Term Value) ~src_ty_opt:(Some acc_init_src_ty)
             ~ty_opt:(Some acc_init_ty) (acc_label ^ "_") 0 st in
         let (sts_acc, ctxt_acc, assign_acc, _, st) =
           naasty_of_flick_expr st' acc_init local_name_map sts_acc
@@ -761,10 +766,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let (naasty_ty, st) =
       match ty_opt with
       | None ->
-        (*FIXME currently defaulting to Int, but we should use type inference
-                on e here*)
-        let ty = Integer (Some name, []) in
-        let naasty_ty = Int_Type (None, default_int_metadata) in
+        let ty, _ = lnm_tyinfer st local_name_map e in
+        let naasty_ty, st = naasty_of_flick_type st ty in
         let (_, st) =
           (*FIXME should probably use mk_fresh*)
           extend_scope_unsafe (Term Value) st ~src_ty_opt:(Some ty)
@@ -1297,6 +1300,35 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       |> Naasty_aux.concat in
     (Naasty_aux.concat [sts_acc; peek_sts_acc; translated],
      ((can_result_idx, true) :: ctxt_acc), [], local_name_map, st)
+
+  | IndexableProjection (label, e) ->
+    let label_idx =
+      match lookup_name (Term Undetermined) st label with
+      | None -> failwith ("Could not find previous declaration of " ^ label)
+      | Some idx -> idx in
+
+    let ty =
+      (*FIXME use type inference*)
+      (Int_Type (None, default_int_metadata)) in
+    let (_, proj_result_idx, st) =
+      mk_fresh (Term Value) ~ty_opt:(Some ty) "idx_proj_" 0 st in
+
+    let (_, e_result_idx, st) =
+      mk_fresh (Term Value) ~ty_opt:(Some ty) "idx_e_" 0 st in
+
+    let (sts_acc, ctxt_acc, assign_acc', _, st) =
+      naasty_of_flick_expr st e local_name_map sts_acc
+        ((e_result_idx, true) :: ctxt_acc) [e_result_idx] in
+    assert (assign_acc' = []); (* We shouldn't get anything back to assign to *)
+
+    let translation =
+      Assign (Var proj_result_idx,
+              ArrayElement (Var label_idx, Var e_result_idx)) in
+    let assignment =
+      lift_assign assign_acc (Var proj_result_idx)
+      |> Naasty_aux.concat in
+    (Naasty_aux.concat [sts_acc; translation; assignment],
+      ((proj_result_idx, true) :: ctxt_acc), [], local_name_map, st)
 
   | _ -> raise (Translation_Expr_Exc ("TODO: " ^ expression_to_string no_indent e,
                                       Some e, Some local_name_map, Some sts_acc, st))

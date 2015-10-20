@@ -5,6 +5,7 @@
 #include "naas.cp"
 #include "http.cp"
 
+#type http_request [|DMDMD|] : record
 type http_request : record
   src_network_address : integer
   protocol : record
@@ -15,7 +16,8 @@ type http_response : record
   response_data : string
 
 #fun LB : (type http_request/type http_response client, type http_response/type http_request backend; backend_choices : [type channel_metadata])
-process LB : {no_backends, backend_choices} => (http_request/http_response client, http_response/http_request backend)
+#process LB : {no_backends, backend_choices} => (http_request/http_response client, http_response/http_request backend)
+process LB : {no_backends} => (http_request/http_response client, http_response/http_request backend)
   local set : boolean := False
 
   # FIXME this block should be removed. It serves to make declarations that
@@ -23,20 +25,29 @@ process LB : {no_backends, backend_choices} => (http_request/http_response clien
   #       be translated to refer to suitable values in the runtime.
   let client_src_network_address = 0
   let client_protocol_TCP_src_port = 0
-  let backend = 0
+#  let backend = 0
+  let backend_choices = 0 unsafe_cast [integer]
+  let backend = 0 unsafe_cast [integer]
+#
+#channel properties:
+#  src_address : ipv4_address
+#  dst_address : ipv4_address
+#
+#"extern" for functions? and for types?
+
 
   if set = False:
     let choice =
 #      hash(client.src_network_address + client.protocol.TCP.src_port) mod no_backends
       hash(client_src_network_address + client_protocol_TCP_src_port) mod no_backends
-#    bind (backend, backend_choices[choice])
-    bind (backend, backend_choices)
+    bind (backend, backend_choices[choice])
+#    bind (backend, backend_choices)
     set := True
   else: <> #FIXME this line will be made redundant
 
 #  client => backend
   if can ?? client:
-    let y = ? backend
+    let y = ?? client
     backend ! y
     ? client
   else: <>

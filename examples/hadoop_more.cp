@@ -8,8 +8,8 @@ type k_v : record
 process Wc_node : (k_v/- x, k_v/- y, -/k_v z)
   # Instead of "vs" could have pattern matching, to give v1 and v2
 #  let vs = peek_all ([x, y]) # let [v1,v2] <= [x,y]
-  let v1 = ??x
-  let v2 = ??y
+  let v1 : k_v = ??x
+  let v2 : k_v = ??y
 
   if v1.key_len = -1 and v2.key_len = -1:
     x => z # This syntax means that we're "forwarding" a value from channel x

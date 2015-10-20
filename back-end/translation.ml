@@ -14,9 +14,10 @@ open Task_model
 open State_aux
 open Translation_aux
 
-(*FIXME must this be an integer -- use type inference?*)
+(*FIXME eventually these constants should be eliminated*)
 let int_sty = Integer (None, [])
 let int_ty = Int_Type (None, default_int_metadata)
+let const_RIDICULOUS = Max 54321
 
 let lnm_tyinfer st lmn e : type_value * state =
   apply_lnm_e lmn e
@@ -115,7 +116,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
     let carried_ty', st =
       naasty_of_flick_type ~default_ik ~default_label st carried_ty in
     let (label_opt', st') = check_and_generate_name Value ty label_opt st in
-    let ty' = Array_Type (label_opt', carried_ty', Max 54321(*FIXME const!*)) in
+    let ty' = Array_Type (label_opt', carried_ty', const_RIDICULOUS) in
     let st' = update_naasty_ty Value ty' label_opt st'
     in (ty', st')
   | Dictionary (label_opt, idx_ty, type_name) ->

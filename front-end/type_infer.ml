@@ -789,9 +789,9 @@ let rec ty_of_expr
               raise (Type_Inference_Exc ("Send: Mismatch between label (" ^
                      label ^ ") and map name (" ^ c_name ^ ")", e, st))
         end;
-        if not inv && tx_chan_type ct = data_ty then
+        if not inv && forget_label (tx_chan_type ct) = forget_label data_ty then
           data_ty
-        else if inv && rx_chan_type ct = data_ty then
+        else if inv && forget_label (rx_chan_type ct) = forget_label data_ty then
           data_ty
         else
           let xx_chan_ty = if not inv then tx_chan_type ct else rx_chan_type ct in

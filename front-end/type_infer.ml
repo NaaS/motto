@@ -388,6 +388,20 @@ let rec ty_of_expr
           end;
         (def_undefined(*FIXME unsure how to index channel arrays*),
          ChanType (None, ChannelSingle (rx_ty, tx_ty)))
+
+(*FIXME channel-splitting needs to give arrays of channels?
+        Discussing this with MK; see email of 20 Oct 2015.
+        This block of code is temporary, to avoid hitting the exception that
+        would otherwise be raised.*)
+      | Some (ChanType (lbl_opt, ChannelSingle (rx_ty, tx_ty))) ->
+        if not (lbl_opt = Some map_name) then
+          begin
+          (*FIXME give more info*)
+          raise (Type_Inference_Exc ("IndexableProjection: Mismatch between label and map name for channel array", e, st))
+          end;
+        (def_undefined(*FIXME unsure how to index channel arrays*),
+         ChanType (None, ChannelSingle (rx_ty, tx_ty)))
+
       | Some (List (lbl_opt, val_ty, dpd_idx, _)) ->
         (*NOTE currently ignoring list's dependency_index*)
         assert (dpd_idx = None);
@@ -797,11 +811,15 @@ let rec ty_of_expr
     let ty =
       match chan_ty with
       | ChanType (label_opt, ct) ->
+(*FIXME This check currently fails because channel names (encoded in the type
+        info) aren't updated during splitting. Discussing this with MK; see
+        email of 20 Oct 2015. This code should be re-enabled when the issue is
+        fixed.
         if not (label_opt = Some c_name) then
           begin
           (*FIXME give more info*)
           raise (Type_Inference_Exc ("Peek: Mismatch between label and map name", e, st))
-          end;
+          end;*)
         if not inv then rx_chan_type ct
         else tx_chan_type ct
       | _ ->

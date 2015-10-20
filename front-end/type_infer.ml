@@ -845,6 +845,10 @@ let rec ty_of_expr
       end;
     (ty, st)
 
+  | Unsafe_Cast (_, ty) ->
+    (*NOTE use carefully!*)
+    ty, st
+
   | Meta_quoted mis ->
     let display_here cp_opt =
       match cp_opt with

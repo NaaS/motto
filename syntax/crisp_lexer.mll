@@ -157,6 +157,7 @@ rule main = parse
   | "ref" {TYPE_REF}
 
   | "can" {CAN}
+  | "unsafe_cast" {UNSAFE_CAST}
 
   | "(|" {FAT_BRACKET_OPEN}
   | "(type|" {FAT_TYPE_BRACKET_OPEN}

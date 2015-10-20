@@ -120,6 +120,7 @@
 %token BAR
 
 %token CAN
+%token UNSAFE_CAST
 
 (*Names*)
 (*
@@ -162,6 +163,7 @@
 %left PERIOD
 %nonassoc PERIODPERIOD
 %nonassoc TYPED
+%nonassoc UNSAFE_CAST
 %nonassoc QUESTION
 %nonassoc QUESTIONQUESTION
 %right BANG
@@ -569,6 +571,9 @@ expression:
 
   | e = expression; TYPED; sltd = single_line_type_def
     {Crisp_syntax.TypeAnnotation (e, sltd None [])}
+  | e = expression; UNSAFE_CAST; sltd = single_line_type_def
+    {Crisp_syntax.TypeAnnotation (e, sltd None [])}
+
   | LEFT_R_BRACKET; e = expression; RIGHT_R_BRACKET {e}
   (*The INDENT-UNDENT combo is a form of bracketing*)
   | INDENT; e = expression; UNDENT {e}

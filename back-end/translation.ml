@@ -884,6 +884,10 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (*NOTE could translate this into an explicit type-case, using the second
            parameter of TypeAnnotation*)
     naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc assign_acc
+  | Unsafe_Cast (e, _) ->
+    (*NOTE this cast is only done at the Flick level, and is ignored by this
+            backe-end*)
+    naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc assign_acc
 
   | RecordProjection (e, label) ->
     let naasty_ty =

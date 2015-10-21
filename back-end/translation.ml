@@ -974,25 +974,25 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
   | RecordUpdate (record, (field_label, field_body)) ->
     (*NOTE using in-place update*)
-    let naasty_ty =
-      (*FIXME use type inference*)
-      Int_Type (None, default_int_metadata) in
+    let src_ty, _ = lnm_tyinfer st local_name_map record in
+    let naasty_ty, st = naasty_of_flick_type st src_ty in
     let field_idx =
       match lookup_name (Term Undetermined) st field_label with
       | None -> failwith ("Could not find previous declaration of " ^ field_label)
       | Some idx -> idx in
     let (_, record_idx, st') =
-      mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "record_" 0 st in
+      mk_fresh (Term Value) ~src_ty_opt:(Some src_ty) ~ty_opt:(Some naasty_ty)
+       "record_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', _, st'') =
       naasty_of_flick_expr st' record local_name_map sts_acc
         ((record_idx, true) :: ctxt_acc) [record_idx] in
     assert (assign_acc' = []);
 
-    let field_body_ty =
-      (*FIXME use type inference*)
-      Int_Type (None, default_int_metadata) in
+    let src_ty, _ = lnm_tyinfer st local_name_map record in
+    let field_body_ty, st = naasty_of_flick_type st src_ty in
     let (_, field_body_idx, st''') =
-      mk_fresh (Term Value) ~ty_opt:(Some field_body_ty) "fieldbody_" 0 st'' in
+      mk_fresh (Term Value) ~src_ty_opt:(Some src_ty)
+       ~ty_opt:(Some field_body_ty) "fieldbody_" 0 st'' in
     let (sts_acc'', ctxt_acc'', assign_acc'', _, st4) =
       naasty_of_flick_expr st''' field_body local_name_map sts_acc'
         ((field_body_idx, true) :: ctxt_acc') [field_body_idx] in
@@ -1009,8 +1009,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       |> Naasty_aux.concat
     in (Naasty_aux.concat [sts_acc''; record_update; translated],
         (*add declaration for the fresh name we have for this tuple instance*)
-        ctxt_acc'',
-        [](*Having assigned to assign_accs, we can forget them.*),
+        ctxt_acc'', [](*Having assigned to assign_accs, we can forget them.*),
         local_name_map,
         st4)
 

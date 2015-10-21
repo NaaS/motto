@@ -280,7 +280,7 @@ let rec ty_of_expr
           begin
           let ty_s = type_value_to_string true false min_indentation ty in
           let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
-          raise (Type_Inference_Exc ("Cannot match the two types " ^ ty_s ^ " and " ^ expected_ty_s, e, st))
+          raise (Type_Inference_Exc ("Update: Cannot match the two types " ^ ty_s ^ " and " ^ expected_ty_s, e, st))
           end in
     (expected_ty, st)
 

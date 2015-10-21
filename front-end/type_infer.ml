@@ -385,7 +385,7 @@ let rec ty_of_expr
           raise (Type_Inference_Exc ("IndexableProjection: Mismatch between label and map name for channel array", e, st))
           end;
         (def_undefined(*FIXME unsure how to index channel arrays*),
-         ChanType (None, ChannelSingle (rx_ty, tx_ty)))
+         ChanType (lbl_opt, ChannelArray (rx_ty, tx_ty, di_opt)))
       | Some (List (lbl_opt, val_ty, dpd_idx, _)) ->
         (*NOTE currently ignoring list's dependency_index*)
         assert (dpd_idx = None);

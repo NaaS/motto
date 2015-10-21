@@ -1602,14 +1602,14 @@ let split_io_channels f st =
     | [] -> []
     | (Channel (ctype, cname))::t ->
       match ctype with
-      | ChannelSingle (Empty, _) ->
-        (Channel (ctype, cname ^ "_send"), o_index)::
+      | ChannelSingle (Empty, v) ->
+        (Channel (ChannelArray (Empty, v, None), cname ^ "_send"), o_index)::
           (split t i_index (Crisp_syntax.Plus (o_index, Int 1)))
       | ChannelArray (Empty, _, dep) ->
         (Channel (ctype, cname ^ "_send"), o_index)::
           (split t i_index (Crisp_syntax.Plus (o_index, Variable (the dep))))
-      | ChannelSingle (_, Empty) ->
-        (Channel (ctype, cname ^ "_recv"), i_index)::
+      | ChannelSingle (v, Empty) ->
+        (Channel (ChannelArray (v, Empty, None), cname ^ "_recv"), i_index)::
           (split t (Crisp_syntax.Plus (i_index, Int 1)) o_index)
       | ChannelArray (_, Empty, dep) ->
         (Channel (ctype, cname ^ "_recv"), i_index)::

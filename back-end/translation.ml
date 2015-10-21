@@ -698,26 +698,47 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       naasty_of_flick_expr st_before_cond be local_name_map sts_acc
         ((cond_result_idx, true) :: ctxt_acc) [cond_result_idx] in
     assert (assign_acc_cond = []); (* We shouldn't get anything back to assign to *)
-    let (_, if_result_idx, st_before_then) =
-      (*FIXME here we use Int_Type, but this should be inferred from the if
-        expression*)
-      mk_fresh (Term Value)
-        (*FIXME use type inference*)
-        ~src_ty_opt:(Some int_sty)
-        ~ty_opt:(Some int_ty)
-        "ifresult_" 0 st_cond in
+
+    let then_sty, _ = lnm_tyinfer st local_name_map e1 in
+    let else_sty, _ = lnm_tyinfer st local_name_map (the e2_opt(*FIXME we assume the value's there*)) in
+    Type_infer.assert_identical_types then_sty else_sty e st;
+    let then_ty, st = naasty_of_flick_type st then_sty in
+    let else_ty, st = naasty_of_flick_type st else_sty in
+
+    let if_result_idx_opt, st_before_then =
+      if then_sty = flick_unit_type then None, st_cond
+      else
+       let (_, if_result_idx, st_before_then) =
+          mk_fresh (Term Value)
+            ~src_ty_opt:(Some then_sty)
+            ~ty_opt:(Some then_ty)
+            "ifresult_" 0 st_cond in
+       (Some if_result_idx, st_before_then) in
+    let ctxt_acc_cond, assign_acc_cond =
+      if then_sty = flick_unit_type then ctxt_acc_cond, []
+      else (((the if_result_idx_opt, true) :: ctxt_acc_cond),
+             [the if_result_idx_opt]) in
+
     let (then_block, ctxt_acc_then, assign_acc_then, _, st_then) =
       naasty_of_flick_expr st_before_then e1 local_name_map Skip
-        ((if_result_idx, true) :: ctxt_acc_cond) [if_result_idx] in
+        ctxt_acc_cond assign_acc_cond in
+    assert (assign_acc_then = []);
     let (else_block, ctxt_acc_else, assign_acc_else, _, st_else) =
-      naasty_of_flick_expr st_then (the(*FIXME we assume the value's there*) e2_opt) local_name_map Skip ctxt_acc_then [if_result_idx] in
+      naasty_of_flick_expr st_then (the(*FIXME we assume the value's there*) e2_opt)
+       local_name_map Skip ctxt_acc_then assign_acc_cond in
+    assert (assign_acc_else = []);
+
     let translated = 
       Naasty.If (Var cond_result_idx, then_block, else_block) in
     let nstmt =
-      lift_assign assign_acc (Var if_result_idx)
-      |> Naasty_aux.concat in
+      match if_result_idx_opt with
+      | None -> Skip
+      | Some if_result_idx ->
+        lift_assign assign_acc (Var if_result_idx)
+        |> Naasty_aux.concat in
+
     (Naasty_aux.concat [sts_acc_cond; translated; nstmt], ctxt_acc_else,
-     assign_acc_else, local_name_map, st_else);
+     [], local_name_map, st_else);
 
   | IPv4_address (oct1, oct2, oct3, oct4) ->
     let addr =

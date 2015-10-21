@@ -109,17 +109,15 @@ let rec ty_of_expr
         assert_identical_types e1_ty e2_ty e st in
     ans
 
-  (*Definable over arithmetic expressions*)
+  (*Currently definable over any expressions -- integers, strings, etc*)
   | GreaterThan (e1, e2)
   | LessThan (e1, e2) ->
     let ans = (Boolean (None, []), st) in
-    let expected = (Integer (None, []), st) in
     let _ =
       if strict then
         let f = ty_of_expr ~strict st in
         let ((e1_ty, _), (e2_ty, _)) = f e1, f e2 in
-        assert_identical_types e1_ty e2_ty e st;
-        assert_identical_types e1_ty (fst expected) e st in
+        assert_identical_types e1_ty e2_ty e st in
     ans
 
   (*Arithmetic expressions*)
@@ -597,7 +595,7 @@ let rec ty_of_expr
             if List.length fun_args_tys <> List.length chans + List.length arg_tys then
               raise (Type_Inference_Exc ("Inconsistency between the number of formal and actual parameters.", e, st))
             else List.combine fun_args_tys arg_tys in
-          let unifier =
+          let unifier : (string * type_value) list =
             List.fold_right (fun ((arg_e, ty1), ty2) acc ->
               let ty1_anonymous = forget_label ty1 in
               let ty2_anonymous = forget_label ty2 in
@@ -612,13 +610,9 @@ let rec ty_of_expr
               | Some ty ->
                 acc @ extract_unifier ty1_anonymous ty @ extract_unifier ty2_anonymous ty)
             formal_and_actual_parameters [] in
-          unique_unifier unifier in
-        let ret_ty =
-          begin
-            match unifier with
-            | None -> ret_ty
-            | Some unifier -> apply_unifier unifier ret_ty
-          end in
+          assert_functional_unifier unifier;
+          unifier in
+        let ret_ty = apply_unifier unifier ret_ty in
         (ret_ty, st)
       | Some _ ->
         raise (Type_Inference_Exc ("Function types currently carried in a different field in the symbol table", e, st))

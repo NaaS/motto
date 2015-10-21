@@ -416,20 +416,17 @@ and channel_type_unify (ct1 : channel_type) (ct2 : channel_type) : channel_type 
       end
 
 (*Given a pair of types, extract all pairings between an occurrence of Undefined
-  in one type and the corresponding type in the other
-  This is used since we don't have a full implementation of first-order
-  unification, and this serves to compute the unifier to the single unification
-  variable we have (i.e., "Undefined").*)
+  in one type and the corresponding type in the other*)
 (*NOTE here we ignore serialisation annotations and names*)
-let rec extract_unifier (ty1 : type_value) (ty2 : type_value) : type_value list =
-  let extract_unifiers (tys1 : type_value list) (tys2 : type_value list) : type_value list =
+let rec extract_unifier (ty1 : type_value) (ty2 : type_value) : (string * type_value) list =
+  let extract_unifiers (tys1 : type_value list) (tys2 : type_value list) : (string * type_value) list =
     let ty_pairs = List.combine tys1 tys2 in
     let f (ty1, ty2) = extract_unifier ty1 ty2 in
     List.map f ty_pairs
     |> List.flatten in
   match ty1, ty2 with
-  | (Undefined _, _) -> [ty2]
-  | (_, Undefined _) -> [ty1]
+  | (Undefined s, _) -> [(s, ty2)]
+  | (_, Undefined s) -> [(s, ty1)]
 
   | (UserDefinedType (_, _), UserDefinedType (_, _))
   | (String (_, _), String (_, _))
@@ -448,28 +445,31 @@ let rec extract_unifier (ty1 : type_value) (ty2 : type_value) : type_value list 
     extract_unifier ty1A ty1B @ extract_unifier ty2A ty2B
 
   | (ChanType (_, ct1), ChanType (_, ct2)) -> channel_extract_unifier ct1 ct2
-and channel_extract_unifier (ct1 : channel_type) (ct2 : channel_type) : type_value list =
+and channel_extract_unifier (ct1 : channel_type) (ct2 : channel_type) : (string * type_value) list =
   match ct1, ct2 with
   | (ChannelSingle (ty1A, ty2A), ChannelSingle (ty1B, ty2B)) ->
     extract_unifier ty1A ty1B @ extract_unifier ty2A ty2B
   | (ChannelArray (ty1A, ty2A, di1), ChannelArray (ty1B, ty2B, di2)) ->
     extract_unifier ty1A ty1B @ extract_unifier ty2A ty2B
 
-let unique_unifier (unifiers : type_value list) : type_value option =
-  match unifiers with
-  | [] -> None
-  | (u :: us) ->
-    let unifier =
-      List.fold_right (fun u acc ->
-        if u <> acc then failwith "Unifiers should be identical"(*FIXME give more info*)
-        else acc) us u
-    in Some unifier
+(*Check to make sure that a unification variable is not mapped to distinct terms*)
+let assert_functional_unifier (unifiers : (string * type_value) list) : bool =
+  List.fold_right (&&)
+   (List.map (fun (s, ty) ->
+      List.fold_right (fun (s', ty') acc ->
+        if s = s' then ty = ty' && acc
+        else acc) unifiers true) unifiers) true
 
 (*NOTE we ignore the name of the unification variable*)
-let rec apply_unifier (unifier : type_value) (ty : type_value) : type_value =
-  assert (not (undefined_ty unifier));
+let rec apply_unifier (unifier : (string * type_value) list)
+   (ty : type_value) : type_value =
+  assert (List.fold_right (&&) (List.map (fun (_, ty) ->
+    not (undefined_ty ty)) unifier) true);
   match ty with
-  | Undefined _ -> unifier
+  | Undefined s ->
+    if List.mem_assoc s unifier then
+      List.assoc s unifier
+    else failwith ("Not covered by unifier: " ^ s)
   | UserDefinedType (_, _)
   | String (_, _)
   | Integer (_, _)

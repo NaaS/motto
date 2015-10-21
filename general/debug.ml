@@ -4,7 +4,7 @@
 *)
 
 
-(*More of e debugging-related function, than a general one*)
+(*Format a list of strings nicely*)
 let print_list indentation l =
   let sep = "\n" ^ indentation ^ "\t" in
   if l = [] then "(empty)"

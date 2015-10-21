@@ -144,9 +144,14 @@ let collect_decl_info (st : State.state) (p : Crisp_syntax.program) : State.stat
             match type_check_blob st' chans arg_tys ret_ty fn_body with
             | (true, _) -> ()
             | (false, (expected_ty, actual_ty)) ->
-              let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
-              let actual_ty_s = type_value_to_string true false min_indentation actual_ty in
-              failwith ("Types do not check in function '" ^ fn_name ^ "'. Expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
+              (*FIXME crude way of distinguising a normal function from a function
+                      that was obtained from a process definition*)
+              match expected_ty with
+              | IL_Type _ -> ()
+              | _ ->
+                let expected_ty_s = type_value_to_string true false min_indentation expected_ty in
+                let actual_ty_s = type_value_to_string true false min_indentation actual_ty in
+                failwith ("Types do not check in function '" ^ fn_name ^ "'. Expected: " ^ expected_ty_s ^ " but found " ^ actual_ty_s) in
         (*NOTE order of declarations isn't preserved within term_symbols*)
         st'
       | Some (_, _) -> failwith ("Function '" ^ fn_name ^ "' declared more than once")

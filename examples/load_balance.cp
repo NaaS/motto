@@ -43,6 +43,7 @@ process LB : {no_backends} => (http_request/http_response client, http_response/
     bind (backend, backend_choices[choice])
 #    bind (backend, backend_choices)
     set := True
+    <>
   else: <> #FIXME this line will be made redundant
 
 #  client => backend
@@ -50,6 +51,7 @@ process LB : {no_backends} => (http_request/http_response client, http_response/
     let y = ?? client
     backend ! y
     ? client
+    <>
   else: <>
 
 process LB_resp : (http_request/http_response client, http_response/http_request backend)

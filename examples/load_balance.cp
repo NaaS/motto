@@ -19,6 +19,7 @@ type http_response : record
 #process LB : {no_backends, backend_choices} => (http_request/http_response client, http_response/http_request backend)
 process LB : {no_backends} => (http_request/http_response client, http_response/http_request backend)
   local set : boolean := False
+  global backend_choices : dictionary [integer] integer := []
 
   # FIXME this block should be removed. It serves to make declarations that
   #       parts of the compiler can latch onto. The fields from the PDU should
@@ -26,7 +27,6 @@ process LB : {no_backends} => (http_request/http_response client, http_response/
   let client_src_network_address = 0
   let client_protocol_TCP_src_port = 0
 #  let backend = 0
-  let backend_choices = 0 unsafe_cast [integer]
   let backend = 0 unsafe_cast [integer]
 #
 #channel properties:

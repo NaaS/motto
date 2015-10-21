@@ -65,6 +65,10 @@ let is_string : type_value -> bool = function
   | String _ -> true
   | _ -> false
 
+let is_integer : type_value -> bool = function
+  | Integer _ -> true
+  | _ -> false
+
 (*NOTE currently only a single unification variable is supported*)
 let def_undefined = Undefined "X"
 

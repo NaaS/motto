@@ -119,8 +119,18 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
     let ty' = Array_Type (label_opt', carried_ty', const_RIDICULOUS) in
     let st' = update_naasty_ty Value ty' label_opt st'
     in (ty', st')
-  | Dictionary (label_opt, idx_ty, type_name) ->
-    failwith "TODO -- link to dictionary provided by libNaaS" (*TODO*)
+  | Dictionary (label_opt, idx_ty, carried_ty) ->
+    (*FIXME this is a very restricted form of dictionary. It maps to arrays.
+            thus the index type of the dictionary is integers. We also set the
+            value type to be integers too*)
+    assert (is_integer idx_ty);
+    assert (is_integer carried_ty);
+    let carried_ty', st =
+      naasty_of_flick_type ~default_ik ~default_label st carried_ty in
+    let (label_opt', st') = check_and_generate_name Value ty label_opt st in
+    let ty' = Array_Type (label_opt', carried_ty', const_RIDICULOUS) in
+    let st' = update_naasty_ty Value ty' label_opt st'
+    in (ty', st')
   | Empty -> failwith "Cannot translate empty type"
   | Tuple (label_opt, []) ->
     assert (label_opt = None);

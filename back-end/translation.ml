@@ -908,7 +908,6 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (*NOTE this bit is similar to part of Function_Call*)
     let (result_indices, sts_acc', ctxt_acc', _, st''') =
       List.fold_right (fun e (result_indices, sts_acc, ctxt_acc, assign_acc, st) ->
-
         let src_ty, _ = lnm_tyinfer st local_name_map e in
         let naasty_ty, st = naasty_of_flick_type st src_ty in
 
@@ -949,15 +948,15 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     naasty_of_flick_expr st e local_name_map sts_acc ctxt_acc assign_acc
 
   | RecordProjection (e, label) ->
-    let naasty_ty =
-      (*FIXME use type inference*)
-      Int_Type (None, default_int_metadata) in
+    let src_ty, _ = lnm_tyinfer st local_name_map e in
+    let naasty_ty, st = naasty_of_flick_type st src_ty in
     let name_idx =
       match lookup_name (Term Undetermined) st label with
       | None -> failwith ("Could not find previous declaration of " ^ label)
       | Some idx -> idx in
     let (_, e_result_idx, st') =
-      mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "record_" 0 st in
+      mk_fresh (Term Value) ~src_ty_opt:(Some src_ty) ~ty_opt:(Some naasty_ty)
+       "record_" 0 st in
     let (sts_acc', ctxt_acc', assign_acc', _, st'') =
       naasty_of_flick_expr st' e local_name_map sts_acc
         ((e_result_idx, true) :: ctxt_acc) [e_result_idx] in

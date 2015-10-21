@@ -588,7 +588,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       NOTE we ignore the value we'd get for assign_acc'', since this should be
            [] -- we ensure that this is so, and assert that intermediate values
            of this are [] too, as can be seen below.*)
-    let (sts_acc'', ctxt_acc'', _, st'', from_idx, to_idx) =
+    let (sts_acc'', ctxt_acc'', _, st'', from_idx, to_idx, idx_sty) =
       match range_e with
       | IntegerRange (from_e, until_e)->
         let (_, from_idx, st'') =
@@ -607,21 +607,32 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
             ((to_idx, true) :: ctxt_acc'') [to_idx] in
         assert (assign_acc''' = []);
 
-        (sts_acc''', ctxt_acc''', [], st5, from_idx, to_idx)
+        (sts_acc''', ctxt_acc''', [], st5, from_idx, to_idx, int_sty)
       | _ -> failwith "Unsupported iteration range" in
 
+    let idx_ty, st'' = naasty_of_flick_type st'' idx_sty in
     let (_, idx, st''') =
-      mk_fresh (Term Value) ~src_ty_opt:(Some int_sty)
-        ~ty_opt:(Some int_ty) (label ^ "_") 0 st'' in
-    let idx_ty = the (lookup_symbol_type idx (Term Value) st''') in
-    let (_, body_result_idx, st''') =
-      mk_fresh (Term Value)
-        ~ty_opt:(Some int_ty)(*FIXME this should be same as type of acc, since
-                                     after all we'll be assigning this to acc*)
-        ("body_result_") 0 st''' in
-
+      mk_fresh (Term Value) ~src_ty_opt:(Some idx_sty)
+        ~ty_opt:(Some idx_ty) (label ^ "_") 0 st'' in
     let local_name_map'' =
       extend_local_names local_name_map' Value label idx st''' in
+
+    let body_src_ty, _ = lnm_tyinfer st''' local_name_map'' body_e in
+    let body_ty, st''' = naasty_of_flick_type st''' body_src_ty in
+    (*If the body has unit type, then we don't create an index variable, since
+      we won't be assigning it anything of note.*)
+    let body_result_idx_opt, st''' =
+      if body_src_ty = flick_unit_type then
+         None, st'''
+      else
+        let (_, body_result_idx, st''') =
+          mk_fresh (Term Value)
+            (*FIXME check that this is of same as type as acc, since
+                    after all we'll be assigning this to acc*)
+            ~src_ty_opt:(Some body_src_ty)
+            ~ty_opt:(Some body_ty)
+            ("body_result_") 0 st''' in
+        (Some body_result_idx, st''') in
 
     let condition = LEq (Var idx, Var to_idx) in
     let increment = Increment (idx, Int_Value 1) in
@@ -632,13 +643,23 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       match acc_label_idx_opt with
       | None -> Skip
       | Some acc_label_idx ->
-        Assign (Var acc_label_idx, Var body_result_idx) in
+        Assign (Var acc_label_idx,
+                (*body_result_idx_opt=None if the type of the body is
+                  unit, in which case there's no point in assigning the
+                  unit value and passing it around.*)
+                Var (the body_result_idx_opt)) in
+
+    let ctxt_acc'', assign_acc'' =
+      match body_result_idx_opt with
+      | None -> ctxt_acc'', []
+      | Some body_result_idx ->
+        ( (body_result_idx, true) :: ctxt_acc'', [body_result_idx]) in
 
     let (body, ctxt_acc''', assign_acc''', _, st4) =
       naasty_of_flick_expr st''' body_e local_name_map''
         Skip (*At the start of the translation, the body is completely empty,
                thus Skip.*)
-        ((body_result_idx, true) :: ctxt_acc'') [body_result_idx] in
+        ctxt_acc'' assign_acc'' in
         assert (assign_acc''' = []);
 
     (*As always, we assign to any waiting variables. In the case of loops, we
@@ -647,8 +668,18 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       match acc_label_idx_opt with
       | None -> Skip
       | Some acc_label_idx ->
+          (*NOTE if the type of the body is unit, then nothing will be assigned
+                 to the acc. We could therefore check for that here, to avoid
+                 emitting assignment instructions, but we leave it to the
+                 optimisations down the line to erase the dead variable for
+                 acc_label_idx*)
           lift_assign assign_acc (Var acc_label_idx)
           |> Naasty_aux.concat in
+
+    (*Next step is to obtain the type of idx, and we do it this way
+      to get the type of idx that references idx. (Recall that types
+      carry identifiers.)*)
+    let idx_ty = the (lookup_symbol_type idx (Term Value) st4) in
 
     let for_stmt =
       For (((idx_ty, Var from_idx), condition, increment), mk_seq body tail_statement) in

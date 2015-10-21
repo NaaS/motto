@@ -895,10 +895,10 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let (_, tuple_instance_ty_idx, st') =
       mk_fresh Type ~ty_opt:None "tupletype_" 0 st in
     let tuple_instance_ty =
-      let component_tys =
-        List.map (fun _ ->
-          (*FIXME use type inference*)
-          Int_Type (None, default_int_metadata)) es in
+      let component_tys, st' =
+        fold_map ([], st') (fun st e ->
+          let src_ty, _ = lnm_tyinfer st local_name_map e in
+          naasty_of_flick_type st src_ty) es in
         Record_Type (tuple_instance_ty_idx, component_tys) in
     let (_, tuple_instance_idx, st'') =
       update_symbol_type tuple_instance_ty_idx tuple_instance_ty Type st'
@@ -908,10 +908,13 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (*NOTE this bit is similar to part of Function_Call*)
     let (result_indices, sts_acc', ctxt_acc', _, st''') =
       List.fold_right (fun e (result_indices, sts_acc, ctxt_acc, assign_acc, st) ->
-        let naasty_ty =
-          (*FIXME use type inference*)
-          Int_Type (None, default_int_metadata) in
-        let (_, e_result_idx, st') = mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "tuplefield_" 0 st in
+
+        let src_ty, _ = lnm_tyinfer st local_name_map e in
+        let naasty_ty, st = naasty_of_flick_type st src_ty in
+
+        let (_, e_result_idx, st') =
+          mk_fresh (Term Value) ~src_ty_opt:(Some src_ty)
+           ~ty_opt:(Some naasty_ty) "tuplefield_" 0 st in
         let (sts_acc', ctxt_acc', assign_acc', _, st'') =
           naasty_of_flick_expr st' e local_name_map sts_acc
             ((e_result_idx, true) :: ctxt_acc) [e_result_idx] in

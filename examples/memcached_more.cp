@@ -18,6 +18,7 @@ process MCD_resp : {no_backends, req_opcode} => (mc_command/mc_command client, [
       let y = ?? backends[i]
       client ! y
       ? backends[i]
+      <>
     else: <>
 
 #fun MCD_resp : {no_backends, req_opcode} => (mc_command/mc_command client, [mc_command/mc_command]{no_backends} backends) -> ()

@@ -723,7 +723,8 @@ let rec forget_label (ty : type_value) =
   | Empty
   | Undefined _
   | ChanType _
-  | IPv4Address _ -> ty
+  | IPv4Address _
+  | IL_Type _ -> ty
 
 (*Erases type annotation, making it easier to compare two types.
   NOTE you might need to erase or match type label values too.*)

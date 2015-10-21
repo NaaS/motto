@@ -247,7 +247,7 @@ and string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
           |> String.concat ", "
           in "<" ^ body ^  ">" in
       let arg_s =
-        List.map (string_of_naasty_expression ~st_opt) es
+        List.map (string_of_naasty_expression ~no_outer_brackets:true ~st_opt) es
         |> List.map fst
         |> String.concat ", " in
       id_name st_opt id ^ template_params_s ^ " (" ^ arg_s ^ ")"
@@ -337,7 +337,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     let definition =
       match e_opt with
       | None -> ""
-      | Some e -> " = " ^ fst (string_of_naasty_expression ~st_opt e) in
+      | Some e -> " = " ^ fst (string_of_naasty_expression ~no_outer_brackets:true ~st_opt e) in
     let prefix_s, trailing_comment_s =
       if not b then
         "/*", " -- This declaration is not to be emitted to the back-end*/"
@@ -349,16 +349,16 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     string_of_naasty_statement ~st_opt indent stmt2
   | Assign (lvalue, e) ->
     indn indent ^ fst (string_of_naasty_expression ~st_opt lvalue) ^ " = " ^
-    fst (string_of_naasty_expression ~st_opt e) ^ terminal
+    fst (string_of_naasty_expression ~no_outer_brackets:true ~st_opt e) ^ terminal
   | Increment (id, e) ->
     indn indent ^ id_name st_opt id ^ " += " ^
-    fst (string_of_naasty_expression ~st_opt e) ^ terminal
+    fst (string_of_naasty_expression ~no_outer_brackets:true ~st_opt e) ^ terminal
   | For (((id, id_init), condition, increment), body) ->
     (*FIXME check if the target syntax is correct*)
     indn indent ^ "for (" ^
     string_of_naasty_type ~st_opt no_indent id ^ " = " ^
     fst (string_of_naasty_expression ~st_opt id_init) ^ "; " ^
-    fst (string_of_naasty_expression ~st_opt condition) ^ "; " ^
+    fst (string_of_naasty_expression ~no_outer_brackets:true ~st_opt condition) ^ "; " ^
     string_of_naasty_statement ~st_opt no_indent ~print_semicolon:false increment ^ ") {\n" ^
     string_of_naasty_statement ~st_opt (indent + indentation) body ^
     "\n" ^ indn indent ^ "}"
@@ -405,7 +405,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     (*First print the statement, then the comment*)
     string_of_naasty_statement ~st_opt indent stmt ^ " // " ^ comment
   | St_of_E e ->
-    indn indent ^ fst (string_of_naasty_expression ~st_opt e) ^ terminal
+    indn indent ^ fst (string_of_naasty_expression ~no_outer_brackets:true ~st_opt e) ^ terminal
   | Label (lbl, stmt) ->
     indn indent ^ lbl ^ ": " ^
     string_of_naasty_statement ~st_opt no_indent stmt ^ terminal

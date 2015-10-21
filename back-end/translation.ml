@@ -1278,8 +1278,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     let src_ty, _ = lnm_tyinfer st local_name_map e in
     let naasty_ty, st = naasty_of_flick_type st src_ty in
     let (_, peek_idx, st'') =
-      mk_fresh (Term Value) ~src_ty_opt:(Some src_ty) ~ty_opt:(Some naasty_ty)
-       "peek_" 0 st'' in
+      mk_fresh (Term Value) ~src_ty_opt:(Some (Reference (None, src_ty)))
+        ~ty_opt:(Some (Pointer_Type (None, naasty_ty))) "peek_" 0 st'' in
 
     let translated_peek =
       Assign (Var peek_idx,

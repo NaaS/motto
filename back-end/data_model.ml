@@ -49,7 +49,7 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
       | [] ->
-        if !Config.cfg.Config.disable_data_model_checks then
+        if not !Config.cfg.Config.enable_data_model_checks then
           (stmts, names, next_placeholder)
         else failwith "Strings need to be given an indication of size."
       | [(_, v)] ->
@@ -57,7 +57,7 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
           match v with
           | Ann_Str _ -> failwith "TODO"
           | Ann_Int _ ->
-            if !Config.cfg.Config.disable_data_model_checks then
+            if not !Config.cfg.Config.enable_data_model_checks then
               (stmts, names, next_placeholder)
             else failwith "TODO"
           | Ann_Ident s ->
@@ -68,7 +68,7 @@ let rec analyse_type_getchannellen ty ((stmts, names, next_placeholder) as acc :
             let commented_stmt = Commented(stmt, "Handle '" ^ the label_opt ^ "'")
             in (stmts @(*FIXME naive*) [commented_stmt], s :: names, next_placeholder - 1)
           | Ann_BinaryExp (_, _, _) ->
-            if !Config.cfg.Config.disable_data_model_checks then
+            if not !Config.cfg.Config.enable_data_model_checks then
               (stmts, names, next_placeholder)
             else failwith "TODO"
         end
@@ -197,7 +197,7 @@ let rec analyse_type_bstc_dynamic
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
       | [] ->
-        if !Config.cfg.Config.disable_data_model_checks then
+        if not !Config.cfg.Config.enable_data_model_checks then
           (stmts, names, next_placeholder)
         else failwith "Strings need to be given an indication of size."
       | [(_, v)] ->
@@ -205,7 +205,7 @@ let rec analyse_type_bstc_dynamic
           match v with
           | Ann_Str _ -> failwith "TODO"
           | Ann_Int _ ->
-            if !Config.cfg.Config.disable_data_model_checks then
+            if not !Config.cfg.Config.enable_data_model_checks then
               (stmts, names, next_placeholder)
             else failwith "TODO"
           | Ann_Ident length_field ->
@@ -228,7 +228,7 @@ let rec analyse_type_bstc_dynamic
                    Increment (write_offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt1; stmt2], length_field :: name :: names, next_placeholder - 2)
           | Ann_BinaryExp (_, _, _) ->
-            if !Config.cfg.Config.disable_data_model_checks then
+            if not !Config.cfg.Config.enable_data_model_checks then
               (stmts, names, next_placeholder)
             else failwith "TODO"
         end
@@ -320,7 +320,7 @@ let rec analyse_type_writebytestochannel_dynamic
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
       | [] ->
-        if !Config.cfg.Config.disable_data_model_checks then
+        if not !Config.cfg.Config.enable_data_model_checks then
           (stmts, names, next_placeholder)
         else failwith "Strings need to be given an indication of size."
       | [(_, v)] ->
@@ -328,7 +328,7 @@ let rec analyse_type_writebytestochannel_dynamic
           match v with
           | Ann_Str _ -> failwith "TODO"
           | Ann_Int _ ->
-            if !Config.cfg.Config.disable_data_model_checks then
+            if not !Config.cfg.Config.enable_data_model_checks then
               (stmts, names, next_placeholder)
             else failwith "TODO"
           | Ann_Ident length_field ->
@@ -344,7 +344,7 @@ let rec analyse_type_writebytestochannel_dynamic
                    Increment (offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt], name :: length_field :: names, next_placeholder - 2)
           | Ann_BinaryExp (_, _, _) ->
-            if !Config.cfg.Config.disable_data_model_checks then
+            if not !Config.cfg.Config.enable_data_model_checks then
               (stmts, names, next_placeholder)
             else failwith "TODO"
         end
@@ -438,7 +438,7 @@ let rec analyse_type_bcts_dynamic
     begin
       match List.filter (fun (k, v) -> k = "byte_size") ty_ann with
       | [] ->
-        if !Config.cfg.Config.disable_data_model_checks then
+        if not !Config.cfg.Config.enable_data_model_checks then
           (stmts, names, next_placeholder)
         else failwith "Strings need to be given an indication of size."
       | [(_, v)] ->
@@ -446,7 +446,7 @@ let rec analyse_type_bcts_dynamic
           match v with
           | Ann_Str _ -> failwith "TODO"
           | Ann_Int _ ->
-            if !Config.cfg.Config.disable_data_model_checks then
+            if not !Config.cfg.Config.enable_data_model_checks then
               (stmts, names, next_placeholder)
             else failwith "TODO"
           | Ann_Ident length_field ->
@@ -464,7 +464,7 @@ let rec analyse_type_bcts_dynamic
                    Increment (offsetI, f_call))
             in (stmts @(*FIXME naive*) [stmt], length_field :: name :: names, next_placeholder - 2)
           | Ann_BinaryExp (_, _, _) ->
-            if !Config.cfg.Config.disable_data_model_checks then
+            if not !Config.cfg.Config.enable_data_model_checks then
               (stmts, names, next_placeholder)
             else failwith "TODO"
         end

@@ -51,8 +51,10 @@ type configuration =
       that all names are unique.*)
     naive_internal_naming : bool;
     (*When this flag is set, checks built into the Data_model module are
-      disabled. This is useful to debugging and development.*)
-    disable_data_model_checks : bool;
+      enable. This is useful to debugging and development. These checks are
+      off by default since they are no longer up to date with how we currently
+      use the data model.*)
+    enable_data_model_checks : bool;
     (*Simplification involves evaluating expressions and commands at compile
       time, where possible. This transformation is done on the IL, not the
       source language.*)
@@ -82,7 +84,7 @@ let cfg : configuration ref = ref {
   dependency_valuation = [];
   front_end_and_state = false;
   naive_internal_naming = false;
-  disable_data_model_checks = false;
+  enable_data_model_checks = false;
   disable_simplification = false;
   default_nonstrict_type_checking = false;
 }

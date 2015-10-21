@@ -227,6 +227,7 @@ let rec string_of_template_parameter ?st_opt:((st_opt : state option) = None)
     string_of_naasty_expression ~st_opt e
     |> fst
 and string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
+          ?no_outer_brackets:(no_outer_brackets = false)
           (e : naasty_expression) : string * bool(*if bracketed*) =
   let e_s =  
     match e with
@@ -297,7 +298,7 @@ and string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
       fst (string_of_naasty_expression ~st_opt e2)
     | ArrayElement (arr, idx) ->
       fst (string_of_naasty_expression ~st_opt arr) ^ "[" ^
-      fst (string_of_naasty_expression ~st_opt idx) ^ "]"
+      fst (string_of_naasty_expression ~st_opt ~no_outer_brackets:true idx) ^ "]"
     | Left_shift (e1, e2) ->
       fst (string_of_naasty_expression ~st_opt e1) ^ " << " ^
       fst (string_of_naasty_expression ~st_opt e2)
@@ -320,7 +321,7 @@ and string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
       "{" ^ fields_s ^ "}" 
     | Nullptr -> "nullptr"
     | Literal s -> s in
-  if size_of_naasty_expression e = 1 then
+  if no_outer_brackets || size_of_naasty_expression e = 1 then
     e_s, false
   else
     "(" ^ e_s ^ ")", true

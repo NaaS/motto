@@ -202,7 +202,7 @@ let rec inliner_analysis (st : state) (stmt : naasty_statement)
         table
       else
         raise (Inliner_Exc
-                 ("Declaration must contain an identifier name, not just mention a type!" ,
+                 ("inliner_analysis: Declaration must contain an identifier name, not just mention a type!" ,
                   Some st, Some stmt))
     | Some idx ->
       let no_idx_entries =
@@ -696,7 +696,7 @@ let rec erase_vars ?aggressive:(aggressive : bool = false) (stmt : naasty_statem
                 need to be declared*)
         stmt
       else
-        raise (Inliner_Exc ("Declaration must contain an identifier name, not just mention a type!",
+        raise (Inliner_Exc ("erase_vars: Declaration must contain an identifier name, not just mention a type!",
                             None, None))
     | Some idx ->
       if List.mem idx idents then Skip else stmt

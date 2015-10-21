@@ -53,6 +53,10 @@ let rec preprocess_exp st e : Crisp_syntax.expression * State.state =
     let e', st' = preprocess_exp st e in
     TypeAnnotation (e', ty), st'
 
+  | Unsafe_Cast (e, ty) ->
+    let e', st' = preprocess_exp st e in
+    Unsafe_Cast (e', ty), st'
+
   | True
   | False -> e, st
 

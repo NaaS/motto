@@ -4,7 +4,7 @@ process MCD_req : {no_backends, req_opcode} => (mc_command/mc_command client, [m
   let x = ?? client
   switch x.opcode:
     req_opcode:
-      let target = hash (x.key typed integer) mod no_backends
+      let target = hash (x.key) mod no_backends
 #      client => backends[target]
 # The above line abbreviates the following two:
       backends[target] ! x # Note that x was "peeked" from the channel "client".

@@ -1137,12 +1137,13 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       naasty_of_flick_expr st'' chan_index local_name_map sts_acc
         ((chan_index_idx, true) :: ctxt_acc') [chan_index_idx] in
 
+    let src_ty, _ = lnm_tyinfer st local_name_map e in
+    let naasty_ty, st = naasty_of_flick_type st src_ty in
+
     let translated =
       St_of_E (Call_Function
                  (consume_channel,
-                  [Type_Parameter
-                     (*FIXME need to work out the correct value for this*)
-                     (Int_Type (None, default_int_metadata))],
+                  [Type_Parameter naasty_ty],
                   [ArrayElement (Var inputs, Var chan_index_idx);
                    Address_of (Var size)]))
     (*FIXME we should lift_assign*)
@@ -1274,19 +1275,17 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       naasty_of_flick_expr st'' chan_index local_name_map sts_acc
         ((chan_index_idx, true) :: ctxt_acc') [chan_index_idx] in
 
-    let naasty_ty =
-      (*FIXME use type inference*)
-      Int_Type (None, default_int_metadata) in
+    let src_ty, _ = lnm_tyinfer st local_name_map e in
+    let naasty_ty, st = naasty_of_flick_type st src_ty in
     let (_, peek_idx, st'') =
-      mk_fresh (Term Value) ~ty_opt:(Some naasty_ty) "peek_" 0 st'' in
+      mk_fresh (Term Value) ~src_ty_opt:(Some src_ty) ~ty_opt:(Some naasty_ty)
+       "peek_" 0 st'' in
 
     let translated_peek =
       Assign (Var peek_idx,
               Call_Function
                  (peek_channel,
-                  [Type_Parameter
-                     (*FIXME need to work out the correct value for this*)
-                     (Int_Type (None, default_int_metadata))],
+                  [Type_Parameter naasty_ty],
                   [ArrayElement (Var inputs, Var chan_index_idx)])) in
     let condition = Equals (Var peek_idx, Nullptr) in
 

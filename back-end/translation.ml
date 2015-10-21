@@ -1485,6 +1485,7 @@ let split_io_channels f st =
   let replace_channels f c_sidx (* a list of tupples of the form (channel, start index)*) =
     let rec replace f =
       match f with
+      | Unsafe_Cast (e, ty) -> Unsafe_Cast (replace e, ty)
       | Bottom
       | True
       | False

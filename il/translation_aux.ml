@@ -91,6 +91,8 @@ and apply_lnm_e (lmn : local_name_map) (e : expression) : expression =
   | Variable label -> Variable (apply_endomap lmn label)
   | TypeAnnotation (e, ty) ->
     TypeAnnotation (apply_lnm_e lmn e, apply_lnm_ty lmn ty)
+  | Unsafe_Cast (e, ty) ->
+    Unsafe_Cast (apply_lnm_e lmn e, apply_lnm_ty lmn ty)
   | LocalDef ((value_name, ty_opt), e') ->
     LocalDef ((apply_endomap lmn value_name,
                bind_opt (fun ty -> Some (apply_lnm_ty lmn ty)) None ty_opt),

@@ -572,7 +572,7 @@ expression:
   | e = expression; TYPED; sltd = single_line_type_def
     {Crisp_syntax.TypeAnnotation (e, sltd None [])}
   | e = expression; UNSAFE_CAST; sltd = single_line_type_def
-    {Crisp_syntax.TypeAnnotation (e, sltd None [])}
+    {Crisp_syntax.Unsafe_Cast (e, sltd None [])}
 
   | LEFT_R_BRACKET; e = expression; RIGHT_R_BRACKET {e}
   (*The INDENT-UNDENT combo is a form of bracketing*)

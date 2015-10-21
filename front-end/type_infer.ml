@@ -621,6 +621,8 @@ let rec ty_of_expr
   | CaseOf (e', cases) ->
     let ty, _ = ty_of_expr ~strict st e' in
     (*ty must be a Disjoint_Union*)
+(*FIXME this checking is currently disabled, to allow case-of over constants
+        (and not only disjoint unions)
     let expected_disjuncts =
       match Crisp_syntax_aux.resolve_if_usertype st ty with
       | Disjoint_Union (_, tys) -> tys
@@ -659,6 +661,7 @@ let rec ty_of_expr
                let disj_ty_anonymous_s = type_value_to_string true false min_indentation disj_ty_anonymous in
                raise (Type_Inference_Exc ("Disjunct " ^ label ^ " has does not match expected type: expected " ^ disj_ty_anonymous_s ^ " but found " ^ e_ty_anonymous_s, e, st))
         ) expected_disjunct_heads (*FIXME give more info*) in
+*)
     (*within cases, the head must be a Functor_App, a disjunct of ty.*)
     let actual_disjuncts, body_tys =
       List.map (fun (head_e, body_e) ->
@@ -680,6 +683,11 @@ let rec ty_of_expr
                | _ ->
                  raise (Type_Inference_Exc ("Invalid disjunct head", e, st)))
                fun_args)
+          | Variable s ->
+            (*FIXME this is a hack to allow us to simulate "switch" over
+                    constants. this should be removed, and replaced with
+                    a proper inference based on such a syntactical feature.*)
+            s, [s]
           | _ ->
             (*FIXME give more info*)
             raise (Type_Inference_Exc ("Disjunct heads must be functors", e, st)) in
@@ -702,6 +710,8 @@ let rec ty_of_expr
         let body_ty, _ = ty_of_expr ~strict st' body_e in
         (head_label, body_ty)) cases
       |> List.split in
+(*FIXME this checking is currently disabled, to allow case-of over constants
+        (and not only disjoint unions)
     (*all the disjuncts of the Disjoint_Union must be mentioned in the heads*)
     let _ =
       if strict then
@@ -709,6 +719,7 @@ let rec ty_of_expr
           if not (List.exists (fun lbl -> label = lbl) expected_disjunct_heads) then
             raise (Type_Inference_Exc ("Extra disjunct -- this had not been mentioned in the type specification: " ^ label, e, st)))
          actual_disjuncts in
+*)
     (*each body must be of the same type, and is the result type of the whole expression*)
     assert (List.length body_tys > 0);
     let ty =

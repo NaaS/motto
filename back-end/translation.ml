@@ -1013,27 +1013,27 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
         local_name_map,
         st4)
 
-  | CaseOf (e, cases) ->
+  | CaseOf (e', cases) ->
     (*NOTE this is a generalised if..then..else statement*)
     (*FIXME this behaves similar to a Hoare-style switch (but lacks a "default"
             case (though it should have one, to ensure totality), rather than
             as a more general ML-syle case..of*)
-    let ty =
-      (*FIXME use type inference*)
-      (Int_Type (None, default_int_metadata)) in
-    let (_, e_result_idx, st) =
-      mk_fresh (Term Value) ~ty_opt:(Some ty) "e_" 0 st in
+    let src_ty, _ = lnm_tyinfer st local_name_map e' in
+    let ty, st = naasty_of_flick_type st src_ty in
+
+    let (_, e'_result_idx, st) =
+      mk_fresh (Term Value) ~src_ty_opt:(Some src_ty) ~ty_opt:(Some ty)
+       "e_" 0 st in
     let (sts_acc, ctxt_acc, assign_acc', _, st) =
-      naasty_of_flick_expr st e local_name_map sts_acc
-        ((e_result_idx, true) :: ctxt_acc) [e_result_idx] in
+      naasty_of_flick_expr st e' local_name_map sts_acc
+        ((e'_result_idx, true) :: ctxt_acc) [e'_result_idx] in
     assert (assign_acc' = []); (* We shouldn't get anything back to assign to *)
+
+    let src_ty, _ = lnm_tyinfer st local_name_map e in
+    let ty, st = naasty_of_flick_type st src_ty in
     let (_, switch_result_idx, st) =
-      (*FIXME here we use Int_Type, but this should be inferred from the
-        expression*)
-      mk_fresh (Term Value)
-        ~ty_opt:(Some
-                  (*FIXME use type inference*)
-                   (Int_Type (None, default_int_metadata))) "switchresult_" 0 st in
+      mk_fresh (Term Value) ~src_ty_opt:(Some src_ty)
+        ~ty_opt:(Some ty) "switchresult_" 0 st in
     let ctxt_acc = (switch_result_idx, true) :: ctxt_acc in
 
     (*NOTE we preserve assign_acc since we use it at the end of the function.
@@ -1059,7 +1059,7 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       ) cases in
 
     let translated =
-      Naasty.Switch (Var e_result_idx, cases) in
+      Naasty.Switch (Var e'_result_idx, cases) in
     let nstmt =
       lift_assign assign_acc (Var switch_result_idx)
       |> Naasty_aux.concat in

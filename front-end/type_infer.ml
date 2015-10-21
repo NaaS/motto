@@ -276,7 +276,7 @@ let rec ty_of_expr
     let ty, _ = ty_of_expr ~strict st e in
     let _ =
       if strict then
-        if not (undefined_ty ty || expected_ty = ty) then
+        if not (undefined_ty ty || forget_label expected_ty = forget_label ty) then
           begin
           let ty_s = type_value_to_string true false min_indentation ty in
           let expected_ty_s = type_value_to_string true false min_indentation expected_ty in

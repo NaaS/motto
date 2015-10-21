@@ -1045,7 +1045,8 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
       fold_map ([], (sts_acc, ctxt_acc, assign_acc, st))
         (fun (sts_acc, ctxt_acc, assign_acc, st) (case_e, case_body) ->
            let (_, e_result_idx, st) =
-             mk_fresh (Term Value) ~ty_opt:(Some ty) "case_e_" 0 st in
+             mk_fresh (Term Value) ~src_ty_opt:(Some src_ty)
+               ~ty_opt:(Some ty) "case_e_" 0 st in
            let (sts_acc, ctxt_acc, assign_acc', _, st) =
              naasty_of_flick_expr st case_e local_name_map sts_acc
                ((e_result_idx, true) :: ctxt_acc) [e_result_idx] in
@@ -1157,11 +1158,12 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
   (*FIXME contains lots of default types -- usually "int" is used*)
   | Send (channel_inverted, channel_identifier, e) ->
     (*Start by translating e*)
-    let e_ty = (*FIXME use type inference*)
-      Int_Type (None, default_int_metadata) in
+    let e_src_ty, _ = lnm_tyinfer st local_name_map e in
+    let e_ty, st = naasty_of_flick_type st e_src_ty in
     (*Since this is a newly-declared variable, make sure it's fresh.*)
     let (_, e_idx, st') =
-      mk_fresh (Term Value) ~ty_opt:(Some e_ty) ("e_") 0 st in
+      mk_fresh (Term Value) ~src_ty_opt:(Some e_src_ty) ~ty_opt:(Some e_ty)
+       "e_" 0 st in
     let (sts_acc, ctxt_acc, assign_acc, _, st) =
       naasty_of_flick_expr st' e local_name_map sts_acc
         ((e_idx, true) :: ctxt_acc) [e_idx] in

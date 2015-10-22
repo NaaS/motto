@@ -374,6 +374,7 @@ and expression =
   | Str of string
   | Meta_quoted of meta_instruction list
   | Hole
+  | Literal_Expr of string
 
 let flick_unit_value = TupleValue []
 
@@ -383,6 +384,8 @@ let rec channel_identifier_to_string (c_name, idx_opt) =
   | None -> ""
   | Some idx -> "[" ^ expression_to_string min_indentation idx ^ "]"
 and expression_to_string indent = function
+  | Literal_Expr s ->
+    indn indent ^ s
   | Unsafe_Cast (e, ty) ->
     indn indent ^ expression_to_string min_indentation e ^ " unsafe_cast " ^
     type_value_to_string default_use_mixfix_lists false 0 ty

@@ -1397,6 +1397,13 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
     (Naasty_aux.concat [sts_acc; translation; assignment],
       ((proj_result_idx, true) :: ctxt_acc), [], local_name_map, st)
 
+  | Literal_Expr s ->
+    let assignment =
+      lift_assign assign_acc (Literal s)
+      |> Naasty_aux.concat in
+    (Naasty_aux.concat [sts_acc; assignment],
+      ctxt_acc, [], local_name_map, st)
+
   | _ -> raise (Translation_Expr_Exc ("TODO: " ^ expression_to_string no_indent e,
                                       Some e, Some local_name_map, Some sts_acc, st))
   with
@@ -1500,7 +1507,6 @@ let split_io_channels f st =
       | True
       | False
       | InvertedVariable _
-      | Variable _
       | Int _
       | IPv4_address _
       | EmptyList
@@ -1508,6 +1514,76 @@ let split_io_channels f st =
       | Meta_quoted _
       | Hole ->
         f
+      | Variable label ->
+        begin
+        (*FIXME crude check: see if label^suffix exists in c_sidx, and if so
+                replace label with label^suffix*)
+        let label_recv =
+          List.exists (fun (Channel (_, n), _) ->
+            n = label ^ "_recv"(*FIXME const*)) c_sidx in
+        let label_send =
+          List.exists (fun (Channel (_, n), _) ->
+            n = label ^ "_send"(*FIXME const*)) c_sidx in
+        match label_recv, label_send with
+        | true, false ->
+          failwith "'replace' on a read-only channel not currently supported"
+        | false, true ->
+          (* One idea is to rewrite f as
+               Variable (label ^ "_send"(*FIXME const*))
+             and anotehr is to rewrite it as
+               IndexableProjection ("outputs", idx)
+             These run into checking problems -- for example, for the latter,
+             the state must know what "outputs" is.
+             So we take a really simple approach: since we know what "label"
+             should be rewritten to in the target, we create a literal blob
+             for it. Other parts of the compiler won't be able to look into
+             this blob, but nor will they need to.*)
+          let (Channel (ct, name), idx) =
+            List.find (fun (Channel (typ, n), _) ->
+              n = (label ^ "_send")) c_sidx in
+          (*We also make sure that this literal blob gets the right type.
+            We force the type checker to accept that this blob has the given
+            type. We get this type from the original expression, so this is
+            sound.*)
+          Unsafe_Cast
+            (Literal_Expr
+               ("outputs[" ^ expression_to_string min_indentation idx ^ "]"),
+             tx_chan_type ct)
+        | true, true ->
+          failwith "Ambiguous channel direction"
+        | false, false ->
+          (*label does not refer to a channel*)
+          f
+        end
+(* Other implementation idea
+        begin
+print_endline ("CHECKING " ^ label);
+        (*Get variable's type. If it's a channel, then rename it too.*)
+        match lookup_term_data (Term Undetermined) st.term_symbols label with
+        | None ->
+print_endline ("  NO " ^ label);
+          f
+        | Some (_, {source_type; _}) ->
+List.find (fun (Channel (typ, n), _) -> n = (c_name ^ "_recv")) c_sidx in
+          begin
+          (*determine whether the channel is read-only or write-only, in which
+            case we can unambigiously map it to its new name. otherwise complain.
+            FIXME improve this to also handle ambiguity -- this would consist of
+                  a program transformation that duplicated the overall
+                  expression, evaluating it for both the receive and send sides.*)
+          let ct =
+            match source_type with
+            | Some (ChanType (_, ct)) -> ct
+            | _ -> failwith "symbol in Channel_Name scope does not have type ChanType" in
+          let suffix =
+            match rx_chan_type ct, tx_chan_type ct with
+            | Empty, Empty -> failwith "Nonsense channel"
+            | Empty, _ -> "_send"(*FIXME const*)
+            | _, Empty -> "_recv"(*FIXME const*)
+            | _, _ -> failwith "Ambiguous channel direction"
+          in Variable (label ^ suffix)
+          end
+        end*)
       | Send (inv, (c_name, idx_opt), e) ->
         let (Channel (_, name), idx) =
           List.find (fun (Channel (typ, n), _) -> n = (c_name ^ "_send")) c_sidx in

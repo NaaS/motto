@@ -85,7 +85,8 @@ and apply_lnm_e (lmn : local_name_map) (e : expression) : expression =
   | EmptyList
   | Str _
   | Meta_quoted _
-  | Hole -> e
+  | Hole
+  | Literal_Expr _ -> e
 
   | InvertedVariable label -> InvertedVariable (apply_endomap lmn label)
   | Variable label -> Variable (apply_endomap lmn label)

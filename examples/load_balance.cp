@@ -36,7 +36,7 @@ process LB : {no_backends} => (http_request/- client, -/http_request backend)
 #"extern" for functions? and for types?
 
 
-  if set = False:
+  if not set:
     let choice =
 #      hash(client.src_network_address + client.protocol.TCP.src_port) mod no_backends
 #      hash(client_src_network_address + client_protocol_TCP_src_port) mod no_backends

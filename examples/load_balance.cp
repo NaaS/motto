@@ -24,8 +24,8 @@ process LB : {no_backends} => (http_request/- client, -/http_request backend)
   # FIXME this block should be removed. It serves to make declarations that
   #       parts of the compiler can latch onto. The fields from the PDU should
   #       be translated to refer to suitable values in the runtime.
-  let client_src_network_address = 0
-  let client_protocol_TCP_src_port = 0
+#  let client_src_network_address = 0
+#  let client_protocol_TCP_src_port = 0
 #  let backend = 0
 #  let backend = 0 unsafe_cast [integer]
 #
@@ -39,7 +39,9 @@ process LB : {no_backends} => (http_request/- client, -/http_request backend)
   if set = False:
     let choice =
 #      hash(client.src_network_address + client.protocol.TCP.src_port) mod no_backends
-      hash(client_src_network_address + client_protocol_TCP_src_port) mod no_backends
+#      hash(client_src_network_address + client_protocol_TCP_src_port) mod no_backends
+#      hash(src_address(client) + src_port(client)) mod no_backends
+      hash(src_address(client)) mod no_backends
     bind (backend, backend_choices[choice])
 #    bind (backend, backend_choices)
     set := True

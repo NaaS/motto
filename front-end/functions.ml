@@ -57,6 +57,10 @@ let function_db : function_db =
                   FunRetType [Boolean (None, [])]);
     impl = (fun x -> failwith "This function is only implemented in the ICL backend")
    };
+   {name = "src_address";
+    ty = FunType ([], FunDomType ([], [def_undefined]), FunRetType [Integer (None, [])]);
+    impl = (fun x -> failwith "TODO")
+   };
   ]
 
 let export_fun (e : function_entry) : (function_name * (bool * function_type)) =

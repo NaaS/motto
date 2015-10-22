@@ -1525,8 +1525,6 @@ let split_io_channels f st =
           List.exists (fun (Channel (_, n), _) ->
             n = label ^ "_send"(*FIXME const*)) c_sidx in
         match label_recv, label_send with
-        | true, false ->
-          failwith "'replace' on a read-only channel not currently supported"
         | false, true ->
           (* One idea is to rewrite f as
                Variable (label ^ "_send"(*FIXME const*))
@@ -1549,6 +1547,14 @@ let split_io_channels f st =
             (Literal_Expr
                ("outputs[" ^ expression_to_string min_indentation idx ^ "]"),
              tx_chan_type ct)
+        | true, false ->
+          let (Channel (ct, name), idx) =
+            List.find (fun (Channel (typ, n), _) ->
+              n = (label ^ "_recv")) c_sidx in
+          Unsafe_Cast
+            (Literal_Expr
+               ("inputs[" ^ expression_to_string min_indentation idx ^ "]"),
+             rx_chan_type ct)
         | true, true ->
           failwith "Ambiguous channel direction"
         | false, false ->

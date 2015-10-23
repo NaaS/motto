@@ -62,6 +62,8 @@ type term_symbol_metadata =
     naasty_type : naasty_type option;
     identifier_kind : identifier_kind;
 
+    backend_symbol : string option;
+
     (*If the symbol is a channel name, then here we keep the (unique)
       channel identifier it maps to. This mapping is defined by the task
       graph generation. The chan_id is used to work out the channel offset
@@ -70,11 +72,18 @@ type term_symbol_metadata =
     channel_id : Task_model.chan_id option
   }
 
-type state =
+type type_symbol_metadata =
+  {
+    naasty_type : naasty_type option;
+    emit_as : naasty_type option;
+    assign_as : (identifier * identifier * state -> naasty_statement * state) option;
+  }
+
+and state =
   { pragma_inclusions : string list;
     type_declarations : (type_name * type_value * naasty_type option) list;
     next_symbol : identifier;
-    type_symbols : (string * identifier * naasty_type option) list;
+    type_symbols : (string * identifier * type_symbol_metadata) list;
     term_symbols : (string * identifier * term_symbol_metadata) list;
     (* FIXME the name of this field should be improved: it's used for both
          functions and processes.
@@ -116,6 +125,7 @@ let initial_state =
     naasty_type = None;
     identifier_kind = Defined_Function_Name;
     channel_id = None;
+    backend_symbol = None;
   } in
   (*Initialise next_symbol and term_symbols based on the available
     interpreted function symbols*)
@@ -312,18 +322,18 @@ let lookup_id (scope : scope) (st : state) (id : identifier) : string option =
 let update_symbol_type (id : identifier) (ty : naasty_type)
       (scope : scope) (st : state) : state =
   let type_symbols_transf =
-    List.map (fun (name, idx, ty_opt) ->
+    List.map (fun (name, idx, md) ->
       if id = idx then
-        match ty_opt with
-        | None -> (name, idx, Some ty)
+        match md.naasty_type with
+        | None -> (name, idx, { md with naasty_type = Some ty })
         | Some ty' ->
             if ty <> ty' then
               raise (State_Exc ("Different types associated with same symbol!",
                                Some st))
             (*Here we are being lenient, because we could fail even if we try to
               assign the same type to the same symbol twice.*)
-            else (name, idx, ty_opt)
-      else (name, idx, ty_opt)) in
+            else (name, idx, md)
+      else (name, idx, md)) in
   let term_symbols_transf =
     List.map (fun ((name, idx, metadata) as original) ->
       if id = idx then
@@ -347,11 +357,23 @@ let update_symbol_type (id : identifier) (ty : naasty_type)
     term_symbols = term_symbols_transf st.term_symbols;
   }
 
+(*Updates the "emit_as" type associated with a type symbol in the symbol table*)
+let update_symbol_emission (id : identifier) (emit_as : naasty_type option)
+      (st : state) : state =
+  let type_symbols_transf =
+    List.map (fun (name, idx, md) ->
+      if id = idx then
+        (name, idx, { md with emit_as = emit_as })
+      else (name, idx, md)) in
+  { st with
+    type_symbols = type_symbols_transf st.type_symbols;
+  }
+
 let lookup_symbol_type (id : identifier)
       (scope : scope) (st : state) : naasty_type option =
   let type_symbol_lookup =
-    List.fold_right (fun (_, idx, ty_opt) acc ->
-      if id = idx then ty_opt
+    List.fold_right (fun (_, idx, md) acc ->
+      if id = idx then md.naasty_type
       else acc) in
   let term_symbol_lookup =
     List.fold_right (fun (_, idx, metadata) acc ->
@@ -378,3 +400,15 @@ let symbol_is_di (id : int) (st : state) : bool =
           (List.map (fun (x, y, z) -> (y, x, z)) st.term_symbols) id with
   | None -> failwith "symbol_is_di: symbol not in table" (*FIXME give more info*)
   | Some (_, md) -> md.dependency_index
+
+let lookup_type_metadata (id : identifier) (st : state) : type_symbol_metadata option =
+  List.fold_right (fun (_, idx, md) acc ->
+    if id = idx then
+      match acc with
+      | None -> Some md
+      | Some _ ->
+        raise (State_Exc
+                 ("Multiple entries for type in symbol " ^ string_of_int id ^
+                  " was used in term, getting idx " ^
+                  string_of_int idx, Some st))
+    else acc) st.type_symbols (None : type_symbol_metadata option)

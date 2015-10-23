@@ -100,7 +100,7 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
                 assert (metadata.naasty_type = None);
                 NOTE disabled this assertion since the assumption doesn't seem
                      valid*)
-                let metadata' =
+                let metadata': term_symbol_metadata =
                   { metadata with
                     naasty_type = Some naasty_ty } in
                 (id, index, metadata')
@@ -263,14 +263,40 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
     in (translated_ty, st''')
   | IL_Type naasty_ty -> naasty_ty, st
   | RecordType (label_opt, tys, type_ann) ->
-    if (type_ann <> []) then
-      failwith "Record serialisation annotation not supported"; (*TODO*)
+    (*Extract any Diffingo names, and associate them with this record type.
+      There are 2 kinds of Diffingo names: diffingo_record and diffingo_data.
+      The first is used for peeked values. The second is used when we want
+      to operate over those peeked values.
+      We need to add both those names as types to the symbol table.
+      When it comes to emitting this record type, then we use diffingo_record.
+      When it comes to assigning to a value of this record type, then we
+      use diffingo_data to type that value. (We also need to assign through the
+      reinterpret_cast.)*)
+
+    (*FIXME also need to handle diffingo_data*)
+
+    let diffingo_record_ty_opt =
+      let diffingo_record =
+        List.fold_right (fun (name, ann) acc ->
+          match name, ann with
+          | "diffingo_record"(*FIXME const*), Ann_Str s ->
+            begin
+              match acc with
+              | None -> Some s
+              | Some _ -> failwith "More than one diffingo_record has been defined"
+            end
+          | _ -> acc) type_ann None in
+      match diffingo_record with
+      | None -> None
+      | Some s -> Some (Literal_Type (None, s)) in
+
     let (type_identifier, st') = check_and_generate_typename label_opt in
     let (tys', st'') =
       fold_map ([], st') (naasty_of_flick_type ~default_ik:(Some (Field ty))) tys in
     let translated_ty = Record_Type (type_identifier, List.rev tys') in
     let st''' =
-        update_symbol_type type_identifier translated_ty Type st''
+      update_symbol_type type_identifier translated_ty Type st''
+      |> update_symbol_emission type_identifier diffingo_record_ty_opt
     in (translated_ty, st''')
   | ChanType (label_opt, chan_type) ->  (*FIXME -- THIS IS A DUMMY NOT REAL TRANSLATION *)
     let ik =

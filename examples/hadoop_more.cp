@@ -1,5 +1,14 @@
+#// Reference to what comes out of a channel
+#HadoopDMDgoData * peek_6;
+#peek_0 = NaasData::peek_channel<HadoopDMDgoData> (inputs[x_recv_index_0]);
+#// ... and anything related to a channel
+#NaasData::write_to_channel<HadoopDMDgoData> (peek_1, outputs[0], &size);
+#NaasData::consume_channel<HadoopDMDgoData> (inputs[0], &size);
+#
+#// Actual data of what comes out of a record
+#hadoop::HadoopRecord *v2= reinterpret_cast<hadoop::HadoopRecord *>(peek_1->area.contents());
 
-type k_v : record
+type k_v : { diffingo_record = "HadoopDMDgoData" } record
   key_len : integer
   key : string
   value_len : integer

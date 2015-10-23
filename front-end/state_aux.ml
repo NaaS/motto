@@ -41,8 +41,11 @@ let state_to_str ?indentation:(indentation : string = "  ")
   indentation ^ "type_declarations : " ^ print_list indentation type_decls_l ^ "\n" ^
   indentation ^ "next_symbol : " ^ string_of_int next_symbol ^ "\n" ^
   indentation ^ "type_symbols : " ^ print_list indentation
-                         (List.map (fun (s, i, ty_opt) -> "(" ^ s ^ ", " ^
-                                   string_of_int i ^ ", " ^ str_of_ty_opt ty_opt ^ ")")
+                         (List.map (fun (s, i, md) -> "(" ^ s ^ ", " ^
+                                   string_of_int i ^ ", " ^
+                                   str_of_ty_opt md.naasty_type ^ ", " ^
+                                   "assign_as?" ^
+                                     if md.assign_as = None then "no" else "yes"^ ")")
                          type_symbols) ^ "\n" ^
   indentation ^ "term_symbols : " ^ print_list indentation
                      (List.map (fun (s, i, md) -> "(" ^ s ^ ", " ^

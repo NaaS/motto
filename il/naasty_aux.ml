@@ -134,8 +134,26 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
     " " ^ ty_name st_opt ty_ident
   | Unit_Type -> indn indent ^ "void"
   | UserDefined_Type (id_opt, ty_ident) ->
+    let ty_s =
+      match st_opt with
+      | None ->
+        (*FIXME this might not be right, since this user-defined type might
+                actually be intended to refer to emit_as, but it's the best we can
+                do at the moment since we have no state info.*)
+        ty_name st_opt ty_ident
+      | Some st ->
+        begin
+          match lookup_type_metadata ty_ident st with
+          | None -> failwith "Could not find ty_ident"(*FIXME give more info*)
+          | Some md ->
+            begin
+              match md.emit_as with
+              | None -> ty_name st_opt ty_ident
+              | Some ty -> string_of_naasty_type ~st_opt no_indent ty
+            end
+        end in
     indn indent ^
-    ty_name st_opt ty_ident ^
+    ty_s ^
     bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
   | Pointer_Type (id_opt, naasty_type) ->
     string_of_naasty_type ~st_opt indent naasty_type ^ " *" ^
@@ -473,7 +491,9 @@ let extend_scope_unsafe' (scope : scope) (st : state)
   | Type ->
     (st.next_symbol,
      { st with
-       type_symbols = (id, st.next_symbol, ty_opt') :: st.type_symbols;
+       type_symbols =
+         (id, st.next_symbol,
+          { naasty_type = ty_opt'; emit_as = None; assign_as = None}) :: st.type_symbols;
        next_symbol = 1 + st.next_symbol;
      })
   | Term ik ->
@@ -490,6 +510,7 @@ let extend_scope_unsafe' (scope : scope) (st : state)
        naasty_type = ty_opt';
        identifier_kind = ik;
        channel_id = None;
+       backend_symbol = None;
      } in
      { st with
        term_symbols = (id, st.next_symbol, metadata) :: st.term_symbols;
@@ -893,6 +914,9 @@ let add_fields_to_record (decl : naasty_declaration)
   match decl with
   | Type_Decl (Record_Type (ty_id, tys)) ->
     Type_Decl (Record_Type (ty_id, tys @ additional_tys))
+  | Type_Decl (Literal_Type _) ->
+    (*We allow Literal_Type through*)
+    decl
   | _ -> failwith "Tried to add fields to non-record."
 
 (*Assigns to a collection of variables the value of an expression*)

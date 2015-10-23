@@ -354,7 +354,10 @@ type_def:
 type_decl:
   | TYPE; type_name = IDENTIFIER; COLON; td = type_def
     { {Crisp_syntax.type_name = type_name;
-       Crisp_syntax.type_value = td None [](*FIXME include annotation?*)} }
+       Crisp_syntax.type_value = td None []} }
+  | TYPE; type_name = IDENTIFIER; COLON; ann = type_annotation; td = type_def
+    { {Crisp_syntax.type_name = type_name;
+       Crisp_syntax.type_value = td None ann} }
 
 channel_type_kind1:
   | from_type = single_line_type_def; SLASH; to_type = single_line_type_def

@@ -151,9 +151,37 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None)
             | None -> failwith "Could not find ty_ident"(*FIXME give more info*)
             | Some md ->
               begin
-                match md.emit_as with
-                | None -> ty_name st_opt ty_ident
-                | Some ty -> string_of_naasty_type ~st_opt no_indent ty
+                (*Check if the variable's has_channel_read is set. If set,
+                  then type the variable as md.emit_as, otherwise interpret as
+                  md.assign_as*)
+                match id_opt with
+                | None ->
+                  begin
+                    match md.emit_as with
+                    | None ->
+                      (*FIXME emit warning?*)
+                      ty_name st_opt ty_ident
+                    | Some ty -> string_of_naasty_type ~st_opt no_indent ty
+                  end
+                | Some id ->
+                  match lookup_term_data ~st_opt (Term Value)
+                          (List.map (fun (x, y, z) ->
+                             (y, x, z)) st.term_symbols) id with
+                  | None ->
+                      ty_name st_opt ty_ident
+                  | Some (_, term_md) ->
+                    if term_md.has_channel_read then
+                      match md.emit_as with
+                      | None ->
+                        (*FIXME emit warning?*)
+                        ty_name st_opt ty_ident
+                      | Some ty -> string_of_naasty_type ~st_opt no_indent ty
+                    else
+                      match md.assign_as with
+                      | None ->
+                        (*FIXME emit warning?*)
+                        ty_name st_opt ty_ident
+                      | Some ty -> string_of_naasty_type ~st_opt no_indent ty
               end
           end in
     indn indent ^

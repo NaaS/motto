@@ -62,7 +62,16 @@ type term_symbol_metadata =
     naasty_type : naasty_type option;
     identifier_kind : identifier_kind;
 
-    backend_symbol : string option;
+    (*Indicates whether this symbol is a variable that carries a value that
+      has just been peeked from a channel (i.e., without having gone through
+      other variables or expressions first). This is used to separate variables
+      into those that read directly from channels and those that do not. In
+      particular, we're interested in assignments in which we have the second
+      kind of variable on the left, and the first kind of the right. When we
+      find such assignments, we will add the reinterpret_cast line for Diffingo.*)
+    (*FIXME can push such back-end specific features into a back-end module?*)
+    has_channel_read : bool;
+    backend_symbol : string option;(*FIXME unused*)
 
     (*If the symbol is a channel name, then here we keep the (unique)
       channel identifier it maps to. This mapping is defined by the task
@@ -76,7 +85,11 @@ type type_symbol_metadata =
   {
     naasty_type : naasty_type option;
     emit_as : naasty_type option;
-    assign_as : (identifier * identifier * state -> naasty_statement * state) option;
+    assign_as : naasty_type option;
+    (*A "hook" that is fired when we encounter an assignment of a
+      has_channel_read variable to a non-has_channel_read variable.
+      This is here to inject a line as required by Diffingo.*)
+    assign_hook : (identifier -> identifier -> state -> naasty_statement * state) option;
   }
 
 and state =
@@ -108,6 +121,23 @@ and state =
 *)
   }
 
+(*Equality betweens states -- modulo functions contained therein*)
+let state_eq (st1 : state) (st2 : state) : bool =
+  st1.pragma_inclusions = st2.pragma_inclusions &&
+  st1.type_declarations = st2.type_declarations &&
+  st1.next_symbol = st2.next_symbol &&
+  List.length st1.type_symbols = List.length st2.type_symbols &&
+  List.fold_right (fun ((name1, idx1, md1), (name2, idx2, md2)) b ->
+    b && name1 = name2 && idx1 = idx2 && md1.naasty_type = md2.naasty_type &&
+    md1.emit_as = md2.emit_as && md1.assign_as = md2.assign_as &&
+    (if md1.assign_hook = None || md2.assign_hook = None then
+       md1.assign_hook = None && md2.assign_hook = None
+     else true)) (List.combine st1.type_symbols st2.type_symbols) true &&
+  st1.term_symbols = st2.term_symbols &&
+  st1.crisp_funs = st2.crisp_funs &&
+  st1.current_task = st2.current_task &&
+  st1.task_graph = st2.task_graph
+
 exception State_Exc of string * state option
 
 (*The initial state consists of empty values for most things, except for
@@ -125,6 +155,7 @@ let initial_state =
     naasty_type = None;
     identifier_kind = Defined_Function_Name;
     channel_id = None;
+    has_channel_read = false;
     backend_symbol = None;
   } in
   (*Initialise next_symbol and term_symbols based on the available
@@ -364,6 +395,32 @@ let update_symbol_emission (id : identifier) (emit_as : naasty_type option)
     List.map (fun (name, idx, md) ->
       if id = idx then
         (name, idx, { md with emit_as = emit_as })
+      else (name, idx, md)) in
+  { st with
+    type_symbols = type_symbols_transf st.type_symbols;
+  }
+
+(*Updates the "assign_as" type associated with a type symbol in the symbol table*)
+(*FIXME boilerplate code -- would be neater to pass a function that transforms
+        the md record*)
+let update_symbol_assign (id : identifier) (assign_as : naasty_type option)
+      (st : state) : state =
+  let type_symbols_transf =
+    List.map (fun (name, idx, md) ->
+      if id = idx then
+        (name, idx, { md with assign_as = assign_as })
+      else (name, idx, md)) in
+  { st with
+    type_symbols = type_symbols_transf st.type_symbols;
+  }
+(*FIXME boilerplate code -- would be neater to pass a function that transforms
+        the md record*)
+let update_symbol_assign_hook (id : identifier) assign_hook
+      (st : state) : state =
+  let type_symbols_transf =
+    List.map (fun (name, idx, md) ->
+      if id = idx then
+        (name, idx, { md with assign_hook = assign_hook })
       else (name, idx, md)) in
   { st with
     type_symbols = type_symbols_transf st.type_symbols;

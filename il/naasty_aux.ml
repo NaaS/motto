@@ -87,7 +87,8 @@ let set_empty_identifier (ty : naasty_type) : naasty_type =
     Chan_Type (None, is_array, chan_direction, naasty_type)
   | Literal_Type (_, s) -> Literal_Type (None, s)
 
-let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
+let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None)
+          ?redirect_udt:(redirect_udt : bool = true) indent =
   function
   | Int_Type (id_opt, int_metadata) ->
     let prefix =
@@ -135,23 +136,26 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None) indent =
   | Unit_Type -> indn indent ^ "void"
   | UserDefined_Type (id_opt, ty_ident) ->
     let ty_s =
-      match st_opt with
-      | None ->
-        (*FIXME this might not be right, since this user-defined type might
-                actually be intended to refer to emit_as, but it's the best we can
-                do at the moment since we have no state info.*)
+      if not redirect_udt then
         ty_name st_opt ty_ident
-      | Some st ->
-        begin
-          match lookup_type_metadata ty_ident st with
-          | None -> failwith "Could not find ty_ident"(*FIXME give more info*)
-          | Some md ->
-            begin
-              match md.emit_as with
-              | None -> ty_name st_opt ty_ident
-              | Some ty -> string_of_naasty_type ~st_opt no_indent ty
-            end
-        end in
+      else
+        match st_opt with
+        | None ->
+          (*FIXME this might not be right, since this user-defined type might
+                  actually be intended to refer to emit_as, but it's the best we can
+                  do at the moment since we have no state info.*)
+          ty_name st_opt ty_ident
+        | Some st ->
+          begin
+            match lookup_type_metadata ty_ident st with
+            | None -> failwith "Could not find ty_ident"(*FIXME give more info*)
+            | Some md ->
+              begin
+                match md.emit_as with
+                | None -> ty_name st_opt ty_ident
+                | Some ty -> string_of_naasty_type ~st_opt no_indent ty
+              end
+          end in
     indn indent ^
     ty_s ^
     bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
@@ -493,7 +497,8 @@ let extend_scope_unsafe' (scope : scope) (st : state)
      { st with
        type_symbols =
          (id, st.next_symbol,
-          { naasty_type = ty_opt'; emit_as = None; assign_as = None}) :: st.type_symbols;
+          { naasty_type = ty_opt';
+            emit_as = None; assign_as = None; assign_hook = None }) :: st.type_symbols;
        next_symbol = 1 + st.next_symbol;
      })
   | Term ik ->
@@ -511,6 +516,7 @@ let extend_scope_unsafe' (scope : scope) (st : state)
        identifier_kind = ik;
        channel_id = None;
        backend_symbol = None;
+       has_channel_read = false;
      } in
      { st with
        term_symbols = (id, st.next_symbol, metadata) :: st.term_symbols;
@@ -716,7 +722,7 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
       instantiate_type fresh names st naasty_type in
     if naasty_type' = naasty_type then
       begin
-        assert (st = st');
+        assert (state_eq st st');
         substitute_opt fresh names false scheme st id_opt (fun id' ->
         Pointer_Type (Some id', naasty_type))
       end
@@ -731,7 +737,7 @@ let rec instantiate_type (fresh : bool) (names : string list) (st : state)
       instantiate_type fresh names st naasty_type in
     if naasty_type' = naasty_type then
       begin
-        assert (st = st');
+        assert (state_eq st st');
         substitute_opt fresh names false scheme st id_opt (fun id' ->
         Static_Type (Some id', naasty_type))
       end

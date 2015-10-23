@@ -8,7 +8,7 @@
 #// Actual data of what comes out of a record
 #hadoop::HadoopRecord *v2= reinterpret_cast<hadoop::HadoopRecord *>(peek_1->area.contents());
 
-type k_v : { diffingo_record = "HadoopDMDgoData" } record
+type k_v : { diffingo_record = "HadoopDMDgoData", diffingo_data = "hadoop::HadoopRecord" } record
   key_len : integer
   key : string
   value_len : integer

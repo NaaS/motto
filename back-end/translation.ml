@@ -13,6 +13,7 @@ open State
 open Task_model
 open State_aux
 open Translation_aux
+open Naasty_transformation
 
 (*FIXME eventually these constants should be eliminated*)
 let int_sty = Integer (None, [])
@@ -273,8 +274,6 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
       use diffingo_data to type that value. (We also need to assign through the
       reinterpret_cast.)*)
 
-    (*FIXME also need to handle diffingo_data*)
-
     let diffingo_record_ty_opt =
       let diffingo_record =
         List.fold_right (fun (name, ann) acc ->
@@ -290,13 +289,56 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
       | None -> None
       | Some s -> Some (Literal_Type (None, s)) in
 
+    (*FIXME mostly repeated from above*)
+    let diffingo_data_ty_opt =
+      let diffingo_data =
+        List.fold_right (fun (name, ann) acc ->
+          match name, ann with
+          | "diffingo_data"(*FIXME const*), Ann_Str s ->
+            begin
+              match acc with
+              | None -> Some s
+              | Some _ -> failwith "More than one diffingo_data has been defined"
+            end
+          | _ -> acc) type_ann None in
+      match diffingo_data with
+      | None -> None
+      | Some s -> Some (Literal_Type (None, s)) in
+
+    assert (if diffingo_record_ty_opt = None || diffingo_record_ty_opt = None then
+              diffingo_record_ty_opt = None && diffingo_record_ty_opt = None
+            else true);
+
+    let assign_hook =
+      match diffingo_data_ty_opt with
+      | None -> None
+      | Some diffingo_data_ty ->
+        Some (fun (lhs_idx : identifier) (rhs_idx : identifier) (st : state) ->
+        let diffingo_data_ty_s =
+          string_of_naasty_type ~st_opt:(Some st) min_indentation diffingo_data_ty in
+        let rhs_name = the (lookup_id (Term Value) st rhs_idx) in
+        (*FIXME this would fall foul of later optimisations, which might delete
+                the rhs_idx, but we know that the rhs_idx is a peeked variable,
+                and its syntactic occurrences do not trigger the optimisation
+                phase to remove it.
+                Ideally should not package the RHS up into a Literal, but i'm doing
+                so here for prototyping.*)
+        Assign (Var lhs_idx,
+                Literal ("reinterpret_cast<" ^ (*lhs_ty_s*)
+                         diffingo_data_ty_s ^ " *>(" ^
+                         rhs_name ^ "->area.contents())")), st) in
+
     let (type_identifier, st') = check_and_generate_typename label_opt in
     let (tys', st'') =
       fold_map ([], st') (naasty_of_flick_type ~default_ik:(Some (Field ty))) tys in
     let translated_ty = Record_Type (type_identifier, List.rev tys') in
     let st''' =
       update_symbol_type type_identifier translated_ty Type st''
+      (*Update this symbol's entry in the symbol table with Diffingo-related info*)
       |> update_symbol_emission type_identifier diffingo_record_ty_opt
+      |> update_symbol_assign type_identifier diffingo_data_ty_opt
+      |> update_symbol_assign_hook type_identifier assign_hook
+
     in (translated_ty, st''')
   | ChanType (label_opt, chan_type) ->  (*FIXME -- THIS IS A DUMMY NOT REAL TRANSLATION *)
     let ik =
@@ -1313,9 +1355,20 @@ let rec naasty_of_flick_expr (st : state) (e : expression)
 
     let src_ty, _ = lnm_tyinfer st local_name_map e in
     let naasty_ty, st = naasty_of_flick_type st src_ty in
-    let (_, peek_idx, st'') =
+    let (peek_ident, peek_idx, st'') =
       mk_fresh (Term Value) ~src_ty_opt:(Some (Reference (None, src_ty)))
         ~ty_opt:(Some (Pointer_Type (None, naasty_ty))) "peek_" 0 st'' in
+    (*Set the "has_channel_read" flag for peek_idx*)
+    let st'' =
+      { st'' with
+        term_symbols =
+          List.map (fun ((name, idx, md) as record) ->
+            if name = peek_ident || idx = peek_idx then
+              begin
+                assert (name = peek_ident && idx = peek_idx);
+                (name, idx, { md with has_channel_read = true })
+              end
+            else record) st''.term_symbols } in
 
     let translated_peek =
       Assign (Var peek_idx,
@@ -1913,110 +1966,168 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
     let _ =
       if !Config.cfg.Config.verbosity > 1 then
         log (State_aux.state_to_str false st5) in 
-    
-    (Fun_Decl
+
+    (*FIXME code style sucks*)
+    let final_body, final_state =
+      let body'' =
+        if !Config.cfg.Config.disable_simplification then
+          body''
+        else Simplify.simplify_stmt body'' in
+
+      let _ =
+        if !Config.cfg.Config.verbosity > 0 then
+        print_endline ("Program prior to optimisation: " ^
+          string_of_naasty_statement ~st_opt:(Some st5)
+                0 body'') in
+
+      (*Initialise table for the inliner and for variable erasure.
+        Mention the parameters in the initial table*)
+      let init_table =
+        (*Initialise some data that might be needed during the final
+          passes (inlining and variable erasure)*)
+        let arg_idxs = List.map (fun x ->
+          idx_of_naasty_type x
+          |> the) n_arg_tys in
+        let decl_var_indices = List.map fst decl_vars
+        in Inliner.init_table (arg_idxs @ decl_var_indices) in
+
+      let _ =
+        if !Config.cfg.Config.verbosity > 0 then
+          Inliner.table_to_string st5 init_table
+          |> (fun s -> print_endline ("Initial inliner table:" ^ s)) in
+
+      let inlined_body init_table st body =
+        if !Config.cfg.Config.disable_inlining then body
+        else
+          let subst = Inliner.mk_subst st init_table body in
+          (*If all variables mentioned in an assignment/declaration are
+            to be deleted, then delete the assignment/declaration.
+            (Irrespective if it contains side-effecting functions,
+             since these have been moved elsewhere.)
+            FIXME this can re-order side-effecting functions, which
+                  would lead to the introduction of bugs. Should check
+                  to ensure that inlining doesn't reorder such
+                  functions.*)
+          Inliner.erase_vars ~aggressive:true body (List.map fst subst)
+          (*Do the inlining*)
+          |> Inliner.subst_stmt subst in
+
+      (*Iteratively delete variables that are never read, but
+        don't delete what's assigned to them if it may contain
+        side-effects (i.e., call erase_vars in non-aggressive mode).*)
+      let rec var_erased_body init_table st body =
+        if !Config.cfg.Config.disable_var_erasure then body
+        else
+          let body' =
+            Inliner.mk_erase_ident_list st init_table body
+            |> Inliner.erase_vars body in
+          if body = body' then
+            begin
+              if !Config.cfg.Config.verbosity > 0 then
+                print_endline ("(Variable erasure did not change anything at this iteration)");
+              body
+            end
+          else var_erased_body init_table st body' in
+      let pre_final_body =
+        (*optimisation*)
+        inlined_body init_table st5 body''
+        |> var_erased_body init_table st5
+        (*simplification*)
+        |> (fun body ->
+          if !Config.cfg.Config.disable_simplification then
+            body
+          else Simplify.simplify_stmt body)
+        (*backend-specific transformation -- return statements*)
+        |> (fun body ->
+          let result =
+            match last_return_expression body with
+            | None ->
+              failwith "Body does not have 'return' statement"
+            | Some naasty_e_opt -> naasty_e_opt in
+          match result with
+          | None ->
+            (*The return doesn't carry an expression, so there's no need
+              to apply the transformation. Simply return the body as it
+              is*)
+            body
+          | Some e ->
+            begin
+              match e with
+              | Var result_idx ->
+                Icl_transformations.ensure_result_is_assigned_to
+                  result_idx body
+              | _ ->
+                (*We return some expression. We assume that its
+                 subexpressions have all been assigned to, so we
+                 return the expression as it is.
+                 FIXME check if this assumption is sensible.*)
+                body
+            end)
+        (*Re-apply these transformations, since we might have introduced
+          an introduction by Icl_transformations.ensure_result_is_assigned_to*)
+        |> inlined_body init_table st5
+        |> var_erased_body init_table st5 in
+
+    (*backend-specific transformation: diffingo integration*)
+    let finalise_body body : naasty_statement * state=
+      let guard st stmt =
+        match stmt with
+        | Assign (Var _, Var rhs) ->
+          begin
+            let rhs_name =
+            the (lookup_id (Term Value) st rhs) in
+            match lookup_term_data ~st_opt:(Some st)(Term Value) st.term_symbols
+                    rhs_name with
+            | None -> failwith "No data"(*FIXME give more info*)
+            | Some (_, md) -> md.has_channel_read
+          end
+        | _ -> false in
+      let transf st stmt =
+        match stmt with
+        | Assign (Var lhs_idx, Var rhs_idx) ->
+          begin
+          let metadata =
+            match lookup_symbol_type rhs_idx (Term Value) st with
+            | None -> failwith "no type?" (*FIXME give more info*)
+            | Some (Pointer_Type (_, ((UserDefined_Type (_, ty_ident) as ty)))) ->
+              begin
+                match lookup_type_metadata ty_ident st with
+                | None -> failwith "Could not find ty_ident"(*FIXME give more info*)
+                | Some md -> md
+              end in
+
+         (*FIXME need to update variable declarations earlier in the program,
+                 since at this late stage in the compilation, we do not make use
+                 of the symbol table all that much.*)
+          let st =
+            (*update lhs' type*)
+            { st with
+              term_symbols =
+                List.map (fun ((name, idx,
+                                (md : term_symbol_metadata)) as record) ->
+                if idx <> lhs_idx then record
+                else
+                  let md' =
+                    { md with
+                      naasty_type = metadata.assign_as; }
+                  in (name, idx, md')) st.term_symbols } in
+
+          match metadata.assign_hook with
+          | None -> failwith "No hook found"(*FIXME give more info*)
+          | Some fn -> fn lhs_idx rhs_idx st
+          end
+        | _ -> failwith "Unexpected form of statement"(*FIXME give more info*)
+      in guard_stmt_transformation guard transf st5 body in
+      finalise_body pre_final_body
+    in
+      (Fun_Decl
           {
             id = fn_idx;
             arg_tys = n_arg_tys;
             ret_ty = n_res_ty;
-            body =
-              let body'' =
-                if !Config.cfg.Config.disable_simplification then
-                  body''
-                else Simplify.simplify_stmt body'' in
-
-              let _ =
-                if !Config.cfg.Config.verbosity > 0 then
-                print_endline ("Program prior to optimisation: " ^
-                  string_of_naasty_statement ~st_opt:(Some st5)
-                        0 body'') in
-
-              (*Initialise table for the inliner and for variable erasure.
-                Mention the parameters in the initial table*)
-              let init_table =
-                (*Initialise some data that might be needed during the final
-                  passes (inlining and variable erasure)*)
-                let arg_idxs = List.map (fun x ->
-                  idx_of_naasty_type x
-                  |> the) n_arg_tys in
-                let decl_var_indices = List.map fst decl_vars
-                in Inliner.init_table (arg_idxs @ decl_var_indices) in
-
-              let _ =
-                if !Config.cfg.Config.verbosity > 0 then
-                  Inliner.table_to_string st5 init_table
-                  |> (fun s -> print_endline ("Initial inliner table:" ^ s)) in
-
-              let inlined_body init_table st body =
-                if !Config.cfg.Config.disable_inlining then body
-                else
-                  let subst = Inliner.mk_subst st init_table body in
-                  (*If all variables mentioned in an assignment/declaration are
-                    to be deleted, then delete the assignment/declaration.
-                    (Irrespective if it contains side-effecting functions,
-                     since these have been moved elsewhere.)
-                    FIXME this can re-order side-effecting functions, which
-                          would lead to the introduction of bugs. Should check
-                          to ensure that inlining doesn't reorder such
-                          functions.*)
-                  Inliner.erase_vars ~aggressive:true body (List.map fst subst)
-                  (*Do the inlining*)
-                  |> Inliner.subst_stmt subst in
-
-              (*Iteratively delete variables that are never read, but
-                don't delete what's assigned to them if it may contain
-                side-effects (i.e., call erase_vars in non-aggressive mode).*)
-              let rec var_erased_body init_table st body =
-                if !Config.cfg.Config.disable_var_erasure then body
-                else
-                  let body' =
-                    Inliner.mk_erase_ident_list st init_table body
-                    |> Inliner.erase_vars body in
-                  if body = body' then
-                    begin
-                      if !Config.cfg.Config.verbosity > 0 then
-                        print_endline ("(Variable erasure did not change anything at this iteration)");
-                      body
-                    end
-                  else var_erased_body init_table st body'
-              in
-                inlined_body init_table st5 body''
-                |> var_erased_body init_table st5
-                |> (fun body ->
-                  if !Config.cfg.Config.disable_simplification then
-                    body
-                  else Simplify.simplify_stmt body)
-                |> (fun body ->
-                  let result =
-                    match last_return_expression body with
-                    | None ->
-                      failwith "Body does not have 'return' statement"
-                    | Some naasty_e_opt -> naasty_e_opt in
-                  match result with
-                  | None ->
-                    (*The return doesn't carry an expression, so there's no need
-                      to apply the transformation. Simply return the body as it
-                      is*)
-                    body
-                  | Some e ->
-                    begin
-                      match e with
-                      | Var result_idx ->
-                        Icl_transformations.ensure_result_is_assigned_to
-                          result_idx body
-                      | _ ->
-                        (*We return some expression. We assume that its
-                         subexpressions have all been assigned to, so we
-                         return the expression as it is.
-                         FIXME check if this assumption is sensible.*)
-                        body
-                    end)
-                (*Re-apply these transformations, since we might have introduced
-                  an introduction by Icl_transformations.ensure_result_is_assigned_to*)
-                |> inlined_body init_table st5
-                |> var_erased_body init_table st5
+            body = final_body;
           },
-        st5)
+        final_state)
 
   | Process process -> 
     (*A process could be regarded as a unit-returning function that is evaluated

@@ -61,6 +61,17 @@ let function_db : function_db =
     ty = FunType ([], FunDomType ([], [def_undefined]), FunRetType [Integer (None, [])]);
     impl = (fun x -> failwith "TODO")
    };
+   {name = "reinterpret_cast";(*FIXME unused*)
+    ty = FunType
+           ([], FunDomType
+                  ([], [Undefined "diffingo_type";(*FIXME this should be a
+                                                    template parameter, but the
+                                                    AST does not provide a way of
+                                                    encoding such info*)
+                        Undefined "chan_contents"]),
+                  FunRetType [flick_unit_type]);
+    impl = (fun x -> failwith "TODO")
+   };
   ]
 
 let export_fun (e : function_entry) : (function_name * (bool * function_type)) =

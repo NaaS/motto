@@ -1,0 +1,293 @@
+############# Some general types
+
+type channel_metadata : record
+  interface : string
+  src_network_address : ipv4_address
+  dst_network_address : ipv4_address
+  protocol : variant
+    TCP : record
+      src_port : int
+      dst_port : int
+    UDP : record
+      src_port : int
+      dst_port : int
+
+# Placeholder
+# NOTE lacking wire formatting.
+type data : unit
+
+
+############# Load balancer
+
+# Stateful LB, based on hashing source IP and port.
+proc LB1 : (data/data input, channel_metadata input_mdata, [data/data] backends)
+  local set := None # NOTE Python's capitalisation might not play nice with our lexical requirements.
+  if set = None:
+    # NOTE relying on coercion between ipv4_address and int.
+    set := hash(input_mdata.src_network_address + input_mdata.src_port) % len(backends)
+  backends[set] ! input?
+  input ! backends[set]?
+
+# I tried to base this on Richard's view of typing processes, by making the
+# binding explicit within the process.
+proc LB1B : (data/data input, channel_metadata input_mdata, data/data backend)
+  local set := False
+  if set = False:
+    # NOTE <ip address> below is a placeholder for an expression that computes
+    #      an IP address. This could involve picking from some number of
+    #      addresses, or otherwise specifying an IP address.
+    #      One idea involves specifying a list such as
+    #        let backends = [10.0.1.2, 10.0.1.3, 10.0.1.4]
+    #      and then using the usual hash+mod calculation to pick one of them.
+    #      This list needn't be hardcoded -- it could also be passed as a
+    #      parameter to the program.
+    backend := bind("eth0", 10.0.0.4, TCP, *,  # This is the source line. I used "*" to mean "any available source port".
+                    <ip address>, input_mdata.TCP.dst_port)
+    set := True
+  backend ! input?
+  input ! backend?
+
+# Stateless version of LB1.
+proc LB2 : (data/data input, channel_metadata input_mdata, [data/data] backends)
+  let set = hash(input_mdata.src_network_address) % len(backends)
+  backends[set] ! input?
+  input ! backends[set]?
+
+
+############# memcached
+
+# FIXME update to match proper spec
+type mcd_request : record
+  key : string
+type mcd_reply : record
+  key : string
+  value : string
+
+proc MCD : (mcd_request/mcd_reply client, [mcd_request/mcd_reply] backends)
+  # NOTE shared dictionaries are application-level primitives we supply.
+  # NOTE what parameters to give e.g., whether to randomise, and initial allocation.
+  global cache := empty_dictionary
+  let request = client?
+  if cache[request.key] = None:
+    # Work out which backend memcached to forward this request to, and send.
+    backends[hash(request.key) % len(backends)] ! request
+  else:
+    client ! cache[request.key]
+
+  # Any time we get something from a backend, cache it and forward it to the
+  # client.
+  # NOTE we only look to hear back from backends whom we have contacted in the
+  #      past. This needs to be specified more precisely, i feel.
+  for i in backends: # This "for" is "foldChan"/"section".
+    let response = backends[i]? in
+      cache[response.key] := response
+      client ! response
+  # NOTE no combine/fold/join step.
+
+
+############# Word count (a.k.a. the Hadoop use-case)
+
+type wc : record
+  word : string
+  count : int
+
+# This relies on:
+# - inputs being sorted.
+# - acting only when we have inputs available on all channels.
+
+# For the latter, we can encode this requirement in different ways. One way is
+# to define from first principles, as shown next.
+# AllReady(chans) can be defined using primitives. Here's one way of doing it:
+
+for i in chans: #NOTE remember that "for" on channels consists of "section"
+  let x = chans[i]?? in # peek operation
+    x <> None
+join v with acc starting at True: #this specifies the "combine" or fold part of the section
+  v and acc # "and" is a keyword
+
+# Thus AllReady(chans) is True when each chans[i] has input.
+# In the translation we shouldn't expand AllReady into primitives, since we
+# could implement it directly more efficiently.
+
+
+# FIXME should allow functions to be impure?
+#       they'd be able to interact with channels
+#       and interact with local+global state
+
+# NOTE i considered dropping "let..in" syntax, leaving it implicit, but that
+#      would confuse things, since "x = e" might mean a boolean value, or a let
+#      binding, and it might not be clear which.
+#      An idea would be to use a different "=" operator, as for
+#      references, but that would complicate the syntax.
+
+
+# The next two functions implement a naive sort over the data of this middlebox.
+# NOTE i think "sort on column x" could be provided as a primitive (where "x" is
+# the name of a field in a (possibly nested) record).
+
+# FIXME bracketing for typing below?
+#   look closely at ...* x : idx * wc... for ambiguity.
+fun prepend_x_if_must ((acc'' : [idx * wc] * b : bool * unit) * x : idx * wc) -> ([idx * wc])
+  if b then acc'' else x :: acc''$
+
+fun sort_on_word (l : [idx * wc]) -> ([idx * wc])
+  # NOTE below rely on ">" to be extended in the obvious way to life the
+  #      ">" over words (strings) to work on values of type idx*wc.
+  # FIXME make the above lifting explicit to get a full example.
+  join x with acc in l starting at []:
+    if acc = []: [x]$
+    else:
+      let sub_sorted =
+        # NOTE pattern matching
+        join y with (ys, b, x) in acc starting at ([], false, x):
+          if not b:
+            if x > y: (y :: x :: ys, true, x)$
+            else: (y :: ys, b, x)$
+          else: (y :: ys, b, x)$
+      prepend_x_if_must (sub_sorted, x)$
+
+# NOTE how it doesn't matter what the precise value of the index "i" is, as long
+#      as it can serve as a suitable index.
+# NOTE how steps form a pipeline.
+# NOTE steps 4 and 4 are both labelled "4" since they could be done in parallel.
+proc WordCount : ([wc/-] input, -/wc output)
+  local letter : wc := None
+  if AllReady(input):
+    # 1. peek at each channel, forming a list
+    let inputs =
+      for i in chans: (i, chans[i]??)
+      join v with acc starting at []: v :: acc
+    # 2. sort the list on the input words
+    let sorted = sort_on_word(inputs)
+    # 3. sum together the occurrences of the smallest word
+    let (idxs, wc) = # NOTE you can get a runtime Match-style exception, in the same way
+                     #      you would if you tried to take the head of an empty list;
+                     #      in this case we have as many items as channels, and we have
+                     #      more than one channel, so we're safe.
+      let (idx, wc) = head (sorted)
+      ([idx], wc)
+    let (idxs, wc) =
+      # NOTE the different scopes of the symbols used below isn't made clear enough by the notation.
+      join (idx, wc') with (idxs, wc) in tail (sorted) starting at (idxs, wc):
+        if wc'.word = wc.word:
+          let wc'' = wc where count = wc.count + wc'.count
+          (idx :: idxs, wc'')
+        else: (idxs, wc)
+    # 4. send the (word, sum) pair out
+    output ! wc
+    # 4. remove each occurrence of the smallest word from the respective input channels
+    for i in idxs:
+      input[i]?
+
+
+############# NAT
+# A NAT may contact arbitrary hosts on behalf of a NATted machine.
+# Here we only support TCP, we assume that we have at least 2 interfaces
+# (one pointed inwards, the other outwards), and that we have a single
+# IP address on the outer interface.
+# I assume there's a way of hijacking the connection (establishment, and
+# subsequently its duration) when packets arrive on the NAT's inward-facing interface.
+# (Presumably this is provided by the endpoint termination of our runtime system.)
+
+# NOTE initially had this definition, but it turns out we don't need a
+#      centralised translation table; as long as we have a centralised source
+#      of NAT ports (for which i use a combination of an int reference and a
+#      stack below) then the translation table is distributed among process
+#      instances. We can benefit from the implicit state distributed among
+#      process instances: each process remembers its own state (i.e., what are
+#      the source and target host details, and its nat_port), and the runtime
+#      system should guarantee us that these will be different for each process
+#      instance -- this reduces to the fact that different instances of the
+#      5-tuple indicates different connections, and the process' lifetime
+#      extends to that of the connection.
+#type translation_entry : record
+#  dst_network_address : ipv4_address
+#  dst_port : int
+#  nat_port : int                          # the NAT provides this value.
+#  src_network_address : ipv4_address
+#  src_port : int
+#
+# I then created entries as follows:
+#
+#  let new_entry = {
+#    dst_network_address = client_channel.dst_network_address
+#    # FIXME check variant+record combination below
+#    dst_port = client_channel.protocol.TCP.dst_port
+#    nat_port = nat_port
+#    src_network_address = client_channel.dst_network_address
+#    src_port = client_channel.protocol.TCP.src_port
+#  }
+
+# NOTE channels are capabilities. Using a capability relies on having a means
+#      for querying what capabilities i have. A capability may be restricted;
+#      i'll treat a general capability as the set of discrete capabilities it
+#      can be restricted to; not the powerset, since i don't want to include
+#      that complication.
+# NOTE how to query and modify (restrict/specialise) capabilities in this
+#      language? i think modifying is easy: simply give a unique value to all
+#      of a capabilities fields that are currently underspecified.
+#      For querying? my idea is to use record-like syntax, to specialise the
+#      values of the channel-metadata records. These values are tested for
+#      specificify at load time (wrt the configuration). Specialising an
+#      already-specialised value gives a type error. Not specialising a record
+#      enough (i.e., not specialising one or more fields) also returns a type
+#      error. (I say type error here, since i mean that in order to use a
+#      capabilitya i must have referenced (via a query) a most specific
+#      capability.
+# NOTE a channel index only matters as much as the information it carries. if
+#      the index is an integer, then that might be less useful than if the
+#      channel included connection info such as an IP address; but after the
+#      connection is over, knowing the IP address might be as useful as knowing
+#      the integer index of a channel..
+
+# FIXME how to index different lists/arrays, and how to specify this, and what
+#       are the limits on this?
+proc NAT : (data/data client, channel_metadata client_channel,
+            [data/data] external_hosts, channel_metadata external_capability)
+  # NOTE can make datatypes like stack and hash available in the language or
+  #      base library.
+  global nat_port_stack : int stack = empty_stack
+  global next_nat_port : int = 0
+  # NOTE "None" inhabits all types. Assume all types are lifted; all are option types.
+  local nat_port : int = None
+
+  # Assign a nat_port if one hasn't yet been assigned.
+  if nat_port = None:
+    # FIXME not sure about naming of functions like empty_stack, stack_pop and
+    #       stack_push: it feels we need some kind of namespace qualification
+    #       here, if only to improve readability. But this this doesn't seem
+    #       like a necessary feature for v1.0.
+    if empty_stack(nat_port_stack):
+      nat_port := next_nat_port
+      next_nat_port := next_nat_port + 1
+    else:
+      nat_port := stack_pop(nat_port_stack)
+
+  # FIXME store this value in local state, like we do for nat_port
+  let i : channel_metadata =
+    # NOTE we don't change "interface" and "src_network_address": those must
+    #      have been fixed by the capability we have.
+    external_host_channel where {
+      dst_network_address = client_channel.dst_network_address
+                 # FIXME how to get an arbitrary source-port number for onward
+                 #       connections?
+      protocol = TCP {src_port = nat_port,
+                      dst_port = client_channel.protocol.TCP.dst_port}
+    }
+
+  # behaviour of NAT is actually straightforward.
+  external_hosts[i] ! client?
+  client ! external_hosts[i]?
+
+# At the end of the connection, free the nat_port
+# FIXME note that "final" is a primitive event type that corresponds to
+#       the non-standard administrative steps involved in stopping and cleaning
+#       up.
+|| Final -> stack_push(nat_port_stack, nat_port)
+
+# NOTE we get unique sourceports anyway from the protocol stack, so the above
+#      definition would have worked anyway as a NAT even if we didn't bother
+#      with handling the source ports ourselves!
+#      So in this framework, a firewall is a NAT that can filter, and needs to do
+#      additional work to this end.
+

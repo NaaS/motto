@@ -2096,9 +2096,11 @@ let rec naasty_of_flick_toplevel_decl (st : state) (tl : toplevel_decl) :
                 | Some md -> md
               end in
 
-         (*FIXME need to update variable declarations earlier in the program,
-                 since at this late stage in the compilation, we do not make use
-                 of the symbol table all that much.*)
+         (*NOTE need to update variable declarations earlier in the program,
+                since at this late stage in the compilation, we do not make use
+                of the symbol table all that much.
+             NOTE i currently tackle this at the printing phase, by checking if
+                  a variable has the has_channel_read flag set.*)
           let st =
             (*update lhs' type*)
             { st with

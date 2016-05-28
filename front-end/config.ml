@@ -7,6 +7,8 @@ let version = "0.1"
 
 type output_location = Stdout | Directory of string | No_output;;
 
+type backend = Backend_ICL | Backend_OCaml
+
 type configuration =
   { source_file : string option;
     output_location : output_location;
@@ -63,6 +65,8 @@ type configuration =
       check an expression more deeply to see if it is well-typed. When this flag
       is set, those checks are disabled.*)
     default_nonstrict_type_checking : bool;
+    (*Which backend to generate code for.*)
+    backend : backend;
   }
 
 let cfg : configuration ref = ref {
@@ -87,4 +91,5 @@ let cfg : configuration ref = ref {
   enable_data_model_checks = false;
   disable_simplification = false;
   default_nonstrict_type_checking = false;
+  backend = Backend_ICL;
 }

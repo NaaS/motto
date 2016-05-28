@@ -312,6 +312,10 @@ let front_end ?st:(st : state = initial_state) (cfg : Config.configuration ref) 
 (*FIXME Functorise to take backend-specific code as parameter*)
 let back_end (cfg : Config.configuration ref) inputs : (string * string) list =
   if !Config.cfg.Config.translate then
-    uncurry Icl_backend.translate inputs
+    match !Config.cfg.Config.backend with
+    | Config.Backend_ICL ->
+        uncurry Icl_backend.translate inputs
+    | Config.Backend_OCaml ->
+        failwith "OCaml backend not yet available."
     (*FIXME post-process to fix the function signature*)
   else []

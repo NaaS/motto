@@ -13,7 +13,11 @@ type arg_params =
   | TestParseFile
   | TestParseDir
   | DependancyValue
+  | Backend
 ;;
+
+let icl_K = "ICL";;
+let ocaml_K = "OCaml";;
 
 type param_entry =
   { key : string;
@@ -161,6 +165,11 @@ let rec param_table : param_entry list =
       desc = "Weaken the checking done during type inference. This makes type
       inference less computationally demanding, at the risk of missing
       deeply-nested badly-typed expressions.";};
+    { key = "--backend";
+      parameter_desc = "{" ^ icl_K ^ "," ^ ocaml_K ^ "}";
+      action = (fun () ->
+        next_arg := Some Backend);
+      desc = "Specify which backend to generate code for.";};
   ] in
 
 while !arg_idx < Array.length Sys.argv do
@@ -210,6 +219,15 @@ while !arg_idx < Array.length Sys.argv do
         let [k; v] = Str.split (Str.regexp "=") s in
         cfg := { !cfg with dependency_valuation = (k, int_of_string v) :: !cfg.dependency_valuation};
         next_arg := None
+
+      | Some Backend ->
+        if s = icl_K then
+          cfg := { !cfg with backend = Backend_ICL}
+        else if s = ocaml_K then
+          cfg := { !cfg with backend = Backend_OCaml}
+        else failwith ("Unrecognised backend: '" ^ s ^ "'");
+        next_arg := None
+
   in
   handle_arg !arg_idx;
   arg_idx := !arg_idx + 1

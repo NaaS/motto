@@ -203,8 +203,7 @@ while !arg_idx < Array.length Sys.argv do
         end
       | Some OutputDir ->
         cfg := { !cfg with
-                 output_location = Directory s;
-                 translate = true };
+                 output_location = Directory s};
         next_arg := None
       | Some DebugOutputLevel_Optional ->
         cfg := { !cfg with verbosity = int_of_string s; };

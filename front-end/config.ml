@@ -14,9 +14,10 @@ let output_location_to_string = function
   | No_output -> "(No output)"
 ;;
 
-type backend = Backend_ICL | Backend_OCaml
-let available_backends = [Backend_ICL; Backend_OCaml];;
+type backend = No_backend | Backend_ICL | Backend_OCaml
+let available_backends = [No_backend; Backend_ICL; Backend_OCaml];;
 let backend_to_string = function
+  | No_backend -> "no_backend"
   | Backend_ICL -> "ICL"
   | Backend_OCaml -> "OCaml"
 ;;
@@ -39,12 +40,12 @@ type configuration =
     parser_test_files : string list;
     parser_test_dirs : string list;
     translate : bool; (*FIXME this is a crude flag indicating whether we want to
-                              run code generation or not. It's unset by default
-                              at the moment. It gets set if the user provides
-                              an -o argument from the command line.
-                              In the future there may be multiple
-                              backends, so this switch should turn into a
-                              selector from multiple alternatives.*)
+                              run code generation or not. It's set by default,
+                              and currently cannot be changed from the
+                              command-line. It's intended to help with
+                              debugging, to dis/enable bits of the compiler,
+                              but will probably eventually be removed since it's
+                              no longer as useful as it used to be.*)
     (*If true, then summarise compound types (records and unions.*)
     summary_types : bool;
     (*If true, then we don't type (process and function) declarations after
@@ -92,7 +93,7 @@ let cfg : configuration ref = ref {
   verbosity = 0;
   parser_test_files = [];
   parser_test_dirs = [];
-  translate = false;
+  translate = true;
   summary_types = true;
   skip_type_check = false;
   unexceptional = false;
@@ -103,7 +104,7 @@ let cfg : configuration ref = ref {
   enable_data_model_checks = false;
   disable_simplification = false;
   default_nonstrict_type_checking = false;
-  backend = Backend_ICL;
+  backend = No_backend;
 }
 
 let configuration_to_string (cfg : configuration) : string list =

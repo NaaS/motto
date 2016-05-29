@@ -290,12 +290,13 @@ let parse_program source_file =
 let front_end ?st:(st : state = initial_state) (cfg : Config.configuration ref) (program : Crisp_syntax.program) =
   expand_includes !cfg.Config.include_directories program
   |> (fun prog ->
-    if !Config.cfg.Config.translate then
-      (*FIXME this transformation relates to the back-end, yet it's applied
-              in the front-end. Can this weird organised by systematised better?*)
+    if !Config.cfg.Config.translate &&
+       !Config.cfg.Config.backend = Config.Backend_ICL then
+      (*This transformation relates to the back-end, yet it needs to be applied
+        in the front-end.*)
       let prog', st' =
         Icl_backend.ICL_Backend.preprocess st prog
-      in (collect_decl_info st' prog'), prog'(*FIXME sucky code style*)
+      in (collect_decl_info st' prog'), prog'
     else (collect_decl_info st prog), prog)
   |> (fun ((st, p) as data) ->
     (if !Config.cfg.Config.verbosity > 0 then
@@ -311,11 +312,10 @@ let front_end ?st:(st : state = initial_state) (cfg : Config.configuration ref) 
 
 (*FIXME Functorise to take backend-specific code as parameter*)
 let back_end (cfg : Config.configuration ref) inputs : (string * string) list =
-  if !Config.cfg.Config.translate then
-    match !Config.cfg.Config.backend with
-    | Config.Backend_ICL ->
-        uncurry Icl_backend.translate inputs
-    | Config.Backend_OCaml ->
-        failwith "OCaml backend not yet available."
-    (*FIXME post-process to fix the function signature*)
-  else []
+  match !Config.cfg.Config.backend with
+  | Config.No_backend -> []
+  | Config.Backend_ICL ->
+      uncurry Icl_backend.translate inputs
+  | Config.Backend_OCaml ->
+      failwith "OCaml backend not yet available."
+  (*FIXME post-process to fix the function signature*)

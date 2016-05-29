@@ -12,23 +12,63 @@ open Runtime_data
   This is false by default.*)
 let kill_run = ref false
 
+(*A continuation needs to be fed the current state (i.e., type info) and
+  runtime_ctxt (i.e., runtime state) in order to yield the next snapshot of the
+  computation, consisting of an element of the monad (which we'll pick up again
+  for more computation later) and an updated runtime state.
+*)
 type eval_continuation = state -> runtime_ctxt -> eval_monad * runtime_ctxt
 
+(*bind_kind describes what we can bind an element of the monad with:
+  we can either leave it as it is (Id), or we can continue evaluating the value
+  we get (using the parameter of Fun).
+  Id is a special case of "Fun f" when f e = fun _ c -> (Value e, c),
+  but it was useful to defunctionalise and see "Id".
+*)
 and bind_kind =
   | Fun of (expression -> eval_continuation)
   | Id
 
+(*A value of eval_monad should ultimately give a value, but until then it will
+  yield intermediate snapshots of the computation. This correspond to the
+  gradual computation of a value, and might be held back by information that is
+  not yet available (e.g., when we are waiting to read a value from a channel).
+  Thus the monad contains three kinds of elements: values that are fully
+  evaluated -- such values could be "regular" (i.e., Value) or "exceptional"
+  (because a timeout or other exception has occurred, such as resource depletion);
+  values that are in the process of being evaluated (Cont and Bind); and
+  explicitly non-terminating values (Process): these may not be terminated (they
+  may only terminate themselves) and may generate new values to be evaluated.
+*)
 (*FIXME add other kinds of result values -- such as Timeout, and perhaps
         one that carries exceptions*)
 and eval_monad =
     (*Expression will not be normalised any further*)
   | Value of expression
     (*Expression should be normalised further.
-      If it reduces to a value in one step, then continue immediately to
-      the first function parameter. Otherwise, use the second function
+      If it reduces to a value in one step (case Cont), then continue immediately
+      to the first function parameter. Otherwise (case Bind) use the second function
       parameter to combine any background continuation with this continuation,
       to create a new (combined) continuation.*)
   | Cont of expression * bind_kind
+    (*Elements in the monad usually start off being Cont, and then are turned
+     into Bind before eventually becoming Value (see the "Common abbreviations"
+     below and the definition of the bind_eval function.
+
+     Bind values encode the unrolling of the expression's evaluation
+     (guided by the "normalise" function). Bind values may consist of nested
+     monad elements. Using Bind, monad elements are paired with "suspended" or
+     waiting functions, that are waiting to be evaluated once the Bind's
+     innermost expression (e.g., reading from a channel) is evaluated (e.g.,
+     the monad element containing a channel read gets scheduled to be evaluated
+     when the channel has a value to be read).
+
+     Until an expression can be evaluated (e.g., we can finally read from a
+     channel), we would keep retrying the expression (see the "retry"
+     abbreviation below). This retrying is why we defunctionalise Id: it's to
+     avoid bursting the heap with identity functions "Fun (fun x -> x)" since
+     we have (and can instantly recognise Id and can reduce it immediately,
+     rather than suspend the identity function.*)
   | Bind of eval_monad * bind_kind
     (*A process never terminates -- it will be reduced to its body followed by
       itself again*)
@@ -57,6 +97,7 @@ let expect_value m =
   | Value e -> e
   | _ -> raise (EvalMonad_Exc ("Was expecting a Value eval_monad", Some m))
 
+(*Common abbreviations*)
 let return_eval (e : expression) : eval_monad = Value e
 let return (e : expression) : eval_continuation = fun _ ctxt -> Value e, ctxt
 let continuate e f = Cont (e, Fun f)
@@ -68,8 +109,10 @@ let evaluate e = Cont (e, Fun return)
 let rec bind_eval normalise (m : eval_monad) (f : expression -> eval_continuation) st ctxt : eval_monad * runtime_ctxt =
   match m with
   | Value e' -> f e' st ctxt
-  | Bind (em, Id) -> (*Bind (em, Fun f), ctxt*)
+  | Bind (em, Id) ->
+    (*Simply unwrap the Bind and recurse bind_eval on em*)
     bind_eval normalise em f st ctxt
+    (*A less eager approach would involve returning: Bind (em, Fun f), ctxt*)
   | Bind (em, Fun f') ->
     begin
     let m', ctxt' = bind_eval normalise em f' st ctxt in

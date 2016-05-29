@@ -34,6 +34,9 @@ and eval_monad =
       itself again*)
   | Process of string * expression
 
+(*FIXME hook this up to wrap_err.ml*)
+exception EvalMonad_Exc of string * eval_monad option
+
 type work_item_name = string
 type work_item = work_item_name * eval_monad
 type finished_work_item = string * expression
@@ -49,10 +52,10 @@ let rec evalm_to_string : eval_monad -> string = function
      bk_to_string bk ^ ")"
   | Process (name, _) -> "Process " ^ name
 
-(*FIXME bad style*)
 let expect_value m =
   match m with
   | Value e -> e
+  | _ -> raise (EvalMonad_Exc ("Was expecting a Value eval_monad", Some m))
 
 let return_eval (e : expression) : eval_monad = Value e
 let return (e : expression) : eval_continuation = fun _ ctxt -> Value e, ctxt

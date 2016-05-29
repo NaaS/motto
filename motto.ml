@@ -251,7 +251,8 @@ while !arg_idx < Array.length Sys.argv do
 done;
 
 if !show_config then
-  mk_block 0 (fun _ -> fun s -> s ^ "\n") (configuration_to_string !cfg)
+  "Configuration:" ^
+  Debug.print_list "" (configuration_to_string !cfg)
   |> print_endline
 ;;
 

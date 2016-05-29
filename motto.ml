@@ -14,6 +14,10 @@ type arg_params =
   | TestParseDir
   | DependancyValue
   | Backend
+  | DebugOutputLevel_Optional (*NOTE this is optional. Optionality of arg_params
+                                     is not explicit, but rather implicit in how
+                                     they are handled. Noting their optionality
+                                     explicitly would be an improvement.*)
 ;;
 
 let icl_K = "ICL";;
@@ -57,11 +61,10 @@ let rec param_table : param_entry list =
         cfg := { !cfg with disable_var_erasure = true });
       desc = "(Debugging option) Don't prune temporary variables from the symbol table";};
     { key = "--debug_output";
-      parameter_desc = "";
+      parameter_desc = "(level of verbosity. default is 0)";
       action = (fun () ->
-        if !cfg.verbosity < 1 then
-          (*FIXME there isn't yet a compiler switch to get more verbose output*)
-          cfg := { !cfg with verbosity = 1; });
+        next_arg := Some DebugOutputLevel_Optional;
+        cfg := { !cfg with verbosity = 1; });
       desc = "(Debugging option) Show lots of internal information during compilation";};
     { key = "-q";
       parameter_desc = "";
@@ -177,7 +180,7 @@ while !arg_idx < Array.length Sys.argv do
     let s = Sys.argv.(idx) in
     match lookup_param s param_table with
     | Some entry ->
-        if !next_arg <> None then
+        if !next_arg <> None && !next_arg <> Some DebugOutputLevel_Optional then
           failwith ("Was expecting a parameter value before " ^ s);
         entry.action ();
     | None ->
@@ -194,6 +197,9 @@ while !arg_idx < Array.length Sys.argv do
         cfg := { !cfg with
                  output_location = Directory s;
                  translate = true };
+        next_arg := None
+      | Some DebugOutputLevel_Optional ->
+        cfg := { !cfg with verbosity = int_of_string s; };
         next_arg := None
       | Some IncludeDir ->
         cfg := { !cfg with include_directories = s :: !cfg.include_directories};

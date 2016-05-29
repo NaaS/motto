@@ -3,14 +3,19 @@
    Nik Sultana, Cambridge University Computer Lab, May 2015
 *)
 
+open General
+
 let version = "0.1"
 
 type output_location = Stdout | Directory of string | No_output;;
+let output_location_to_string = function
+  | Stdout -> "stdout"
+  | Directory s -> "Directory " ^ s
+  | No_output -> "(No output)"
+;;
 
 type backend = Backend_ICL | Backend_OCaml
-
 let available_backends = [Backend_ICL; Backend_OCaml];;
-
 let backend_to_string = function
   | Backend_ICL -> "ICL"
   | Backend_OCaml -> "OCaml"
@@ -100,3 +105,31 @@ let cfg : configuration ref = ref {
   default_nonstrict_type_checking = false;
   backend = Backend_ICL;
 }
+
+let configuration_to_string (cfg : configuration) : string list =
+  ["source_file = " ^ bind_opt (fun s -> s) "n/a" cfg.source_file;
+   "output_location = " ^ output_location_to_string cfg.output_location;
+   "max_task_cost = " ^ bind_opt string_of_int "n/a" cfg.max_task_cost;
+   "cost_function_file = " ^ bind_opt (fun s -> s) "n/a" cfg.cost_function_file;
+   "include_directories = [" ^ String.concat ", " cfg.include_directories ^ "]";
+   "disable_inlining  = " ^ string_of_bool cfg.disable_inlining;
+   "disable_var_erasure = " ^ string_of_bool cfg.disable_var_erasure;
+   "verbosity = " ^ string_of_int cfg.verbosity;
+   "parser_test_files = [" ^ String.concat ", " cfg.parser_test_files ^ "]";
+   "parser_test_dirs = [" ^ String.concat ", " cfg.parser_test_dirs ^ "]";
+   "translate = " ^ string_of_bool cfg.translate;
+   "summary_types = " ^ string_of_bool cfg.summary_types;
+   "skip_type_check = " ^ string_of_bool cfg.skip_type_check;
+   "unexceptional = " ^ string_of_bool cfg.unexceptional;
+   "run_compiled_runtime_script = " ^ string_of_bool cfg.run_compiled_runtime_script;
+   "dependency_valuation = [" ^ String.concat ", "
+                                  (List.map (fun (s, i) ->
+                                     "(" ^ s ^ "," ^ string_of_int i ^ ")")
+                                     cfg.dependency_valuation) ^ "]";
+   "front_end_and_state = " ^ string_of_bool cfg.front_end_and_state;
+   "naive_internal_naming = " ^ string_of_bool cfg.naive_internal_naming;
+   "enable_data_model_checks = " ^ string_of_bool cfg.enable_data_model_checks;
+   "disable_simplification = " ^ string_of_bool cfg.disable_simplification;
+   "default_nonstrict_type_checking = " ^ string_of_bool cfg.default_nonstrict_type_checking;
+   "backend = " ^ backend_to_string cfg.backend;
+  ]

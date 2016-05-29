@@ -20,6 +20,8 @@ type arg_params =
                                      explicitly would be an improvement.*)
 ;;
 
+let show_config : bool ref = ref false;;
+
 type param_entry =
   { key : string;
     parameter_desc : string;
@@ -172,8 +174,15 @@ let rec param_table : param_entry list =
       action = (fun () ->
         next_arg := Some Backend);
       desc = "Specify which backend to generate code for.";};
+    { key = "--show-config";
+      parameter_desc = "";
+      action = (fun () ->
+        show_config := true;
+        next_arg := None);
+      desc = "Dump the tool's configuration after parsing all command-line parameters.";};
   ] in
 
+(*Parse command-line arguments*)
 while !arg_idx < Array.length Sys.argv do
   let handle_arg idx =
     let s = Sys.argv.(idx) in
@@ -242,6 +251,12 @@ while !arg_idx < Array.length Sys.argv do
   arg_idx := !arg_idx + 1
 done;
 
+if !show_config then
+  mk_block 0 (fun _ -> fun s -> s ^ "\n") (configuration_to_string !cfg)
+  |> print_endline
+;;
+
+(*Start the actual processing*)
 match !cfg.source_file with
 | Some source_file ->
   if !cfg.run_compiled_runtime_script then

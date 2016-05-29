@@ -9,6 +9,13 @@ type output_location = Stdout | Directory of string | No_output;;
 
 type backend = Backend_ICL | Backend_OCaml
 
+let available_backends = [Backend_ICL; Backend_OCaml];;
+
+let backend_to_string = function
+  | Backend_ICL -> "ICL"
+  | Backend_OCaml -> "OCaml"
+;;
+
 type configuration =
   { source_file : string option;
     output_location : output_location;

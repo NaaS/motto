@@ -14,7 +14,24 @@ let output_location_to_string = function
   | No_output -> "(No output)"
 ;;
 
-type backend = No_backend | Backend_ICL | Backend_OCaml
+type backend =
+    (*A code generator will not be used, nor will IR be generated.*)
+    No_backend
+    (*Target the backend developed at ICL*)
+  | Backend_ICL
+    (*Target the OCaml-based Flick runtime system, but rather than
+      using the "scriptable runtime" interface for interactively
+      evaluating Flick programs, we generate OCaml code from Flick code,
+      that will then call functions in the runtime's API.
+      FIXME explore design choices:
+        i) generate all code to run in a single instance of OCaml,
+           using something like lwt for multithreading, and communicating
+           via shared memory.
+       ii) generate code to run in different instances of OCaml,
+           scheduled by the OS, and communicating over IPC.
+      iii) combination of schemes?
+    *)
+  | Backend_OCaml
 let available_backends = [No_backend; Backend_ICL; Backend_OCaml];;
 let backend_to_string = function
   | No_backend -> "no_backend"

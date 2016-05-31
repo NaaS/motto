@@ -1,4 +1,13 @@
 {
+(*
+   Parser spec for Crisp
+   Nik Sultana, Cambridge University Computer Lab, January 2015
+
+   Target parser-generator: menhir 20140422
+
+   Use of this source code is governed by the Apache 2.0 license; see LICENSE
+*)
+
 open Lexing
 open Crisp_parser
 

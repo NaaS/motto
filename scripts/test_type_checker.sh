@@ -7,6 +7,8 @@
 #   ./scripts/test_type_checker.sh | grep fail
 #
 # NOTE expects to find the compiler in the working directory.
+#
+# Use of this source code is governed by the Apache 2.0 license; see LICENSE
 
 DIR=tests/flick_code/
 

@@ -5,6 +5,8 @@
    Flick programs are translated into NaaSty, en route to becoming C++&libNaaS
    programs. NaaSty can be regarded as an embedded of part of C++, and of
    libNaaS, into OCaml.
+
+   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 
 open General

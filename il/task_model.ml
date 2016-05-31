@@ -1,6 +1,8 @@
 (*
    Task and task graph metadata.
    Nik Sultana, Cambridge University Computer Lab, March 2015
+
+   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 
 open Crisp_syntax

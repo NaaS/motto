@@ -2,6 +2,8 @@
    Runtime state, specifically for a global worklist of concurrently-evaluated
      expressions, and process instances.
    Nik Sultana, Cambridge University Computer Lab, July 2015
+
+   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 
 

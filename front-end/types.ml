@@ -1,6 +1,8 @@
 (*
    Defined types.
    Nik Sultana, Cambridge University Computer Lab, October 2015
+
+   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 (*FIXME ensure that interpreted symbols never get declared by the user*)
 (*FIXME might want to include backend-specific meaning for these in relevant

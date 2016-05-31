@@ -5,6 +5,8 @@
 
    NOTE currently we don't check to see if compilation unit filenames are unique
         -- i.e., we could have two files called "things.h".
+
+   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 
 (*Types of compilation units*)

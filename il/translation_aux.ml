@@ -1,6 +1,8 @@
 (*
    Support for translation from Flick to the NaaSty intermediate language
    Nik Sultana, Cambridge University Computer Lab, October 2015
+
+   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 
 open General

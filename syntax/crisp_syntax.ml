@@ -2,6 +2,8 @@
    AST spec for Crisp
    Nik Sultana, Cambridge University Computer Lab, January 2015
    (based on prototypical Matron language from last November)
+
+   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 
 open General

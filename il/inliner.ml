@@ -4,6 +4,8 @@
 
    NOTE some definitions in this module, such as free_vars, are general enough
    to be moved to Naasty_aux.
+
+   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 
 open General

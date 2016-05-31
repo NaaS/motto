@@ -4,6 +4,8 @@
 
   Parts of this module is based on explanation & code given at
   https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html
+
+   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 
 open Lexing

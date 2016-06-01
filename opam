@@ -1,0 +1,21 @@
+opam-version: "1.2"
+maintainer: "Nik Sultana"
+authors: [
+  "Richard G. Clegg"
+  "Masoud Koleini"
+  "Matteo Migliavacca"
+  "Nik Sultana"
+]
+homepage: "https://github.com/NaaS/motto"
+dev-repo: "https://github.com/NaaS/motto.git"
+bug-reports: "https://github.com/NaaS/motto/issues"
+license: "Apache2"
+build: ["./build.sh"]
+install: []
+remove: []
+depends: [
+  "ocamlfind" {build}
+  "ocamlbuild" {build}
+  "menhir"
+]
+available: [ocaml-version >= "4.01.0"]

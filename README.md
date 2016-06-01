@@ -25,6 +25,16 @@ If compilation fails, check that you have all dependencies listed in the
 Try running `./motto.byte -h` to see if you have a binary. See the section on
 "Testing" for how to run the tool over regression tests.
 
+## Using Docker
+
+If you have [Docker](http://docker.com) installed, you can also use a container
+to run the compiler without installing all the dependencies.  The source code
+can be mounted in `/src` within the container.
+
+```
+$ docker build -t motto .
+$ docker run -v `pwd`/tests:/src motto -q --parser_test_file flick_code/types_process.cp
+```
 
 # Getting going
 We start with the mathematical cousin of "Hello, world" -- i.e., the factorial

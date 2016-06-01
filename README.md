@@ -137,3 +137,16 @@ Other than the OCaml compiler, this project has the following depedencies:
 * ocamlfind. This in turn depends on:
   * m4
 * menhir
+
+# License and support
+
+Motto is distributed under the terms of the [Apache 2.0 license](https://github.com/NaaS/motto/blob/master/LICENSE).
+
+The Motto tool was developed as part of the [Network-as-a-Service
+project](http://www.naas-project.org/) (NaaS), which was funded by
+the UK's Engineering and Physical Sciences Research Council
+through grants EP/K034723/1, EP/K031724/1, and EP/K032968/1.
+These grants were held at the following universities respectively:
+* Computer Laboratory, University of Cambridge
+* School of Computer Science, University of Nottingham
+* Department of Computing, Imperial College London

@@ -252,8 +252,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Plus _ -> (fun i1 i2 -> Int (i1 + i2))
       | Minus _ -> (fun i1 i2 -> Int (i1 - i2))
       | Times _ -> (fun i1 i2 -> Int (i1 * i2))
-      | Mod _
-      | Quotient _ -> failwith "TODO"
+      | Mod _ -> failwith "TODO"
+                   (*FIXME support more from http://caml.inria.fr/pub/docs/manual-ocaml/libref/Int32.html*)
+      | Quotient _ -> (fun i1 i2 -> Int (i1 / i2)) (*FIXME not protection against 'division by zero'*)
       | IntegerRange _ -> (fun i1 i2 ->
           enlist i1 (i2 + 1)
           |> Crisp_syntax_aux.flick_integer_list)
@@ -592,9 +593,6 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
 
     let idx_v, ctxt' = evaluate st ctxt idx in
 
-    if not (List.mem_assoc idx_v dict) then
-      raise (Eval_Exc ("Cannot UpdateIndexable: Key " ^ string_of_typed_value idx_v ^ " not found in dictionary " ^ v, Some e, None));
-
     continuate e (fun e' st ctxt'' ->
       let e_v = evaluate_value ctxt'' e' in
       let dict' = General.add_unique_assoc (idx_v, e_v) dict in
@@ -727,6 +725,23 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
     continuate e1 (fun _ _ ctxt -> normalise st ctxt e2), ctxt
 
   | Hole -> raise (Eval_Exc ("Cannot normalise", Some e, None))
+
+  | Can e ->
+    (*FIXME this could be improved by extracing the list of things that might go
+            wrong from an arbitrary expression "e", and check them one by one.
+            Currently we require "Can" to be affixed immediately to specific
+            expressions.*)
+    begin
+      match e with
+      | IndexableProjection (v, idx) ->
+        let dict = get_dictionary "IndexableProjection" e v ctxt in
+        let idx_v, ctxt' = evaluate st ctxt idx in
+        let e =
+          if List.mem_assoc idx_v dict then Crisp_syntax.True
+          else Crisp_syntax.False in
+        return_eval e, ctxt
+      | _ -> failwith "TODO"
+    end
 
 (*Lift a function over channels to operate on a channel_identifier.
   It factors out the lookup-related boilerplate for channels.*)

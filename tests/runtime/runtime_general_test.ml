@@ -250,6 +250,16 @@ let _ = run [
         update, update-indexable, and indexable-projection*)
    Eval ("let blaX = 3");
    Eval ("blaX := 30"); (*FIXME we're updating an immutable*)
+   Eval ("blaX");
+   Declare_dictionary ("dict", "integer", "integer");
+   Eval ("dict[4] := 3");
+   Eval ("dict[4]");
+(*   Eval ("dict[3]"); This key has not yet been given a value in the
+                       dictionary, so attempting to evaluate this expression
+                       would break.*)
+   Eval ("can dict[4]");
+   Eval ("can dict[3]");
+   Eval ("dict[3]");
    Eval ("blaX[4]");
    Eval ("blaX[4] := 30");
 

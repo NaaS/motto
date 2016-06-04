@@ -53,10 +53,12 @@ type inspect_instruction =
           to interact with an external system. (for instance, a C-based
           protocol parser that can be linked with the .o file generated from
           a runtime script.*)
+  | Declare_dictionary of string * string * string
 
 type declaration =
   | Binding of expression * type_value
   | Channel of channel_name * channel_type
+  | Dictionary of type_value
 
 let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : declaration) : (state * Runtime_data.runtime_ctxt) =
   let ty, ik, value =
@@ -67,7 +69,12 @@ let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : de
            match cty with
            | ChannelSingle _ -> Runtime_data.ChannelSingle ([], [])
            | ChannelArray _ -> Runtime_data.ChannelArray [] (*FIXME what size array?*) in
-         ChanType (Some v, cty), Channel_Name, Runtime_data.ChanType (cn, value) in
+         ChanType (Some v, cty), Channel_Name, Runtime_data.ChanType (cn, value)
+     | Dictionary ty ->
+       ty, Value,
+       (*NOTE We initialise to an empty dictionary -- but might want to hook into a
+              running service*)
+       Dictionary [] in
   (*Remove binding of "v" if it exists*)
   let st' =
     match lookup_term_data (Term ik) st.term_symbols v with
@@ -311,6 +318,22 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
            Eval_monad.Process (name, e)) :: actxt.work_list;
       } in
     (st, ctxt), actxt'
+
+  | Declare_dictionary (name, idx_ty_s, v_ty_s) ->
+    let idx_ty =
+      match Crisp_parse.parse_string ("(type| " ^ idx_ty_s ^ "|)") with
+      | TypeExpr ty -> ty
+      | _ ->
+        raise (Runtime_inspect_exc ("Could not parse into a type: " ^ idx_ty_s)) in
+    let v_ty =
+      match Crisp_parse.parse_string ("(type| " ^ v_ty_s ^ "|)") with
+      | TypeExpr ty -> ty
+      | _ ->
+        raise (Runtime_inspect_exc ("Could not parse into a type: " ^ v_ty_s)) in
+    let dict_ty =
+      (*FIXME should check if idx_ty is an acceptable index type*)
+      Crisp_syntax.Dictionary (Some name, idx_ty, v_ty) in
+    declare name st ctxt (Dictionary dict_ty), actxt
 
 (*Evaluate a list of inspect-instructions*)
 let evals (st : state) (ctxt : Runtime_data.runtime_ctxt)

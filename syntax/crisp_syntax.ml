@@ -259,6 +259,7 @@ and channel_identifier = channel_name * expression option
 and expression =
   | Unsafe_Cast of expression * type_value
   | Can of expression
+  | Size of expression
   | Bottom
 
     (*This is used for channels, to indicate that the channel is being passed

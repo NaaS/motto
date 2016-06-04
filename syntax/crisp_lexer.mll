@@ -175,6 +175,8 @@ rule main = parse
   | "@:" {META_OPEN}
   | ":@" {META_CLOSE}
 
+  | "size" {SIZE}
+
   (*FIXME need to check for escapes, particularly that of doublequotes*)
   | '"' ([^'"']* as str) '"' {STRING str}
 

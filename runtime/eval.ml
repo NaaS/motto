@@ -774,6 +774,56 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | _ -> failwith "TODO"
     end
 
+  | Size e ->
+    (*FIXME this could be improved by extracing the list of things that might go
+            wrong from an arbitrary expression "e", and check them one by one.
+            Currently we require "Can" to be affixed immediately to specific
+            expressions.*)
+    begin
+      match e with
+      | Variable l ->
+        let len =
+          match resolve ctxt l with
+          | String s -> String.length s
+          | List vs -> List.length vs
+          | Dictionary dict -> List.length dict
+(*          | ChanType (cn, _) -> FIXME support channel sizes (single and arrays)*) in
+        let e = Crisp_syntax.Int len in
+        return_eval e, ctxt
+      | Receive (inv, chan_ident)
+      | Peek (inv, chan_ident) ->
+        begin
+        let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+          match dir with
+          | Incoming ->
+            if not inv then
+              match incoming with
+              | _ :: _ -> incoming, outgoing, Integer (List.length incoming), ctxt
+              | [] -> raise (Empty_Channel ctxt)
+            else
+              raise (Eval_Exc ("Unexpected direction: inverted Receive only works in the outgoing direction", Some e, None))
+          | Outgoing ->
+            if not inv then
+              raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None))
+            else
+              match outgoing with
+              | _ :: _ -> incoming, outgoing, Integer (List.length incoming), ctxt
+              | [] -> raise (Empty_Channel ctxt) in
+        try
+          let v, ctxt' =
+            channel_fun_ident chan_ident
+              (if not inv then "receive" else "inverted receive")
+              (if not inv then Incoming else Outgoing)
+              (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
+          (return_eval v, ctxt')
+        with
+        | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
+          (return_eval (Crisp_syntax.Int 0), ctxt)
+        end
+
+      | _ -> failwith "TODO"
+    end
+
 (*Lift a function over channels to operate on a channel_identifier.
   It factors out the lookup-related boilerplate for channels.*)
 and channel_fun_ident ((c_name, idx_opt) : channel_identifier) (operation_verb : string)

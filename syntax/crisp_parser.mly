@@ -124,6 +124,8 @@
 %token CAN
 %token UNSAFE_CAST
 
+%token SIZE
+
 (*Names*)
 (*
 %token <string> UPPER_ALPHA
@@ -139,6 +141,7 @@
 %right BAR
 %nonassoc local_def
 %nonassoc ite
+%nonassoc SIZE
 %nonassoc CAN
 %nonassoc ARR_BOTH
 %right ARR_RIGHT
@@ -547,6 +550,9 @@ specific_channel_list:
 expression:
   | CAN; e = expression
     {Crisp_syntax.Can e}
+
+  | SIZE; e = expression
+    {Crisp_syntax.Size e}
 
   | srcs = specific_channel_list; ARR_RIGHT; dest = specific_channel;
     {let e1 :: rest = List.map (fun chan ->

@@ -260,11 +260,22 @@ let _ = run [
    Eval ("can dict[4]");
    Eval ("can dict[3]");
 
+   Q_channel ("somechan", Incoming, None, "5");
    Eval "can ? somechan";
 (*   Eval "can ? somechan_array[0]"; FIXME need to get channel arrays working*)
    Eval "can ? int_chan";
    Eval "can ? boolchan";
    Eval "can ? unitchan";
+
+(*   Eval ("dict");  dictionaries cannot be evaluated*)
+   Eval ("size dict");
+   Eval ("size l");
+
+   Eval "size ? somechan";
+(*   Eval "size ? somechan_array[0]"; FIXME need to get channel arrays working*)
+   Eval "size ? int_chan";
+   Eval "size ? boolchan";
+   Eval "size ? unitchan";
 
 
    Eval ("dict[3]");

@@ -885,3 +885,8 @@ let rec ty_of_expr
     let e_ty, _ = ty_of_expr ~strict st e' in
     assert_not_undefined_type e_ty e' st;
     Boolean (None, []), st
+
+  | Size e' ->
+    let e_ty, _ = ty_of_expr ~strict st e' in
+    assert_not_undefined_type e_ty e' st;
+    Integer (None, []), st

@@ -169,6 +169,8 @@ let string_of_token = function
   | BAR -> "BAR"
   | CAN -> "CAN"
   | UNSAFE_CAST -> "UNSAFE_CAST"
+
+  | SIZE -> "SIZE"
 ;;
 
 let test filepath =

@@ -224,6 +224,16 @@ let rec string_of_naasty_type ?st_opt:((st_opt : state option) = None)
   | Literal_Type (id_opt, s) ->
     indn indent ^ s ^
     bind_opt (fun i -> " " ^ id_name st_opt i) "" id_opt
+  | Union_Type (ty_ident, fields) ->
+    let body =
+      List.map (fun s ->
+        string_of_naasty_type ~st_opt (indent + default_indentation) s ^ ";")
+       fields
+      |> String.concat "\n"
+    in indn indent ^ "typedef " ^
+    "union " ^
+    "{\n" ^ body ^ "\n" ^ indn indent ^ "}" ^
+    " " ^ ty_name st_opt ty_ident
 
 let rec size_of_naasty_expression : naasty_expression -> int = function
   | Minus (Int_Value 0, Int_Value _)

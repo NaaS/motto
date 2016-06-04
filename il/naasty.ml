@@ -64,6 +64,11 @@ type naasty_type =
   | Chan_Type of identifier option * bool(*if this is an array of channels*) *
                  chan_direction * naasty_type
   | Literal_Type of identifier option * string
+  | Union_Type of
+      (*FIXME this is a very primitive type. Would be nice to be able to have
+              families of ILs, some more primitive than others.*)
+      type_identifier * (*name for this type*)
+      naasty_type list (*fields in the union*)
 
 let is_literal_type = function
   | Literal_Type _ -> true

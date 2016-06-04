@@ -113,7 +113,35 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
       end in
   match ty with
   | Undefined _ -> failwith "Cannot translate undefined type"
-  | Disjoint_Union (_, _) -> failwith "Unsupported (disjoint union type)"
+  | Disjoint_Union (label_opt, tys) ->
+    (*We encode a disjoint union as a tagged union*)
+    (*FIXME this code has not been tested.
+            In particular, check for usual subtle issues in how we encode
+            information into the state, so that indices don't get messed up.*)
+    let (_, union_ty_idx, st') =
+      mk_fresh Type ~src_ty_opt:None(*FIXME include type?*)
+        (bind_opt (fun s -> "disjoint_union_" ^ s ^ "_") "disjoint_union_" label_opt)
+        0 st in
+    let (_, selector_idx, st') =
+      mk_fresh (Term Value(*FIXME or use (Field ty)?*))
+        ~src_ty_opt:(Some (Integer (None, empty_type_annotation)))
+        "union_tag_" 0 st' in
+    let (_, label_idx, st') =
+      mk_fresh Type ~src_ty_opt:None(*FIXME include type?*)
+        (bind_opt (fun s -> "disjoint_union_container_" ^ s ^ "_") "disjoint_union_container_" label_opt)
+        0 st' in
+    let (tys', st') =
+      fold_map ([], st') (naasty_of_flick_type ~default_ik:(Some (Disjunct ty))) tys in
+    let ty' =
+      Record_Type
+        (label_idx,
+         [Int_Type (Some selector_idx, default_int_metadata);
+          Union_Type
+            (union_ty_idx,
+             tys')
+         ]) in
+    let st' = update_naasty_ty Value ty' label_opt st'
+    in (ty', st')
   | List (label_opt, carried_ty, _, _) ->
     (*Lists are turned into arrays*)
     let carried_ty', st =
@@ -135,14 +163,19 @@ let rec naasty_of_flick_type ?default_ik:(default_ik : identifier_kind option = 
     let st' = update_naasty_ty Value ty' label_opt st'
     in (ty', st')
   | Empty -> failwith "Cannot translate empty type"
-  | Tuple (label_opt, []) ->
-    assert (label_opt = None);
-    (*We cannot have values of type "void" in the target, we can only type
-      functions with such a type.*)
+  | Tuple (_, []) ->
+    (*Simple source-level optimisation*)
     (Unit_Type, st)
-  | Tuple (_, _) ->
-    (*Tuples can be turned into records*)
-    failwith "Unsupported (tuple type)"
+  | Tuple (label_opt, tys) ->
+    (*Tuples are turned into records*)
+    let ty = RecordType (label_opt,
+                         (*FIXME update tys to be labelled with unique labelled:
+                                 create names by suffixing the ty's ordinal with
+                                 a fresh name (based on label_opt, for instance)*)
+                         tys,
+                         (*FIXME is this what we want?*)
+                         empty_type_annotation) in
+    naasty_of_flick_type ~default_ik ~default_label st ty
   | UserDefinedType (label_opt, type_name) ->
     let type_name' = check_and_resolve_typename type_name in
     let (label_opt', st') = check_and_generate_name Value ty label_opt st in

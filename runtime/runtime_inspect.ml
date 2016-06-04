@@ -25,7 +25,7 @@ type inspect_instruction =
   | Declare_channel of string * string
     (*close_channel - break a channel (the connected processes should react to this)*)
   | Close_channel of string
-  | Open_channel of string
+  | Open_channel of string (*FIXME seems redundant*)
     (*queue channel value*)
   | Q_channel of string * Runtime_data.channel_direction * chan_idx option * string
     (*dequeue channel value*)

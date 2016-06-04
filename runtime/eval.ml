@@ -740,6 +740,37 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           if List.mem_assoc idx_v dict then Crisp_syntax.True
           else Crisp_syntax.False in
         return_eval e, ctxt
+      | Receive (inv, chan_ident)
+      | Peek (inv, chan_ident) ->
+        begin
+        let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+          match dir with
+          | Incoming ->
+            if not inv then
+              match incoming with
+              | v :: _ -> incoming, outgoing, v, ctxt
+              | [] -> raise (Empty_Channel ctxt)
+            else
+              raise (Eval_Exc ("Unexpected direction: inverted Receive only works in the outgoing direction", Some e, None))
+          | Outgoing ->
+            if not inv then
+              raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None))
+            else
+              match outgoing with
+              | v :: _ -> incoming, outgoing, v, ctxt
+              | [] -> raise (Empty_Channel ctxt) in
+        try
+          let _, ctxt' =
+            channel_fun_ident chan_ident
+              (if not inv then "receive" else "inverted receive")
+              (if not inv then Incoming else Outgoing)
+              (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
+          (return_eval Crisp_syntax.True, ctxt')
+        with
+        | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
+          (return_eval Crisp_syntax.False, ctxt)
+        end
+
       | _ -> failwith "TODO"
     end
 

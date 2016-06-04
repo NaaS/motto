@@ -259,6 +259,14 @@ let _ = run [
                        would break.*)
    Eval ("can dict[4]");
    Eval ("can dict[3]");
+
+   Eval "can ? somechan";
+(*   Eval "can ? somechan_array[0]"; FIXME need to get channel arrays working*)
+   Eval "can ? int_chan";
+   Eval "can ? boolchan";
+   Eval "can ? unitchan";
+
+
    Eval ("dict[3]");
    Eval ("blaX[4]");
    Eval ("blaX[4] := 30");

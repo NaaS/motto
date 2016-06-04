@@ -129,12 +129,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
         match md.source_type with
         | None ->
           raise (Runtime_inspect_exc ("Found entry in symbol table, but no specific type for " ^ v))
-        | Some ty' ->
-          if ty = ty' then ()
-          else
-            let ty_s = type_value_to_string true false min_indentation ty in
-            let ty'_s = type_value_to_string true false min_indentation ty' in
-            raise (Runtime_inspect_exc ("Entry in symbol table for " ^ v ^ " is typed " ^ ty'_s ^ " but type of " ^ e_s ^ " is " ^ ty_s))
+        | Some ty' -> Type_infer.assert_identical_types ty ty' e st
         end in
     let value = Eval.evaluate_value ctxt e in
 

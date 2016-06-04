@@ -277,11 +277,7 @@ let _ = run [
    Eval "size ? boolchan";
    Eval "size ? unitchan";
 
-
-   Eval ("dict[3]");
-   Eval ("blaX[4]");
-   Eval ("blaX[4] := 30");
-
+   Eval "3 / 0"; (*FIXME how to control this?*)
 
 (*FIXME further test:
         exceptions, local and global state

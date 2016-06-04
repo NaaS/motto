@@ -254,7 +254,11 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Times _ -> (fun i1 i2 -> Int (i1 * i2))
       | Mod _ -> failwith "TODO"
                    (*FIXME support more from http://caml.inria.fr/pub/docs/manual-ocaml/libref/Int32.html*)
-      | Quotient _ -> (fun i1 i2 -> Int (i1 / i2)) (*FIXME not protection against 'division by zero'*)
+      | Quotient _ ->
+        (fun i1 i2 ->
+           (*FIXME need better handling for 'division by zero'*)
+           if i2 = 0 then failwith "DbZ";
+           Int (i1 / i2))
       | IntegerRange _ -> (fun i1 i2 ->
           enlist i1 (i2 + 1)
           |> Crisp_syntax_aux.flick_integer_list)

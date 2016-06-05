@@ -71,7 +71,7 @@ let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : de
            | ChannelArray _ -> Runtime_data.ChannelArray [] (*FIXME what size array?*) in
          ChanType (Some v, cty), Channel_Name, Runtime_data.ChanType (cn, value)
      | Dictionary ty ->
-       ty, Value,
+       ty, Map_Name,
        (*NOTE We initialise to an empty dictionary -- but might want to hook into a
               running service*)
        Dictionary [] in
@@ -264,8 +264,12 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       | Expression e -> e
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
+    let ty, st  = Type_infer.ty_of_expr st e in
+    let ty_s =
+      type_value_to_string ~summary_types:true ~show_annot:false true false 0 ty in
     let value, ctxt' = Eval.evaluate st ctxt e in
-    print_endline (e_s ^ " ~> " ^ Runtime_data.string_of_typed_value value);
+    print_endline (e_s ^ " ~> " ^ Runtime_data.string_of_typed_value value ^
+                  " typed: " ^ ty_s);
     (st, ctxt'), actxt
 
   | MI mi ->
@@ -292,6 +296,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       | Expression e -> e
       | _ ->
         raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
+    let _, st  = Type_infer.ty_of_expr st e in
     let actxt' =
       { actxt with work_list = (name, Eval_monad.evaluate e) :: actxt.work_list } in
     (st, ctxt), actxt'
@@ -300,9 +305,16 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
 (*FIXME provide seed for random sequence*)
     (*we ignore the values we get from running the work list*)
     let results, ctxt' = Eval_monad.run_until_done Eval.normalise st ctxt actxt.work_list [] in
-    List.iter (fun (name, result_e) ->
+    List.fold_right (fun (name, result_e) st ->
+      let ty, st  =
+        Type_infer.ty_of_expr st result_e in
+      let ty_s =
+        type_value_to_string ~summary_types:true ~show_annot:false true false 0 ty in
+      let value, ctxt' = Eval.evaluate st ctxt result_e in
       print_endline ("(asynch) " ^ name ^ " ~> " ^
-                     expression_to_string min_indentation result_e)) results;
+                     expression_to_string min_indentation result_e ^
+                     " typed: " ^ ty_s);
+      st) results st;
     let actxt' = { actxt with work_list = [] } in
     (st, ctxt'), actxt'
 

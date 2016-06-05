@@ -32,6 +32,28 @@ let assert_not_undefined_type ty e st =
   if (undefined_ty ty) then
     raise (Type_Inference_Exc ("Type should not be Undefined", e, st))
 
+(* Compute the type of a variable or inverted variable.
+   source_e is either a 'Variable' or 'InvertedVariable', applied to 'label'*)
+let rec ty_of_var (source_e : expression) (label : label) (st : state) : type_value * state =
+  let scope =
+    (*This must be "Undetermined" since the "Variable" in question might be
+      a channel, which has an identifier_kind of "Channel_Name", while a
+      normal variable has an identifier_kind of "Value"*)
+    Term Undetermined in
+  begin
+  match lookup_term_data ~unexceptional:true scope st.term_symbols label with
+  | None ->
+    raise (Type_Inference_Exc ("Inverted/Variable: Missing declaration for '" ^ label ^ "'",
+                               source_e, st))
+  | Some (_, {source_type; _}) ->
+    begin
+    match source_type with
+    | None -> raise (Type_Inference_Exc ("Inverted/Variable: Missing source type for '" ^ label ^ "'",
+                                         source_e, st))
+    | Some ty -> (ty, st)
+    end
+  end
+
 (*Type inference algorithm for Crisp expressions. Given a typing context
   (encoded in "st") and an expression "e", we return a type and a state.
 
@@ -62,21 +84,14 @@ let rec ty_of_expr
                     not !Config.cfg.Config.default_nonstrict_type_checking)
           (st : state) (e : expression) : type_value * state =
   match e with
-  | Variable label ->
-    let scope =
-      (*This must be "Undetermined" since the "Variable" in question might be
-        a channel, which has an identifier_kind of "Channel_Name", while a
-        normal variable has an identifier_kind of "Value"*)
-      Term Undetermined in
-    begin
-    match lookup_term_data ~unexceptional:true scope st.term_symbols label with
-    | None ->
-      raise (Type_Inference_Exc ("Variable: Missing declaration for '" ^ label ^ "'", e, st))
-    | Some (_, {source_type; _}) ->
-      match source_type with
-      | None -> raise (Type_Inference_Exc ("Variable: Missing source type for '" ^ label ^ "'", e, st))
-      | Some ty -> (ty, st)
-    end
+  | Variable label -> ty_of_var e label st
+  | InvertedVariable label ->
+    let ty, st = ty_of_var e label st in
+    let inverted_ty =
+      (*Only channel identifiers may be 'inverted', since inverting swaps
+        the incoming and outgoing directions.*)
+      invert_channel_type ty
+    in inverted_ty, st
 
   (*Boolean expressions*)
   | True
@@ -537,14 +552,120 @@ let rec ty_of_expr
     | None ->
       raise (Type_Inference_Exc ("Functor_App symbol: Missing declaration for '" ^ functor_name ^ "'", e, st))
     | Some (_, {source_type; identifier_kind; _}) ->
+      begin
       match source_type with
+      (*FIXME this code is weird -- currently 'None' is the arm that handles
+              functors that are functions, while the other handles disjuncts.
+              Ideally functions' type data would be stored in the symbol table,
+              not in a separate table, so this code can be made uniform.*)
       | None ->
         let (is_fun(*FIXME currently unused*), functor_ty) =
           match lookup_function_type st functor_name with
           | None ->
             raise (Type_Inference_Exc ("Functor_App function: Missing declaration for '" ^ functor_name ^ "'", e, st))
           | Some f_ty -> f_ty in
-        let (dis(*FIXME currenty not doing anything with this*), (chans, arg_tys), ret_tys) = extract_function_types functor_ty in
+        let (dis(*FIXME currenty not doing anything with this*),
+             (chans, original_arg_tys), ret_tys) =
+          extract_function_types functor_ty in
+        let arg_tys =
+          (*Regard channels as simply being parameters*)
+          List.map chan_to_ty chans @ original_arg_tys in
+        let ret_ty =
+          match ret_tys with
+          | [ty] ->
+            let _ =
+              if strict then
+                match identifier_kind with
+                | Defined_Function_Name -> ()
+                | Function_Name -> ()
+                | Disjunct tv ->
+                  if tv <> ty then
+                    (*FIXME give more info*)
+                    raise (Type_Inference_Exc ("Incorrect return type for disjunct", e, st))
+                | _ ->
+                  (*FIXME give more info*)
+                  raise (Type_Inference_Exc ("Incorrect identifier kind for functor", e, st)) in
+            ty
+          | [] -> flick_unit_type
+          | _ ->
+            raise (Type_Inference_Exc ("Functor's return type is invalid, returns more than one value: " ^ functor_name, e, st)) in
+        let unifier =
+          (*Canonicalise the function's arguments -- eliminating any named-parameter
+            occurrences.*)
+          let arg_expressions =
+            Crisp_syntax_aux.order_fun_args functor_name st fun_args in
+          let fun_args_tys =
+            (*This maps [e1; e2; ...] (arg_expressions) to
+              [(e1, e1_ty); (e2, e2_ty); ...] where eN_ty is the type of eN.*)
+            List.map (fun arg_e ->
+              General.selfpair arg_e
+              |> General.apsnd (ty_of_expr ~strict st)
+              |> General.apsnd fst) arg_expressions in
+          let formal_and_actual_parameters =
+            (*check that two lists are of same length.
+              we'll check whether the types agree later*)
+            if List.length fun_args_tys <> List.length chans +
+                                           List.length original_arg_tys then
+              raise (Type_Inference_Exc
+                       ("Inconsistency between the number of formal parameters " ^
+                        "(" ^ string_of_int (List.length chans) ^ " channels + " ^
+                        string_of_int (List.length arg_tys) ^ " arguments) " ^
+                        "and actual parameters (" ^ string_of_int (List.length fun_args_tys) ^
+                        ")", e, st))
+            else List.combine fun_args_tys arg_tys in
+          let unifier : (string * type_value) list =
+            List.fold_right (fun ((arg_e, ty1), ty2) acc ->
+              let ty1_anonymous =
+                forget_label ty1
+                |> resolve_if_usertype st in
+              let ty2_anonymous =
+                forget_label ty2
+                |> resolve_if_usertype st in
+              match type_unify ty2_anonymous ty1_anonymous with
+              | None ->
+                let arg_e_s = expression_to_string min_indentation arg_e in
+                let ty1_s = type_value_to_string true false min_indentation ty1 in
+                let ty2_s = type_value_to_string true false min_indentation ty2 in
+                raise (Type_Inference_Exc ("Wrong-typed parameter '" ^ arg_e_s ^
+                                           "' (typed " ^ ty1_s ^ ") " ^
+                                           "to functor expecting type '" ^ ty2_s ^ "'", e, st))
+              | Some ty ->
+                acc @ extract_unifier ty1_anonymous ty @ extract_unifier ty2_anonymous ty)
+            formal_and_actual_parameters [] in
+          assert_functional_unifier unifier;
+          unifier in
+        let ret_ty = apply_unifier unifier ret_ty in
+        (ret_ty, st)
+      | Some ty ->
+(*      FIXME probably can remove this now
+
+        let ty_s =
+          type_value_to_string ~summary_types:true ~show_annot:false true false 0 ty in
+        raise (Type_Inference_Exc ("Function types currently carried in a
+        different field in the symbol table, but found type '" ^ ty_s ^ "' for
+        functor '" ^ functor_name ^ "'", e, st))
+*)
+
+        (*FIXME repeated code from above -- we start out different, ro extract
+                info related to disjuncts, then proceed exactly as above.*)
+        let (is_fun(*FIXME currently unused*), functor_ty) =
+          match lookup_function_type st functor_name with
+          | None ->
+            let ret_ty =
+                match identifier_kind with
+                | Disjunct tv -> tv
+            in
+              false,
+              (FunType ([], FunDomType ([], [ty]), FunRetType [ret_ty]))
+          | Some f_ty ->
+            raise (Type_Inference_Exc ("Functor_App function: was expecting '" ^
+                                       functor_name ^ "' to be a non-function
+                                       functor", e, st))
+
+        (*NOTE rest continues as above*)
+        in let (dis(*FIXME currenty not doing anything with this*),
+             (chans, arg_tys), ret_tys) =
+          extract_function_types functor_ty in
         let arg_tys =
           (*Regard channels as simply being parameters*)
           List.map chan_to_ty chans @ arg_tys in
@@ -585,8 +706,12 @@ let rec ty_of_expr
             else List.combine fun_args_tys arg_tys in
           let unifier : (string * type_value) list =
             List.fold_right (fun ((arg_e, ty1), ty2) acc ->
-              let ty1_anonymous = forget_label ty1 in
-              let ty2_anonymous = forget_label ty2 in
+              let ty1_anonymous =
+                forget_label ty1
+                |> resolve_if_usertype st in
+              let ty2_anonymous =
+                forget_label ty2
+                |> resolve_if_usertype st in
               match type_unify ty2_anonymous ty1_anonymous with
               | None ->
                 let arg_e_s = expression_to_string min_indentation arg_e in
@@ -602,8 +727,7 @@ let rec ty_of_expr
           unifier in
         let ret_ty = apply_unifier unifier ret_ty in
         (ret_ty, st)
-      | Some _ ->
-        raise (Type_Inference_Exc ("Function types currently carried in a different field in the symbol table", e, st))
+      end
     end
 
   | CaseOf (e', cases) ->

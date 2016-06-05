@@ -16,7 +16,7 @@ let _ = run [
    Declare_value ("zoo", "100");
    Set ("zoo", "200");
    Eval "zoo * 200";
-   Eval "let zoo = 1300";
+   Eval "let zoo_ = 1300";
    Eval "f (zoo, 3 * zoo)";
    Eval "let l = [1,2,3,4]";
    Eval "let v = 1";
@@ -105,7 +105,7 @@ let _ = run [
 
    (*NOTE even if two expressions evaluate to the same value, their side-effects
           may be different. In this case, they're the same.*)
-   Eval "(if 3 < 4: boolchan ! True else: boolchan ! False) = (boolchan ! 3 < 4)";
+   Eval "(if 3 < 4: boolchan ! True else: boolchan ! False) = (boolchan ! (3 < 4))";
 
    (** Testing of some types other than Booleans **)
 
@@ -137,7 +137,7 @@ let _ = run [
    Q_channel ("somechan", Incoming, None, "15");
    Q_channel ("somechan", Incoming, None, "115");
    Q_channel ("somechan", Incoming, None, "1115");
-   Eval "[? somechan, ? somechan, let x = ? somechan, ? somechan - x]";
+   Eval "[? somechan, ? somechan, let x = ? somechan, ? somechan - zoo]";
 
    (*List comprehension*)
    Eval "1 .. 3";
@@ -151,14 +151,13 @@ let _ = run [
    Eval "1 :: 2 :: 3 .. 10";
    Eval "1 :: 2 :: 3 :: [4, 5, 6]";
    (*List head*)
-   Eval "head (2 :: [3 .. 10])";
+   Eval "head (2 :: 3 .. 10)";
    (*List tail*)
-   Eval "tail (2 :: [3 .. 10])";
+   Eval "tail (2 :: 3 .. 10)";
    (*FIXME test "map"*)
-   (*NOTE these are badly-typed; we don't use the type-checker in this interface yet*)
-   Eval "0 :: [1 .. 3]";
-   Eval "[1 .. 3] @ 4 .. 10";
-   Eval "1 .. 3 @ [4 .. 10]";
+   Eval "0 :: 1 .. 3";
+   Eval "1 .. 3 @ 4 .. 10";
+   Eval "[1 .. 3] @ [4 .. 10]";
 
    Load "tests/flick_code/variants.cp";
    Eval "F_variants(c(5))";

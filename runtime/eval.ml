@@ -578,7 +578,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
 
   | Update (v, e) ->
     (*NOTE this handler's implementation is very similar to that for Set in
-           Runtime_data.eval, except that here we don't do any type-checking:
+           Runtime_inspect.eval, except that here we don't do any type-checking:
            that would have been done in earlier parts of the compiler pipeline
            if we're compiling, or by the interpreter if we're interpreting.*)
     continuate e (fun e' st ctxt' ->

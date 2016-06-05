@@ -503,6 +503,8 @@ let is_usertype = function
   | UserDefinedType _ -> true
   | _ -> false
 
+exception Not_a_usertype of type_value
+
 (*Resolves a user-defined type into Flick types.
   if deep_resolution it ensures that the result of the resolution is never
   a user-defined type.
@@ -523,7 +525,7 @@ let rec resolve_usertype ?deep_resolution:(deep_resolution : bool = true) (st : 
     | [] -> None
     | _ -> failwith "More than one candidate for resolving a usertype"(*FIXME give more info*)
     end
-  | _ -> failwith "Could not resolve usertype"(*FIXME give more info*)
+  | _ -> raise (Not_a_usertype ty)
 
 (*If a type is a usertype, then expect to resolve it.
   Otherwise, do nothing.*)
@@ -942,3 +944,12 @@ let rec bound_vars (e : expression) (acc : label list) : label list =
       | Exp e
       | Named (_, e) ->
         bound_vars e acc) fun_args acc
+
+let invert_channel_type (ty : type_value) : type_value =
+  let invert = function
+  | ChannelSingle (ty1, ty2) -> ChannelSingle (ty2, ty1)
+  | ChannelArray (ty1, ty2, di_opt) -> ChannelArray (ty2, ty1, di_opt) in
+  match ty with
+  | ChanType (label_opt, cty) ->
+    ChanType (label_opt, invert cty)
+  | _ -> failwith "Not a channel type"(*FIXME give more info*)

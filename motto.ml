@@ -20,6 +20,8 @@ type arg_params =
                                      is not explicit, but rather implicit in how
                                      they are handled. Noting their optionality
                                      explicitly would be an improvement.*)
+  | ParseExpression
+  | ParseType
 ;;
 
 let show_config : bool ref = ref false;;
@@ -182,6 +184,16 @@ let rec param_table : param_entry list =
         show_config := true;
         next_arg := None);
       desc = "Dump the tool's configuration after parsing all command-line parameters.";};
+    { key = "--parse_expression";
+      parameter_desc = "(expression)";
+      action = (fun () ->
+        next_arg := Some ParseExpression);
+      desc = "Parse the given expression";};
+    { key = "--parse_type";
+      parameter_desc = "(type)";
+      action = (fun () ->
+        next_arg := Some ParseType);
+      desc = "Parse the given type";};
   ] in
 
 (*Parse command-line arguments*)
@@ -247,6 +259,24 @@ while !arg_idx < Array.length Sys.argv do
           failwith ("Unrecognised backend: '" ^ s ^ "'")
         else
           next_arg := None
+      | Some ParseExpression ->
+        let e =
+          match Crisp_parse.parse_string ("(| " ^ s ^ "|)") with
+          | Crisp_syntax.Expression e -> e
+          | _ -> failwith "String is not an expression" in
+        let e_s =
+          Crisp_syntax.expression_to_string Crisp_syntax.min_indentation e in
+        Printf.printf "%s" e_s;
+        next_arg := None
+      | Some ParseType ->
+        let ty =
+          match Crisp_parse.parse_string ("(type| " ^ s ^ "|)") with
+          | Crisp_syntax.TypeExpr ty -> ty
+          | _ -> failwith "String is not a type" in
+        let ty_s =
+          Crisp_syntax.type_value_to_string true false Crisp_syntax.min_indentation ty in
+        Printf.printf "%s" ty_s;
+        next_arg := None
   in
   handle_arg !arg_idx;
   arg_idx := !arg_idx + 1

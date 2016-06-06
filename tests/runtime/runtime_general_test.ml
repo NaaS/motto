@@ -250,9 +250,10 @@ let _ = run [
    Eval ("blaX := 30");
 *)
 
-   Declare_reference ("blaX", "integer", "3");
+   Declare_reference ("blaX", "3");
    Eval ("blaX := 30");
    Eval ("blaX + 3");
+   Eval ("blaX := (blaX + blaX) / 2");
 (* This would result in an error since we'd be shadowing a definition
    Eval ("let blaX = 3");
 *)

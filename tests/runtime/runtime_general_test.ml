@@ -245,10 +245,8 @@ let _ = run [
    Eval ("hash(3)");
    Eval ("hash(2)");
 
-(*FIXME test:
-        update, update-indexable, and indexable-projection*)
    Eval ("let blaX = 3");
-   Eval ("blaX := 30"); (*FIXME we're updating an immutable*)
+(*   Eval ("blaX := 30"); FIXME need way of declaring references*)
    Eval ("blaX");
    Declare_dictionary ("dict", "integer", "integer");
    Eval ("dict[4] := 3");

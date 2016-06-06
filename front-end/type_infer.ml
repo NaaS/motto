@@ -288,6 +288,12 @@ let rec ty_of_expr
       | None ->
         raise (Type_Inference_Exc ("Update: Missing source type for '" ^ value_name ^ "'", e, st))
       | Some ty -> ty in
+    let expected_ty =
+      match expected_ty with
+      | Reference (_, ty) -> ty
+      | _ ->
+        raise (Type_Inference_Exc ("Update: lvalue " ^ value_name ^
+                                   " does not have a Reference type", e, st)) in
     let ty, _ = ty_of_expr ~strict st e in
     let _ =
       if strict then

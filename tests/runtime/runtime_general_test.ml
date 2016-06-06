@@ -26,6 +26,7 @@ let _ = run [
 
    Declare_channel ("somechan", "integer/boolean");
    Declare_channel ("somechan_array", "[integer/boolean]");
+   Declare_channel ("somechan_array_bounded", "[integer/boolean]{DI}");
    Q_channel ("somechan", Incoming, None, "40");
    Q_channel ("somechan", Incoming, None, "400");
    Q_channel ("somechan", Outgoing, None, "False and True");

@@ -145,7 +145,7 @@ let rec type_value_to_string ?summary_types:(summary_types : bool = false)
        type_value_to_string mixfix_lists false 0 ty ^
         endline
   | Undefined s -> "undefined(" ^ s ^ ")"
-  | ChanType (label_opt, ct) -> "channel " ^
+  | ChanType (label_opt, ct) ->
       opt_string (indn indent) label_opt " : " ^ channel_type_to_string ct
   | IL_Type naasty_ty ->
     (*FIXME print out the naasty_ty*) "<IL_Type>"

@@ -50,7 +50,11 @@ let rec ty_of_var (source_e : expression) (label : label) (st : state) : type_va
     match source_type with
     | None -> raise (Type_Inference_Exc ("Inverted/Variable: Missing source type for '" ^ label ^ "'",
                                          source_e, st))
-    | Some ty -> (ty, st)
+    | Some ty ->
+      (*Strip out 'reference' container, since we only care whether an
+        identifier denotes a reference when assigning to that identifier, not
+        when reading from it*)
+      (try_unreference ty, st)
     end
   end
 

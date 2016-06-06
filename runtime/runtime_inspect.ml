@@ -53,17 +53,26 @@ type inspect_instruction =
           to interact with an external system. (for instance, a C-based
           protocol parser that can be linked with the .o file generated from
           a runtime script.*)
-  | Declare_dictionary of string * string * string
+  | Declare_dictionary of
+      string (*dictionary name*) *
+      string (*type of the key*) *
+      string (*type of the value*)
+  | Declare_reference of
+      string (*name of the reference*) *
+      string (*type of the reference*) *
+      string (*value with which to initialise it*)
 
 type declaration =
   | Binding of expression * type_value
   | Channel of channel_name * channel_type
   | Dictionary of type_value
+  | Reference of expression * type_value
 
 let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : declaration) : (state * Runtime_data.runtime_ctxt) =
   let ty, ik, value =
      match d with
      | Binding (e, ty) -> ty, Value, Eval.evaluate_value ctxt e
+     | Reference (e, ty) -> ty, Value, Eval.evaluate_value ctxt e
      | Channel (cn, cty) ->
          let value =
            match cty with
@@ -346,6 +355,21 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       (*FIXME should check if idx_ty is an acceptable index type*)
       Crisp_syntax.Dictionary (Some name, idx_ty, v_ty) in
     declare name st ctxt (Dictionary dict_ty), actxt
+  | Declare_reference (name, ty_s, e_s) ->
+    let ty =
+      match Crisp_parse.parse_string ("(type| " ^ ty_s ^ "|)") with
+      | TypeExpr ty -> ty
+      | _ ->
+        raise (Runtime_inspect_exc ("Could not parse into a type: " ^ ty_s)) in
+    let e =
+      match Crisp_parse.parse_string ("(| " ^ e_s ^ "|)") with
+      | Expression e -> e
+      | _ ->
+        raise (Runtime_inspect_exc ("Could not parse into an expression: " ^ e_s)) in
+    let ref_ty =
+      (*FIXME should check if ty is an acceptable type -- for instance, it can't be a reference type!*)
+      Crisp_syntax.Reference (Some name, ty) in
+    declare name st ctxt (Reference (e, ref_ty)), actxt
 
 (*Evaluate a list of inspect-instructions*)
 let evals (st : state) (ctxt : Runtime_data.runtime_ctxt)

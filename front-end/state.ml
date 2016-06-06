@@ -22,7 +22,7 @@ let term_type_separation = false
 
 type identifier_kind =
   | Undetermined (*used for lookups*)
-  | Value
+  | Value (*NOTE also used for references*)
   | Disjunct of type_value (*the type of the union of which the identifier
                              indicats a disjunct*)
   | Field of type_value (*the type of the record in which this field occurs*)

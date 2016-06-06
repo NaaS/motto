@@ -245,9 +245,18 @@ let _ = run [
    Eval ("hash(3)");
    Eval ("hash(2)");
 
+(* This would result in a type error, since we cannot assign to a non-reference
    Eval ("let blaX = 3");
-(*   Eval ("blaX := 30"); FIXME need way of declaring references*)
-   Eval ("blaX");
+   Eval ("blaX := 30");
+*)
+
+   Declare_reference ("blaX", "integer", "3");
+   Eval ("blaX := 30");
+   Eval ("blaX + 3");
+(* This would result in an error since we'd be shadowing a definition
+   Eval ("let blaX = 3");
+*)
+
    Declare_dictionary ("dict", "integer", "integer");
    Eval ("dict[4] := 3");
    Eval ("dict[4]");

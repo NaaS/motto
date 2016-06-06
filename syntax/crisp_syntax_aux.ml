@@ -953,3 +953,7 @@ let invert_channel_type (ty : type_value) : type_value =
   | ChanType (label_opt, cty) ->
     ChanType (label_opt, invert cty)
   | _ -> failwith "Not a channel type"(*FIXME give more info*)
+
+let try_unreference : type_value -> type_value = function
+  | Reference (_, ty) -> ty
+  | ty -> ty

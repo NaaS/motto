@@ -774,6 +774,10 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
           (return_eval Crisp_syntax.False, ctxt)
         end
+      | Send _ ->
+        (*FIXME crude -- in this runtime we can always send on a channel since
+                we assume an infinitely-sized buffer*)
+        (return_eval Crisp_syntax.True, ctxt)
 
       | _ -> failwith "TODO"
     end
@@ -810,8 +814,19 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         let e = Crisp_syntax.Int len in
         return_eval e, ctxt
       | Receive (inv, chan_ident)
-      | Peek (inv, chan_ident) ->
+      | Peek (inv, chan_ident)
+      | Send (inv, chan_ident, _) ->
         begin
+        let direction =
+          match e with
+          | Receive _
+          | Peek _ -> if not inv then Incoming else Outgoing
+          | Send _ -> if not inv then Outgoing else Incoming in
+        let op_name =
+          match e with
+          | Receive _ -> if not inv then "receive" else "inverted receive"
+          | Peek _ -> if not inv then "peek" else "inverted peek"
+          | Send _ -> if not inv then "send" else "inverted send" in
         let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
           match dir with
           | Incoming ->
@@ -820,19 +835,25 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
               | _ :: _ -> incoming, outgoing, Integer (List.length incoming), ctxt
               | [] -> raise (Empty_Channel ctxt)
             else
-              raise (Eval_Exc ("Unexpected direction: inverted Receive only works in the outgoing direction", Some e, None))
+              begin
+              match outgoing with
+              | _ :: _ -> incoming, outgoing, Integer (List.length outgoing), ctxt
+              | [] -> raise (Empty_Channel ctxt)
+              end
           | Outgoing ->
             if not inv then
-              raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None))
-            else
               match outgoing with
+              | _ :: _ -> incoming, outgoing, Integer (List.length outgoing), ctxt
+              | [] -> raise (Empty_Channel ctxt)
+            else
+              match incoming with
               | _ :: _ -> incoming, outgoing, Integer (List.length incoming), ctxt
               | [] -> raise (Empty_Channel ctxt) in
         try
           let v, ctxt' =
             channel_fun_ident chan_ident
-              (if not inv then "receive" else "inverted receive")
-              (if not inv then Incoming else Outgoing)
+              op_name
+              direction
               (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
           (return_eval v, ctxt')
         with

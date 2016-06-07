@@ -278,6 +278,7 @@ let _ = run [
    Eval "can ? int_chan";
    Eval "can ? boolchan";
    Eval "can ? unitchan";
+   Eval "can (unitchan ! <>)";
 
 (*   Eval ("dict");  dictionaries cannot be evaluated*)
    Eval ("size dict");
@@ -291,6 +292,7 @@ let _ = run [
    Eval "size ? int_chan";
    Eval "size ? boolchan";
    Eval "size ? unitchan";
+   Eval "size (unitchan ! <>)";
 
    Eval "3 / 0"; (*FIXME how to control this?*)
 

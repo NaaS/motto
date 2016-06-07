@@ -748,34 +748,31 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Peek (inv, chan_ident) ->
         begin
         let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+          begin
           match dir with
           | Incoming ->
             if not inv then
               match incoming with
-              | v :: _ -> incoming, outgoing, v, ctxt
-              | [] -> raise (Empty_Channel ctxt)
+              | _ :: _ -> incoming, outgoing, Boolean true, ctxt
+              | [] -> incoming, outgoing, Boolean false, ctxt
             else
               raise (Eval_Exc ("Unexpected direction: inverted Receive only works in the outgoing direction", Some e, None))
           | Outgoing ->
             if not inv then
               raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None))
             else
+              begin
               match outgoing with
-              | v :: _ -> incoming, outgoing, v, ctxt
-              | [] -> raise (Empty_Channel ctxt) in
-        try
-          let _, ctxt' =
-            channel_fun_ident chan_ident
-              (if not inv then "receive" else "inverted receive")
-              (if not inv then Incoming else Outgoing)
-              (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
-          (return_eval Crisp_syntax.True, ctxt')
-        with
-        (*FIXME there's a neater way to do this without using exceptions,
-                simply pass the boolean value from inside the definition of "f"
-                above*)
-        | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
-          (return_eval Crisp_syntax.False, ctxt)
+              | _ :: _ -> incoming, outgoing, Boolean true, ctxt
+              | [] -> incoming, outgoing, Boolean false, ctxt
+              end
+          end in
+        let v, ctxt' =
+          channel_fun_ident chan_ident
+            (if not inv then "receive" else "inverted receive")
+            (if not inv then Incoming else Outgoing)
+            (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
+        (return_eval v, ctxt')
         end
       | Send _ ->
         (*FIXME crude -- in this runtime we can always send on a channel since
@@ -833,26 +830,15 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
           match dir with
           | Incoming ->
-              match incoming with
-              | _ :: _ -> incoming, outgoing, Integer (List.length incoming), ctxt
-              | [] -> raise (Empty_Channel ctxt)
+            incoming, outgoing, Integer (List.length incoming), ctxt
           | Outgoing ->
-              match outgoing with
-              | _ :: _ -> incoming, outgoing, Integer (List.length outgoing), ctxt
-              | [] -> raise (Empty_Channel ctxt)
-        try
-          let v, ctxt' =
-            channel_fun_ident chan_ident
-              op_name
-              direction
-              (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
-          (return_eval v, ctxt')
-        with
-        (*FIXME there's a neater way to do this without using exceptions,
-                simply pass the integer value from inside the definition of "f"
-                above*)
-        | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
-          (return_eval (Crisp_syntax.Int 0), ctxt)
+            incoming, outgoing, Integer (List.length outgoing), ctxt in
+        let v, ctxt' =
+          channel_fun_ident chan_ident
+            op_name
+            direction
+            (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
+        (return_eval v, ctxt')
         end
 
       | _ -> failwith "TODO"

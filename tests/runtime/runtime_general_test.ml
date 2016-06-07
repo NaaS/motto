@@ -293,6 +293,8 @@ let _ = run [
    Eval "size ? boolchan";
    Eval "size ? unitchan";
    Eval "size (unitchan ! <>)";
+   Eval "unitchan ! <>";
+   Eval "size (unitchan ! <>)";
 
    Eval "3 / 0"; (*FIXME how to control this?*)
 

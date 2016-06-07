@@ -26,6 +26,7 @@ let _ = run [
 
    Declare_channel ("somechan", "integer/boolean");
    Declare_channel ("somechan_array", "[integer/boolean]");
+   Add_DI ("DI", "5");
    Declare_channel ("somechan_array_bounded", "[integer/boolean]{DI}");
    Q_channel ("somechan", Incoming, None, "40");
    Q_channel ("somechan", Incoming, None, "400");
@@ -270,7 +271,10 @@ let _ = run [
 
    Q_channel ("somechan", Incoming, None, "5");
    Eval "can ? somechan";
-(*   Eval "can ? somechan_array[0]"; FIXME need to get channel arrays working*)
+   Eval "can ? somechan_array_bounded[0]";
+(*   Eval "can ? somechan_array_bounded"; FIXME currently this has no meaning*)
+(*   Eval "can somechan_array_bounded"; FIXME currently this has no meaning*)
+
    Eval "can ? int_chan";
    Eval "can ? boolchan";
    Eval "can ? unitchan";
@@ -280,7 +284,10 @@ let _ = run [
    Eval ("size l");
 
    Eval "size ? somechan";
-(*   Eval "size ? somechan_array[0]"; FIXME need to get channel arrays working*)
+   Eval "size ? somechan_array_bounded[0]";
+(*   Eval "size ? somechan_array_bounded"; FIXME currently this has no meaning*)
+   Eval "size somechan_array_bounded";
+
    Eval "size ? int_chan";
    Eval "size ? boolchan";
    Eval "size ? unitchan";

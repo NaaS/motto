@@ -471,3 +471,10 @@ let lookup_type_metadata (id : identifier) (st : state) : type_symbol_metadata o
                   " was used in term, getting idx " ^
                   string_of_int idx, Some st))
     else acc) st.type_symbols (None : type_symbol_metadata option)
+
+let resolve_di (di : string) : int =
+  if List.mem_assoc di !Config.cfg.Config.dependency_valuation then
+    List.assoc di !Config.cfg.Config.dependency_valuation
+  else
+    (*FIXME give more info*)
+    failwith ("DI '" ^ di ^ "' not defined")

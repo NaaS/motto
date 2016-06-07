@@ -61,6 +61,9 @@ type inspect_instruction =
       string (*name of the reference*) *
       (*The type of the reference is inferred from the initial value*)
       string (*value with which to initialise it*)
+  | Add_DI of (*FIXME rename to Set_DI?*)
+      string (*key*) *
+      string (*value (numeric)*)
 
 type declaration =
   | Binding of expression * type_value
@@ -77,7 +80,13 @@ let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : de
          let value =
            match cty with
            | ChannelSingle _ -> Runtime_data.ChannelSingle ([], [])
-           | ChannelArray _ -> Runtime_data.ChannelArray [] (*FIXME what size array?*) in
+           | ChannelArray (_, _, di_opt) ->
+             match di_opt with
+             | None ->
+               Runtime_data.ChannelArray []
+             | Some di ->
+               let size = resolve_di di
+               in Runtime_data.ChannelArray (General.repeat size ([], [])) in
          ChanType (Some v, cty), Channel_Name, Runtime_data.ChanType (cn, value)
      | Dictionary ty ->
        ty, Map_Name,
@@ -366,6 +375,14 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       (*FIXME should check if ty is an acceptable type -- for instance, it can't be a reference type!*)
       Crisp_syntax.Reference (Some name, ty) in
     declare name st ctxt (Reference (e, ref_ty)), actxt
+
+  | Add_DI (k_s, v_s) ->
+    (*FIXME Update DI if it already exists in the association list*)
+    Config.cfg := { !Config.cfg with
+                    dependency_valuation =
+                      (k_s, int_of_string v_s) ::
+                      !Config.cfg.Config.dependency_valuation};
+    (st, ctxt), actxt
 
 (*Evaluate a list of inspect-instructions*)
 let evals (st : state) (ctxt : Runtime_data.runtime_ctxt)

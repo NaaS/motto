@@ -244,6 +244,7 @@ while !arg_idx < Array.length Sys.argv do
         next_arg := None
       | Some DependancyValue ->
         let [k; v] = Str.split (Str.regexp "=") s in
+        (*FIXME Update DI if it already exists in the association list*)
         cfg := { !cfg with dependency_valuation = (k, int_of_string v) :: !cfg.dependency_valuation};
         next_arg := None
       | Some Backend ->

@@ -791,7 +791,22 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           | String s -> String.length s
           | List vs -> List.length vs
           | Dictionary dict -> List.length dict
-(*          | ChanType (cn, _) -> FIXME support channel sizes (single and arrays)*) in
+          | ChanType (_, cty) ->
+            begin
+            match cty with
+            | ChannelSingle _ -> 1
+            | ChannelArray chans ->
+              (*NOTE we return the current number of channels. this should be
+                     the same number that the channel type was declared to have*)
+              List.length chans
+(* If we wanted to work off the type's declaration instead, we would have done
+   something like this:
+            | Crisp_syntax.ChannelArray (_, _, di_opt) ->
+              match di_opt with
+              | None -> 0 (*FIXME do we need to dimension such arrays dynamically?*)
+              | Some di -> resolve_di di
+*)
+            end in
         let e = Crisp_syntax.Int len in
         return_eval e, ctxt
       | Receive (inv, chan_ident)

@@ -165,3 +165,11 @@ let apply_endomap (map : ('a * 'a) list) (x : 'a) : 'a =
   if List.mem_assoc x map then
     List.assoc x map
   else x
+
+let repeat (n : int) (x : 'a) : 'a list =
+  let rec repeat' (n : int) (x : 'a) (xs : 'a list) : 'a list =
+    if n = 0 then xs
+    else repeat' (n - 1) x (x :: xs)
+  in
+  assert (n >= 0);
+  repeat' n x []

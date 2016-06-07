@@ -663,7 +663,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Outgoing ->
         if not inv then
           raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None))
-        else 
+        else
           match outgoing with
           | v :: xs -> incoming, xs, v, ctxt
           | [] -> raise (Empty_Channel ctxt) in
@@ -771,6 +771,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
               (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
           (return_eval Crisp_syntax.True, ctxt')
         with
+        (*FIXME there's a neater way to do this without using exceptions,
+                simply pass the boolean value from inside the definition of "f"
+                above*)
         | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
           (return_eval Crisp_syntax.False, ctxt)
         end
@@ -830,25 +833,13 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
           match dir with
           | Incoming ->
-            if not inv then
               match incoming with
               | _ :: _ -> incoming, outgoing, Integer (List.length incoming), ctxt
               | [] -> raise (Empty_Channel ctxt)
-            else
-              begin
-              match outgoing with
-              | _ :: _ -> incoming, outgoing, Integer (List.length outgoing), ctxt
-              | [] -> raise (Empty_Channel ctxt)
-              end
           | Outgoing ->
-            if not inv then
               match outgoing with
               | _ :: _ -> incoming, outgoing, Integer (List.length outgoing), ctxt
               | [] -> raise (Empty_Channel ctxt)
-            else
-              match incoming with
-              | _ :: _ -> incoming, outgoing, Integer (List.length incoming), ctxt
-              | [] -> raise (Empty_Channel ctxt) in
         try
           let v, ctxt' =
             channel_fun_ident chan_ident
@@ -857,6 +848,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
               (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
           (return_eval v, ctxt')
         with
+        (*FIXME there's a neater way to do this without using exceptions,
+                simply pass the integer value from inside the definition of "f"
+                above*)
         | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
           (return_eval (Crisp_syntax.Int 0), ctxt)
         end

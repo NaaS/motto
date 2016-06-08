@@ -9,6 +9,7 @@ open General
 open Debug
 open Crisp_syntax
 open State
+open Resources
 
 let runtime_ctxt_print_indentation = "  "
 
@@ -31,6 +32,7 @@ type typed_value =
   | Tuple of typed_value list
   | Dictionary of (typed_value * typed_value) list
   | ChanType of label * channel_type
+  | Resource of resource
 (*Channels are abstracted to behave as queues*)
 and channel_type =
   | ChannelSingle of typed_value list * typed_value list
@@ -61,6 +63,7 @@ and string_of_typed_value : typed_value -> string = function
       string_of_typed_value k ^ " |-> " ^ string_of_typed_value v) d in
     "[" ^ String.concat ", " d_s ^ "]"
   | ChanType (cn, cv) -> cn ^ "(" ^ string_of_channel_type cv ^ ")"
+  | Resource r -> string_of_resource r
 and string_of_channel_type : channel_type -> string = function
   | ChannelSingle (in_vs, out_vs) -> string_of_chan_vs (in_vs, out_vs)
   | ChannelArray chans ->

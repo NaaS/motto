@@ -296,7 +296,7 @@ let _ = run [
    Eval "unitchan ! <>";
    Eval "size (unitchan ! <>)";
 
-   Eval "3 / 0"; (*FIXME how to control this?*)
+(*   Eval "3 / 0"; (*FIXME how to control this?*)*)
 
 (*FIXME further test:
         exceptions, local and global state
@@ -309,3 +309,61 @@ let _ = run [
 
    MI (Show_symbol_table None);
    MI (Show_runtime_ctxt None)]
+;;
+
+open Resources
+(*Instead of un/parsing expressions, we store them directly in this example.*)
+let _r : expression ref = ref Bottom;;
+let _r_assigned : bool ref = ref false;;
+let r = Reference_resource
+  {
+    initialise = (fun s_opt ->
+      assert (not !_r_assigned);
+      match s_opt with
+      | None -> failwith "Initial value required"
+      | Some e_s ->
+        begin
+          let e =
+            match Crisp_parse.parse_string ("(| " ^ e_s ^ "|)") with
+            | Expression e -> e
+            | _ ->
+              failwith ("Could not parse into an expression: " ^ e_s) in
+          _r := e;
+        end;
+      _r_assigned := true;
+      !_r_assigned);
+    is_available = (fun () ->
+      !_r_assigned);
+    update = (fun e ->
+      assert !_r_assigned;
+      _r := e;
+      Expression e);
+    retrieve = (fun () ->
+      assert !_r_assigned;
+      Expression !_r);
+    dismiss = (fun () ->
+      assert !_r_assigned;
+      _r_assigned := false;
+      not (!_r_assigned));
+  }
+;;
+
+let _ = run [
+  Acquire_Resource (r, Some "4");
+  Declare_reference ("testref", "3");
+  Eval "testref";
+  Assign_Resource ("testref", r);
+  Eval "testref";
+  Eval "testref := 5";
+  Eval "testref";
+  Eval "can testref"; (*This tells us that the resource is currently available*)
+  Dismiss_Resource r;
+(*  Eval "testref";*) (*We can no longer evaluate this since the resource has
+                        been dismissed*)
+  Eval "can testref"; (*This tells us that the resource is unavailable*)
+  Unlink "testref";
+(*  Eval "testref";*) (*We can no longer evaluate this since the resource has
+                        is not even referenced in our runtime state.
+  Eval "can testref"; -- Indeed we cannot even check to see if the resource is
+                         available.*)
+]

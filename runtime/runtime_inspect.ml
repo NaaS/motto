@@ -64,6 +64,16 @@ type inspect_instruction =
   | Add_DI of (*FIXME rename to Set_DI?*)
       string (*key*) *
       string (*value (numeric)*)
+  | Assign_Resource of
+      string (*Flick-level identifier*) *
+      Resources.resource
+  | Unlink of (*NOTE this was originally 'Unassign_Resource' but I generalised
+                     it to work to non-resource identifiers too.*)
+      string (*Flick-level identifier*)
+  | Acquire_Resource of
+      Resources.resource *
+      string option (*Initialisation string*)
+  | Dismiss_Resource of Resources.resource
 
 type declaration =
   | Binding of expression * type_value
@@ -382,6 +392,45 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
                     dependency_valuation =
                       (k_s, int_of_string v_s) ::
                       !Config.cfg.Config.dependency_valuation};
+    (st, ctxt), actxt
+
+  | Assign_Resource (identifier, resource) ->
+    (*Update runtime context*)
+    let ctxt' =
+      if not (List.mem_assoc identifier ctxt.Runtime_data.value_table) then
+        raise (Runtime_inspect_exc ("Symbol " ^ identifier ^ " has been declared previously, but not defined"));
+      { ctxt with Runtime_data.value_table =
+          let pair = (identifier, Runtime_data.Resource resource) in
+          General.add_unique_assoc pair ctxt.Runtime_data.value_table } in
+    (st, ctxt'), actxt
+  | Unlink identifier ->
+    (*Remove an identifier from the runtime's state.
+      * If this were a resource we could find what kind of resource has been
+        assigned, and swap it with an "internal" version of the resource; Any
+        data currently held or buffered is not copied into the internal resource
+        before the external resource is unassigned. But this is too clever.
+      *  If we went down the route of replacing an external resource with an
+         internal one, then should probably also take an expression that serves
+         to initialise the internal resource, otherwise some suitable default
+         initial value should be sought.
+      NOTE we don't remove type info from the symbol table at the moment, but
+           perhaps this should be done too.*)
+    let ctxt' =
+      if not (List.mem_assoc identifier ctxt.Runtime_data.value_table) then
+        raise (Runtime_inspect_exc ("Symbol " ^ identifier ^ " has been declared previously, but not defined"));
+      { ctxt with Runtime_data.value_table =
+                    List.filter (fun (v, _) ->
+                    v <> identifier) ctxt.Runtime_data.value_table } in
+    (st, ctxt'), actxt
+  | Acquire_Resource (resource, init_string_opt) ->
+    (*Initialise a resource. After being initialised, it should be ready for
+      assignment, and thus use.*)
+    assert (Resources.acquire_resource resource init_string_opt);
+    (st, ctxt), actxt
+  | Dismiss_Resource resource ->
+    (*Indicate to a resource that it will no longer be used. Whatever resources
+      it used can be reclaimed by other parties.*)
+    assert (Resources.dismiss_resource resource);
     (st, ctxt), actxt
 
 (*Evaluate a list of inspect-instructions*)

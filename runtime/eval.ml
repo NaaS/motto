@@ -49,6 +49,8 @@ let rec evaluate_value (ctxt : runtime_ctxt) (e : expression) : typed_value =
   | _ ->
     raise (Eval_Exc ("Cannot represent as Flick expression. Perhaps it's not in normal form?", Some e, None))
 
+exception Unavailue (*Data we seek is unavailable. We'll try again later.*)
+
 (*Translate a value into an expression*)
 let rec devaluate (v : typed_value) : expression =
   match v with
@@ -73,6 +75,14 @@ let rec devaluate (v : typed_value) : expression =
     (*FIXME could serialise as an association list?*)
     raise (Eval_Exc ("Cannot represent as Flick expression", None, Some v))
   | ChanType (cn, _) -> Variable cn
+  | Resource (Reference_resource r) ->
+    match r.retrieve () with
+    | Expression e -> e
+    | Unavailable ->
+      (*FIXME this is not caught properly at the moment*)
+      raise Unavailue
+    | Error s ->
+      raise (Eval_Exc ("(Resource error) " ^ s, None, Some v))
 
 (*NOTE b and l should be in normal form*)
 let rec fold_list ?acc:(acc : expression option = None)
@@ -582,15 +592,44 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
            that would have been done in earlier parts of the compiler pipeline
            if we're compiling, or by the interpreter if we're interpreting.*)
     continuate e (fun e' st ctxt' ->
-      let value = evaluate_value ctxt' e' in
-      (*Update runtime context*)
-      let ctxt'' =
-        if not (List.mem_assoc v ctxt'.Runtime_data.value_table) then
-          raise (Eval_Exc ("Cannot Update: Symbol " ^ v ^ " not in runtime context", Some e, None));
-        { ctxt' with Runtime_data.value_table =
-            let pair = (v, value) in
-            General.add_unique_assoc pair ctxt'.Runtime_data.value_table } in
-      return_eval e', ctxt''), ctxt
+      let updated_value = evaluate_value ctxt' e' in
+      let next =
+        (*FIXME horrible code style*)
+        try
+          (*Update runtime context*)
+          let ctxt'' =
+            if not (List.mem_assoc v ctxt'.Runtime_data.value_table) then
+              raise (Eval_Exc ("Cannot Update: Symbol " ^ v ^ " not in runtime context", Some e, None));
+            let pair, e' =
+              let current_value = List.assoc v ctxt'.Runtime_data.value_table in
+              match current_value with
+              | Resource (Reference_resource r) ->
+                begin
+                match r.update e' with
+                | Expression e' ->
+                  (*Extract the value from the reference, but leave the reference
+                    as it is -- i.e., referring to an external "back-patched"
+                    resource*)
+                  (v, current_value), e'
+                | Unavailable ->
+                  (*FIXME retry until timeout of some sort*)
+                  raise Unavailue
+                | Error s ->
+                  raise (Eval_Exc ("Cannot Update (resource error): " ^ s, Some e, None));
+                end
+              | Resource r ->
+                raise (Eval_Exc ("Cannot Update: Symbol " ^ v ^
+                                 " is wrong type of resource: " ^
+                                 Resources.string_of_resource r, Some e, None));
+              | _ -> (v, updated_value), e' in
+            { ctxt' with Runtime_data.value_table =
+                General.add_unique_assoc pair ctxt'.Runtime_data.value_table } in
+          return_eval e', ctxt''
+        with Unavailue ->
+          (*We cannot progress in the computation at this time , so try again later.*)
+          (*FIXME timeout?*)
+          (retry e, ctxt) in
+    next), ctxt
 
   | UpdateIndexable (v, idx, e) ->
     let dict = get_dictionary "UpdateIndexable" e v ctxt in
@@ -778,6 +817,18 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         (*FIXME crude -- in this runtime we can always send on a channel since
                 we assume an infinitely-sized buffer*)
         (return_eval Crisp_syntax.True, ctxt)
+
+
+      | Variable l ->
+        begin
+        match resolve ctxt l with
+        | Resource r ->
+          let result =
+            if Resources.resource_is_available r then Crisp_syntax.True
+            else Crisp_syntax.False in
+          (return_eval result, ctxt)
+        | _ -> failwith "'can' cannot be applied to this kind of identifier" (*FIXME give more info*)
+        end
 
       | _ -> failwith "TODO"
     end

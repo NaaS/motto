@@ -27,23 +27,73 @@ type result =
       non-transient circumstances.*)
   | Error of string
 
-(*FIXME abstract using modules*)
+module type RESOURCE =
+  sig
+    type t
+
+    val allocate : unit -> t
+
+    val initialise : t -> string option -> bool
+    val is_available : t -> bool
+
+    val dismiss : t -> bool
+  end
+
+module type REFERENCE =
+  sig
+    include RESOURCE
+
+    val update : t -> expression -> result
+    val retrieve : t -> result
+  end
+
+(*Instead of un/parsing expressions, we store them directly in this example.*)
 (*FIXME implement example involving remote reference?*)
-type reference =
-  {
-    initialise : string option -> bool;
-    is_available : unit -> bool;
+module Reference : REFERENCE =
+struct
+  type t = bool ref * expression ref
 
-    update : expression -> result;
-    retrieve : unit -> result;
+  let allocate () = (ref false, ref Bottom)
 
-    dismiss : unit -> bool;
-  }
+  let initialise (_r_assigned, _r) s_opt =
+    assert (not !_r_assigned);
+    match s_opt with
+    | None -> failwith "Initial value required"
+    | Some e_s ->
+      begin
+        let e =
+          match Crisp_parse.parse_string ("(| " ^ e_s ^ "|)") with
+          | Expression e -> e
+          | _ ->
+            failwith ("Could not parse into an expression: " ^ e_s) in
+        _r := e;
+      end;
+    _r_assigned := true;
+    !_r_assigned
+
+  let is_available (_r_assigned, _) =
+    !_r_assigned
+
+  let update (_r_assigned, _r) e =
+    assert !_r_assigned;
+    _r := e;
+    Expression e
+
+  let retrieve (_r_assigned, _r) =
+    assert !_r_assigned;
+    Expression !_r
+
+  let dismiss (_r_assigned, _) =
+    assert !_r_assigned;
+    _r_assigned := false;
+    not (!_r_assigned)
+end
+
 
 type resource =
   | Channel_resource (*FIXME how to deal with channel arrays?*)
   | Dictionary_resource
-  | Reference_resource of reference
+  | Reference_resource of Reference.t
 
 let string_of_resource = function
   | Channel_resource -> "<channel resource>"
@@ -55,16 +105,16 @@ let acquire_resource (r : resource) (param : string option) : bool =
   | Channel_resource
   | Dictionary_resource -> failwith "TODO"
   | Reference_resource r ->
-    r.initialise param
+    Reference.initialise r param
 
 let dismiss_resource (r : resource) : bool =
   match r with
   | Channel_resource
   | Dictionary_resource -> failwith "TODO"
-  | Reference_resource r -> r.dismiss ()
+  | Reference_resource r -> Reference.dismiss r
 
 let resource_is_available (r : resource) : bool =
   match r with
   | Channel_resource
   | Dictionary_resource -> failwith "TODO"
-  | Reference_resource r -> r.is_available ()
+  | Reference_resource r -> Reference.is_available r

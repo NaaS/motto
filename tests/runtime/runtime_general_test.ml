@@ -312,43 +312,7 @@ let _ = run [
 ;;
 
 open Resources
-(*Instead of un/parsing expressions, we store them directly in this example.*)
-(*FIXME abstract using modules*)
-let _r : expression ref = ref Bottom;;
-let _r_assigned : bool ref = ref false;;
-let r = Reference_resource
-  {
-    initialise = (fun s_opt ->
-      assert (not !_r_assigned);
-      match s_opt with
-      | None -> failwith "Initial value required"
-      | Some e_s ->
-        begin
-          let e =
-            match Crisp_parse.parse_string ("(| " ^ e_s ^ "|)") with
-            | Expression e -> e
-            | _ ->
-              failwith ("Could not parse into an expression: " ^ e_s) in
-          _r := e;
-        end;
-      _r_assigned := true;
-      !_r_assigned);
-    is_available = (fun () ->
-      !_r_assigned);
-    update = (fun e ->
-      assert !_r_assigned;
-      _r := e;
-      Expression e);
-    retrieve = (fun () ->
-      assert !_r_assigned;
-      Expression !_r);
-    dismiss = (fun () ->
-      assert !_r_assigned;
-      _r_assigned := false;
-      not (!_r_assigned));
-  }
-;;
-
+let r = Reference_resource (Resources.Reference.allocate ())
 let _ = run [
   Acquire_Resource (r, Some "4");
   Declare_reference ("testref", "3");

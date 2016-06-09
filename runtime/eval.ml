@@ -76,7 +76,9 @@ let rec devaluate (v : typed_value) : expression =
     raise (Eval_Exc ("Cannot represent as Flick expression", None, Some v))
   | ChanType (cn, _) -> Variable cn
   | Resource (Reference_resource r) ->
-    match r.retrieve () with
+    (*FIXME "Reference" is only one possible implementation -- we could
+             generalise this code to use any implementation.*)
+    match Resources.Reference.retrieve r with
     | Expression e -> e
     | Unavailable ->
       (*FIXME this is not caught properly at the moment*)
@@ -605,7 +607,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
               match current_value with
               | Resource (Reference_resource r) ->
                 begin
-                match r.update e' with
+                (*FIXME "Reference" is only one possible implementation -- we could
+                         generalise this code to use any implementation.*)
+                match Resources.Reference.update r e' with
                 | Expression e' ->
                   (*Extract the value from the reference, but leave the reference
                     as it is -- i.e., referring to an external "back-patched"

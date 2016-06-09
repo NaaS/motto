@@ -78,7 +78,7 @@ let rec devaluate (v : typed_value) : expression =
   | Resource (Reference_resource r) ->
     (*FIXME "Reference" is only one possible implementation -- we could
              generalise this code to use any implementation.*)
-    match Resources.Reference.retrieve r with
+    match Resource_instances.Reference.retrieve r with
     | Expression e -> e
     | Unavailable ->
       (*FIXME this is not caught properly at the moment*)
@@ -138,7 +138,7 @@ type dictionary =
   | Local of (Runtime_data.typed_value * Runtime_data.typed_value) list
   (*FIXME not sure that this is the best place to declare this type*)
   (*FIXME there may be more than one kind of external dictionary*)
-  | External of Resources.Dictionary.t
+  | External of Resource_instances.Dictionary.t
 
 let get_dictionary caller_form e v ctxt : dictionary =
   if not (List.mem_assoc v ctxt.Runtime_data.value_table) then
@@ -616,7 +616,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
                 begin
                 (*FIXME "Reference" is only one possible implementation -- we could
                          generalise this code to use any implementation.*)
-                match Resources.Reference.update r e' with
+                match Resource_instances.Reference.update r e' with
                 | Expression e' ->
                   (*Extract the value from the reference, but leave the reference
                     as it is -- i.e., referring to an external "back-patched"
@@ -663,7 +663,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         | External dict ->
           begin
           let result =
-            Resources.Dictionary.update dict
+            Resource_instances.Dictionary.update dict
             (*We devaluate since the dictionary expects an 'expression', not
               a 'typed_value', while the internal dictionary works with
               typed_values. Perhaps a more uniform treatment can be found;
@@ -693,7 +693,7 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         |> devaluate
       | External dict ->
         begin
-        match Resources.Dictionary.lookup dict idx with
+        match Resource_instances.Dictionary.lookup dict idx with
         | Expression e -> e
         | Unavailable
         | Error _ -> failwith "TODO"
@@ -822,10 +822,10 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
             Crisp_syntax_aux.lift_bool (List.mem_assoc idx_v dict)
           | External dict ->
             begin
-            if not (Resources.Dictionary.is_available dict) then
+            if not (Resource_instances.Dictionary.is_available dict) then
               Crisp_syntax.False
             else
-              match Resources.Dictionary.key_exists dict idx with
+              match Resource_instances.Dictionary.key_exists dict idx with
               | Expression e -> e
               | Unavailable
               | Error _ -> failwith "TODO"

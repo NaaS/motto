@@ -134,11 +134,18 @@ let interpret_flick_list (e : expression) : expression list =
     raise (Eval_Exc ("interpret_flick_list : not given a list", Some e, None)) in
   interpret_flick_list' [] e
 
-let get_dictionary caller_form e v ctxt =
+type dictionary =
+  | Local of (Runtime_data.typed_value * Runtime_data.typed_value) list
+  (*FIXME not sure that this is the best place to declare this type*)
+  (*FIXME there may be more than one kind of external dictionary*)
+  | External of Resources.Dictionary.t
+
+let get_dictionary caller_form e v ctxt : dictionary =
   if not (List.mem_assoc v ctxt.Runtime_data.value_table) then
     raise (Eval_Exc ("Cannot " ^ caller_form ^ ": Symbol " ^ v ^ " not in runtime context", Some e, None));
   match List.assoc v ctxt.Runtime_data.value_table with
-  | Dictionary d -> d
+  | Dictionary d -> Local d
+  | Resource (Dictionary_resource d) -> External d
   | _ ->
    raise (Eval_Exc ("Cannot " ^ caller_form ^ ": Symbol " ^ v ^ " not a dictionary ", Some e, None))
 
@@ -642,30 +649,56 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
 
     continuate e (fun e' st ctxt'' ->
       let e_v = evaluate_value ctxt'' e' in
-      let dict' = General.add_unique_assoc (idx_v, e_v) dict in
 
       if not (List.mem_assoc v ctxt''.Runtime_data.value_table) then
         raise (Eval_Exc ("Cannot UpdateIndexable: Symbol " ^ v ^ " not in runtime context", Some e, None));
 
       let ctxt''' =
-        { ctxt'' with Runtime_data.value_table =
-            let pair = (v, Runtime_data.Dictionary dict') in
-            General.add_unique_assoc pair ctxt''.Runtime_data.value_table } in
-      return_eval e', ctxt'''), ctxt'
+        match dict with
+        | Local dict ->
+          let dict' = General.add_unique_assoc (idx_v, e_v) dict in
+          { ctxt'' with Runtime_data.value_table =
+              let pair = (v, Runtime_data.Dictionary dict') in
+              General.add_unique_assoc pair ctxt''.Runtime_data.value_table }
+        | External dict ->
+          begin
+          let result =
+            Resources.Dictionary.update dict
+            (*We devaluate since the dictionary expects an 'expression', not
+              a 'typed_value', while the internal dictionary works with
+              typed_values. Perhaps a more uniform treatment can be found;
+              but carrying out the eval-deval step ensures that idx and e are
+              well-formed, so it's good for safety (if inefficient).*)
+            (devaluate idx_v) (devaluate e_v) in
+          match result with
+          | Expression e ->
+            assert (e = e');
+            ctxt''
+          | Unavailable
+          | Error _ -> failwith "TODO"
+          end
+
+      in return_eval e', ctxt'''), ctxt'
 
   | IndexableProjection (v, idx) ->
-    (*FIXME how to initialise dictionaries etc in the simulator?*)
     let dict = get_dictionary "IndexableProjection" e v ctxt in
-
     let idx_v, ctxt' = evaluate st ctxt idx in
-
-    if not (List.mem_assoc idx_v dict) then
-      raise (Eval_Exc ("Cannot IndexableProjection: Key " ^ string_of_typed_value idx_v ^ " not found in dictionary " ^ v, Some e, None));
-
     let e =
-      List.assoc idx_v dict
-      |> devaluate in
-    return_eval e, ctxt'
+      match dict with
+      | Local dict ->
+        if not (List.mem_assoc idx_v dict) then
+          raise (Eval_Exc ("Cannot IndexableProjection: Key " ^
+           string_of_typed_value idx_v ^ " not found in dictionary " ^ v, Some e, None));
+        List.assoc idx_v dict
+        |> devaluate
+      | External dict ->
+        begin
+        match Resources.Dictionary.lookup dict idx with
+        | Expression e -> e
+        | Unavailable
+        | Error _ -> failwith "TODO"
+        end
+    in return_eval e, ctxt'
 
   | Send (inv, chan_ident, e') ->
     continuate e' (fun e' st ctxt ->
@@ -784,9 +817,20 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         let dict = get_dictionary "IndexableProjection" e v ctxt in
         let idx_v, ctxt' = evaluate st ctxt idx in
         let e =
-          if List.mem_assoc idx_v dict then Crisp_syntax.True
-          else Crisp_syntax.False in
-        return_eval e, ctxt
+          match dict with
+          | Local dict ->
+            Crisp_syntax_aux.lift_bool (List.mem_assoc idx_v dict)
+          | External dict ->
+            begin
+            if not (Resources.Dictionary.is_available dict) then
+              Crisp_syntax.False
+            else
+              match Resources.Dictionary.key_exists dict idx with
+              | Expression e -> e
+              | Unavailable
+              | Error _ -> failwith "TODO"
+            end
+        in return_eval e, ctxt
       | Receive (inv, chan_ident)
       | Peek (inv, chan_ident) ->
         begin
@@ -828,8 +872,8 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
         match resolve ctxt l with
         | Resource r ->
           let result =
-            if Resources.resource_is_available r then Crisp_syntax.True
-            else Crisp_syntax.False in
+            Resources.resource_is_available r
+            |> Crisp_syntax_aux.lift_bool in
           (return_eval result, ctxt)
         | _ -> failwith "'can' cannot be applied to this kind of identifier" (*FIXME give more info*)
         end

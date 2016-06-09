@@ -957,3 +957,5 @@ let invert_channel_type (ty : type_value) : type_value =
 let try_unreference : type_value -> type_value = function
   | Reference (_, ty) -> ty
   | ty -> ty
+
+let lift_bool (b : bool) : expression = if b then True else False

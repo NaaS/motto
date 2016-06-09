@@ -53,6 +53,20 @@ module type REFERENCE =
     val retrieve : t -> result
   end
 
+module type DICTIONARY =
+  sig
+    include RESOURCE
+
+    val lookup : t -> expression -> result
+    (*"update" is also used for "add"*)
+    val update : t -> expression -> expression -> result
+    val delete : t -> expression -> result
+    val key_exists : t -> expression -> result
+    val size : t -> result
+    val capacity : t -> result
+    val as_expression : t -> result
+  end
+
 (*Instead of un/parsing expressions, we store them directly in this example.*)
 (*FIXME implement example involving remote reference?*)
 module Reference : REFERENCE =
@@ -98,31 +112,96 @@ struct
     not (!_r_assigned)
 end
 
+module Dictionary : DICTIONARY =
+struct
+  type t = {
+    availability : bool ref;
+    capacity : int;
+    (*NOTE we'd prefer to use 'typed_value' not 'expression' here, but with the
+           current code it creates a circular dependency among modules. In the
+           reference above we stored 'expression'. The choice is a bit
+           arbitrary, but using typed_value adds extra protection to ensure that
+           we only store stuff that's "storable" in Flick.*)
+    content : (expression, expression) Hashtbl.t;
+  }
+
+  let allocate n = {
+    availability = ref true;
+    capacity = n;
+    content = Hashtbl.create ~random:false n;
+  }
+
+  let initialise t s_opt =
+    (*We initialised the dictionary durine 'allocate' above*)
+    assert (s_opt = None);
+    !(t.availability)
+
+  let is_available t = !(t.availability)
+
+  let dismiss t =
+    t.availability := false;
+    not (!(t.availability))
+
+  let lookup t k_e =
+    assert !(t.availability);
+    Expression (Hashtbl.find t.content k_e)
+
+  let update t k_e v_e =
+    assert !(t.availability);
+    assert (Hashtbl.length t.content < t.capacity);
+    Hashtbl.replace t.content k_e v_e;
+    Expression v_e
+
+  let delete t k_e =
+    assert !(t.availability);
+    Hashtbl.remove t.content k_e;
+    Expression Crisp_syntax.flick_unit_value
+
+  let key_exists t k_e =
+    assert !(t.availability);
+    let result =
+      Hashtbl.mem t.content k_e
+      |> Crisp_syntax_aux.lift_bool in
+    Expression result
+
+  let size t =
+    assert !(t.availability);
+    Expression (Int (Hashtbl.length t.content))
+
+  let capacity t =
+    assert !(t.availability);
+    Expression (Int (t.capacity))
+
+  let as_expression t =
+    failwith "TODO"
+end
+
 type resource =
+  (*FIXME there may be several kinds of channels, dictionaries, and references.
+          should we use OCaml's class system for abstracting their interfaces?*)
   | Channel_resource (*FIXME how to deal with channel arrays?*)
-  | Dictionary_resource
+  | Dictionary_resource of Dictionary.t
   | Reference_resource of Reference.t
 
 let string_of_resource = function
   | Channel_resource -> "<channel resource>"
-  | Dictionary_resource -> "<dictionary resource>"
+  | Dictionary_resource _ -> "<dictionary resource>"
   | Reference_resource _ -> "<reference resource>"
 
 let acquire_resource (r : resource) (param : string option) : bool =
   match r with
-  | Channel_resource
-  | Dictionary_resource -> failwith "TODO"
-  | Reference_resource r ->
-    Reference.initialise r param
+  | Channel_resource -> failwith "TODO"
+  | Dictionary_resource r -> Dictionary.initialise r param
+  | Reference_resource r -> Reference.initialise r param
 
 let dismiss_resource (r : resource) : bool =
   match r with
-  | Channel_resource
-  | Dictionary_resource -> failwith "TODO"
+  | Channel_resource -> failwith "TODO"
+  | Dictionary_resource r -> Dictionary.dismiss r
   | Reference_resource r -> Reference.dismiss r
 
 let resource_is_available (r : resource) : bool =
   match r with
-  | Channel_resource
-  | Dictionary_resource -> failwith "TODO"
+  | Channel_resource -> failwith "TODO"
+  | Dictionary_resource r -> Dictionary.is_available r
   | Reference_resource r -> Reference.is_available r

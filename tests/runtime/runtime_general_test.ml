@@ -313,6 +313,7 @@ let _ = run [
 
 open Resources
 let r = Reference_resource (Resources.Reference.allocate 1)
+let d = Dictionary_resource (Resources.Dictionary.allocate 10)
 let _ = run [
   Acquire_Resource (r, Some "4");
   Declare_reference ("testref", "3");
@@ -331,4 +332,21 @@ let _ = run [
                         is not even referenced in our runtime state.
   Eval "can testref"; -- Indeed we cannot even check to see if the resource is
                          available.*)
+
+  Acquire_Resource (d, None);
+  Declare_dictionary ("dict_res", "integer", "integer");
+(*  Eval "can dict_res";*) (*FIXME currently doesn't work on 'local' dictionary. only works on 'external' dictionary.*)
+  Eval "can dict_res[5]";
+  Eval "dict_res[5] := 1";
+  Eval "can dict_res[5]";
+  Eval "dict_res[5]";
+  Assign_Resource ("dict_res", d);
+  Eval "can dict_res";
+  Eval "can dict_res[5]";
+  Eval "dict_res[5] := 2";
+  Eval "dict_res[5]";
+  Dismiss_Resource d;
+  Eval "can dict_res[5]";
+  Eval "can dict_res";
+  Unlink "dict_res";
 ]

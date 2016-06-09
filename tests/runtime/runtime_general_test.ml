@@ -313,6 +313,7 @@ let _ = run [
 
 open Resources
 (*Instead of un/parsing expressions, we store them directly in this example.*)
+(*FIXME abstract using modules*)
 let _r : expression ref = ref Bottom;;
 let _r_assigned : bool ref = ref false;;
 let r = Reference_resource

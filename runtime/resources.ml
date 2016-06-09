@@ -17,6 +17,9 @@ type result =
     (*This is interpreted relative to the device or context.
       It might mean that there's nothing to be received on a
       channel. This value indicates transient and non-erroneous states.*)
+    (*NOTE instead of polling for availability, could add a parameter indicating
+           a minimum wait period.*)
+    (*FIXME how to timeout, and how to handle this cleanly within the Eval module?*)
   | Unavailable
     (*This is interpreted relative to the device or context.
       It might mean that the channel's not open for sending, for
@@ -24,6 +27,8 @@ type result =
       non-transient circumstances.*)
   | Error of string
 
+(*FIXME abstract using modules*)
+(*FIXME implement example involving remote reference?*)
 type reference =
   {
     initialise : string option -> bool;

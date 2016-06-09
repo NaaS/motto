@@ -312,7 +312,7 @@ let _ = run [
 ;;
 
 open Resources
-let r = Reference_resource (Resources.Reference.allocate ())
+let r = Reference_resource (Resources.Reference.allocate 1)
 let _ = run [
   Acquire_Resource (r, Some "4");
   Declare_reference ("testref", "3");

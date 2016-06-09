@@ -31,11 +31,17 @@ module type RESOURCE =
   sig
     type t
 
-    val allocate : unit -> t
+    (*Allocate a resource.
+      Parameter: quantity of memory that the resource should be allocated,
+      if this is a useful parameter to such a resource.*)
+    val allocate : int -> t
 
+    (*Initialise the resource, thus making it available.*)
     val initialise : t -> string option -> bool
     val is_available : t -> bool
 
+    (*Terminate the resource's use, mark it as unavailable to Flick, and allow
+     the resource to be reclaimed or cleaned up.*)
     val dismiss : t -> bool
   end
 
@@ -53,7 +59,10 @@ module Reference : REFERENCE =
 struct
   type t = bool ref * expression ref
 
-  let allocate () = (ref false, ref Bottom)
+  let allocate n =
+    (*FIXME we currently allow storing expressions of any size in the reference!*)
+    assert (n = 1);
+    (ref false, ref Bottom)
 
   let initialise (_r_assigned, _r) s_opt =
     assert (not !_r_assigned);
@@ -88,7 +97,6 @@ struct
     _r_assigned := false;
     not (!_r_assigned)
 end
-
 
 type resource =
   | Channel_resource (*FIXME how to deal with channel arrays?*)

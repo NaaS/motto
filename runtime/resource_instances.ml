@@ -16,7 +16,7 @@ module Reference : REFERENCE =
 struct
   type t = bool ref * expression ref
 
-  let allocate n =
+  let allocate (Some n) =
     (*FIXME we currently allow storing expressions of any size in the reference!*)
     assert (n = 1);
     (ref false, ref Bottom)
@@ -68,7 +68,7 @@ struct
     content : (expression, expression) Hashtbl.t;
   }
 
-  let allocate n = {
+  let allocate (Some n) = {
     availability = ref true;
     capacity = n;
     content = Hashtbl.create ~random:false n;

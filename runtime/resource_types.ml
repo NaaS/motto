@@ -34,7 +34,7 @@ module type RESOURCE =
     (*Allocate a resource.
       Parameter: quantity of memory that the resource should be allocated,
       if this is a useful parameter to such a resource.*)
-    val allocate : int -> t
+    val allocate : int option -> t
 
     (*Initialise the resource, thus making it available.*)
     val initialise : t -> string option -> bool

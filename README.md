@@ -133,7 +133,7 @@ but simplified as described in the
 
 # Dependencies
 
-Other than the OCaml compiler, this project has the following depedencies:
+Other than the OCaml compiler (tested with v4.03.0) this project has the following dependencies:
 * ocamlfind. This in turn depends on:
   * m4
 * menhir

@@ -351,6 +351,63 @@ let _ = run [
   Unlink "dict_res";
 ]
 
+(*
+(*FIXME is "capacity" actually used internally?*)
+let capacity = 10
+(*FIXME how to group channels together -- use OCaml classes?*)
+let c_fifo = Channel_resource (Resource_instances.Channel_FIFO.allocate (Some capacity))
+(*let c_timer = Channel_resource (Resource_instances.Channel_Timer.allocate (Some capacity))
+let c_sock = Channel_resource (Resource_instances.Channel_Socket.allocate (Some capacity))
+*)
+let _ = run [
+  Acquire_Resource (c_fifo, Some "path. or fd?"(*FIXME*));
+(*  Acquire_Resource (c_timer, None);
+  Acquire_Resource (c_sock, Some "fd?"(*FIXME*));
+*)
+  Declare_channel ("chan_fifo", "integer/integer");
+(*  Declare_channel ("chan_timer", "integer/<>");
+  Declare_channel ("chan_sock", "integer/integer");*)
+  Assign_Resource ("chan_fifo", c_fifo);
+(*  Assign_Resource ("chan_timer", c_timer);
+  Assign_Resource ("chan_sock", c_sock);*)
+  (*Check if channels are connected*)
+  Eval "can chan_fifo";
+(*  Eval "can chan_timer";
+  Eval "can chan_sock";
+  (*Set an alarm for 30 seconds from now*)
+  Eval "chan_timer ! 30";
+  (*FIXME Check if channels have space in rx/tx buffers*)
+(*FIXME use Asynch_Eval for this block?*)
+  Eval "chan_timer -> chan_timer ! 30";
+  Eval "chan_timer <- chan_fifo ! True";
+
+  (*Channel forwarding*)
+  Eval "chan_fifo => chan_sock"
+  Eval "chan_sock => chan_fifo"
+
+  (*FIXME could write static analysis to detect overloaded forwarding (=>) or
+          overloaded subscriptions (<- and ->) or overloaded listens (?) and
+          sends (!) since these imply a race.*)
+*)
+  Dismiss_Resource c_fifo; (*
+  Dismiss_Resource c_timer;
+  Dismiss_Resource c_sock;*)
+  Eval "can chan_fifo"; (*
+  Eval "can chan_timer";
+  Eval "can chan_sock";*)
+  Unlink "chan_fifo";
+  Unlink "chan_timer"; (*
+  Unlink "chan_sock";*)
+  (*NOTE might be interesting, but bordering on silly, to consider nested
+         "can" expressions. For example, since we have unlinked chan_fifo,
+         we now cannot eval "can chan_fifo" since there's no such thing as
+         "chan_fifo" in our runtime state, so we don't know what "can" should
+         mean in that context. But with nested "can" statements we would
+         be able to eval "can (can chan_fifo)" and get "False".*)
+]
+*)
+(*FIXME test channel arrays*)
+
 let c_fifo = Channel_resource (Resource_instances.Channel_FIFO.allocate None)
 let _ = run [
   Acquire_Resource (c_fifo, Some "my_fifo");

@@ -120,3 +120,36 @@ NOTE for better performance we could batch "receive" and "send" requests and
     val send : t -> expression list -> result
 *)
   end
+
+(*
+NOTE TRANSLATORs could be passed as parameters to other resources (that are made into
+     functors) to map between the Flick level and the value stored by the resource.
+*)
+module type TRANSLATOR =
+  sig
+    include RESOURCE
+
+    (*FIXME where to put the argument/result of the translation?
+            should reference a buffer?
+            We could use an instance of REFERENCE for such.*)
+    val to_ : t -> expression -> result
+    val from_ : t -> expression -> result
+  end
+
+(*Bindings with functions executed externally.
+  FIXME consider using this to abstract contents of front-end/functions.ml*)
+module type FUNCTION =
+  sig
+    include RESOURCE
+
+    val apply : t -> expression -> result
+  end
+module type FUNCTIONS =
+  sig
+    include RESOURCE
+
+    val apply : t ->
+     string (*Function name
+              FIXME encode the function name as "expression" instead of "string"?*)
+      -> expression -> result
+  end

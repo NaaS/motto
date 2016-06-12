@@ -19,7 +19,7 @@ echo "building ${TARGET}"
 
 # NOTE could add -dont-catch-errors to have exceptions pass through catches.
 ocamlbuild -cflag -g -lflag -g -cflag -annot -tag thread -use-ocamlfind -use-menhir \
-  -package dynlink -package str \
+  -package dynlink -package str -package bytes \
   -no-hygiene \
   -I front-end \
   -I back-end \

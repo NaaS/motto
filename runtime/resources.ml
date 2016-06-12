@@ -15,28 +15,29 @@ type resource =
   (*FIXME there may be several kinds of channels, dictionaries, and references.
           should we use OCaml's class system for abstracting their interfaces?*)
   | Channel_resource (*FIXME how to deal with channel arrays?*)
+      of Channel_FIFO.t
   | Dictionary_resource of Dictionary.t
   | Reference_resource of Reference.t
 
 let string_of_resource = function
-  | Channel_resource -> "<channel resource>"
+  | Channel_resource _ -> "<channel resource>"
   | Dictionary_resource _ -> "<dictionary resource>"
   | Reference_resource _ -> "<reference resource>"
 
 let acquire_resource (r : resource) (param : string option) : bool =
   match r with
-  | Channel_resource -> failwith "TODO"
+  | Channel_resource r -> Channel_FIFO.initialise r param
   | Dictionary_resource r -> Dictionary.initialise r param
   | Reference_resource r -> Reference.initialise r param
 
 let dismiss_resource (r : resource) : bool =
   match r with
-  | Channel_resource -> failwith "TODO"
+  | Channel_resource r -> Channel_FIFO.dismiss r
   | Dictionary_resource r -> Dictionary.dismiss r
   | Reference_resource r -> Reference.dismiss r
 
 let resource_is_available (r : resource) : bool =
   match r with
-  | Channel_resource -> failwith "TODO"
+  | Channel_resource r -> Channel_FIFO.is_available r
   | Dictionary_resource r -> Dictionary.is_available r
   | Reference_resource r -> Reference.is_available r

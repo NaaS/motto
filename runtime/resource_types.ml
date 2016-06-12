@@ -27,8 +27,22 @@ type result =
       non-transient circumstances.*)
   | Error of string
 
+(*Resource conform to this basic interface, that provides the basic engagement
+  of a resource. Note that the return type of the RESOURCE functions are not
+  "result" (which would make those values directly visible at the Flick level).
+  This is because most of the functionality provided by the RESOURCE interface
+  is logistical. This is not entirely true for the "is_available" function,
+  since this is often used to provide the value returned by "can" expressions.
+
+  I thought to allow a callback function to be registered for when a resource is
+  asynchronouslyadded/removed by the runtime system; the callback function would
+  let the Flick level of the change in case a Flick-level name is mapped to a
+  different dictionary or channel. But I decided that this didn't seem necessary.
+*)
 module type RESOURCE =
   sig
+    (*Any identifiers and metadata that enable us to engage with a resource
+      once it has been allocated and initialised*)
     type t
 
     (*Allocate a resource.
@@ -65,4 +79,44 @@ module type DICTIONARY =
     val size : t -> result
     val capacity : t -> result
     val as_expression : t -> result
+  end
+
+(*FIXME how are the sizes of the TX and RX buffers specified? via "allocate"?*)
+module type CHANNEL =
+  sig
+    include RESOURCE
+    (*What to attach the channel to.
+      FIXME provide some facility to restrict the use of this function within
+            Flick, to prevent the program logic from modifying the channels
+            that have been assigned to it by the runtime system.
+      FIXME currently we don't provide a way of calling this function from the
+            Flick level. This could be provided via an expression such as
+            "contact" for example.*)
+    val attach_to : t -> expression -> result
+    (*What are we connected to*)
+    val attached_to : t -> result
+    (*Register "callback functions". These consists of Flick expressions that
+      are evaluated each time the corresponding event occurs.*)
+    val on_attachment : t -> expression -> unit
+    val on_detachment : t -> expression -> unit
+
+    (*This next batch of functions provides semantics for the Flick-level "can"
+      and "size" expressions.
+      NOTE that for "peek" we use the "receive" equivalents -- "can_receive"
+           or "size_receive"*)
+    val can_receive : t -> result
+    val size_receive : t -> result
+    val can_send : t -> result
+    val size_send : t -> result
+
+    (*These functions provide semantics for the basic channel operators*)
+    val peek : t -> result
+    val receive : t -> result
+    val send : t -> expression -> result
+(*
+NOTE for better performance we could batch "receive" and "send" requests and
+     use functions such as those below, but this doesn't seem needed at the moment:
+    val receive : t -> int -> result list
+    val send : t -> expression list -> result
+*)
   end

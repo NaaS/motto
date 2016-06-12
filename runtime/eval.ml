@@ -708,80 +708,118 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
             has been reached.*)
     let e_value = evaluate_value ctxt e' in
 
-    let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
-      match dir with
-      | Incoming ->
-        if not inv then
-          raise (Eval_Exc ("Unexpected direction: Send only works in the outgoing direction", Some e, None))
-        else (List.rev (e_value :: List.rev incoming), outgoing, e_value, ctxt)
-      | Outgoing ->
-        if not inv then
-          (incoming, List.rev (e_value :: List.rev outgoing), e_value, ctxt)
-        else
-          raise (Eval_Exc ("Unexpected direction: inverted Send only works in the incoming direction", Some e, None)) in
-    channel_fun_ident chan_ident
-      (if not inv then "send" else "inverted send")
-      (if not inv then Outgoing else Incoming)
-      (fun s -> Eval_Exc (s, Some e, None)) f st ctxt
-    |> apfst return_eval), ctxt
+    (*How we operate depends on whether we're speaking to a local channel or
+      an external one*)
+    let (c_name, _(*idx_opt*)) = chan_ident in
+    (*FIXME how to handle channel arrays*)
+    let result =
+      match List.assoc c_name ctxt.Runtime_data.value_table with
+      | ChanType _ ->
+        begin
+        let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+          match dir with
+          | Incoming ->
+            if not inv then
+              raise (Eval_Exc ("Unexpected direction: Send only works in the outgoing direction", Some e, None))
+            else (List.rev (e_value :: List.rev incoming), outgoing, e_value, ctxt)
+          | Outgoing ->
+            if not inv then
+              (incoming, List.rev (e_value :: List.rev outgoing), e_value, ctxt)
+            else
+              raise (Eval_Exc ("Unexpected direction: inverted Send only works in the incoming direction", Some e, None)) in
+        channel_fun_ident chan_ident
+          (if not inv then "send" else "inverted send")
+          (if not inv then Outgoing else Incoming)
+          (fun s -> Eval_Exc (s, Some e, None)) f st ctxt
+        |> apfst return_eval
+        end
+      | Resource (Channel_resource r) ->
+        failwith "TODO"
+
+    in result), ctxt
 
   | Receive (inv, chan_ident) ->
     begin
-    let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
-      match dir with
-      | Incoming ->
-        if not inv then
-          match incoming with
-          | v :: xs -> xs, outgoing, v, ctxt
-          | [] -> raise (Empty_Channel ctxt)
-        else
-          raise (Eval_Exc ("Unexpected direction: inverted Receive only works in the outgoing direction", Some e, None))
-      | Outgoing ->
-        if not inv then
-          raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None))
-        else
-          match outgoing with
-          | v :: xs -> incoming, xs, v, ctxt
-          | [] -> raise (Empty_Channel ctxt) in
-    try
-      let v, ctxt' =
-        channel_fun_ident chan_ident
-          (if not inv then "receive" else "inverted receive")
-          (if not inv then Incoming else Outgoing)
-          (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
-      (return_eval v, ctxt')
-    with
-    | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
-      (retry e, ctxt)
+    (*How we operate depends on whether we're speaking to a local channel or
+      an external one*)
+    let (c_name, _(*idx_opt*)) = chan_ident in
+    (*FIXME how to handle channel arrays*)
+    match List.assoc c_name ctxt.Runtime_data.value_table with
+    | ChanType _ ->
+      begin
+      let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+        match dir with
+        | Incoming ->
+          if not inv then
+            match incoming with
+            | v :: xs -> xs, outgoing, v, ctxt
+            | [] -> raise (Empty_Channel ctxt)
+          else
+            raise (Eval_Exc ("Unexpected direction: inverted Receive only works in the outgoing direction", Some e, None))
+        | Outgoing ->
+          if not inv then
+            raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None))
+          else
+            match outgoing with
+            | v :: xs -> incoming, xs, v, ctxt
+            | [] -> raise (Empty_Channel ctxt) in
+      try
+        let v, ctxt' =
+          channel_fun_ident chan_ident
+            (if not inv then "receive" else "inverted receive")
+            (if not inv then Incoming else Outgoing)
+            (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
+        (return_eval v, ctxt')
+      with
+      | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
+        (retry e, ctxt)
+      end
+      | Resource (Channel_resource r) ->
+        match Resource_instances.Channel_FIFO.receive r with
+        | Expression e -> return_eval e, ctxt
+        | Unavailable -> retry e, ctxt
+        | Error s ->
+          (*FIXME use separate exception type*)
+          failwith ("External channel error: " ^ s)
     end
   | Peek (inv, chan_ident) ->
     begin
-    let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
-      match dir with
-      | Incoming ->
-        if not inv then
-          match incoming with
-          | v :: _ -> incoming, outgoing, v, ctxt
-          | [] -> raise (Empty_Channel ctxt)
-        else
-          raise (Eval_Exc ("Unexpected direction: inverted Peek only works in the outgoing direction", Some e, None))
-      | Outgoing ->
-        if not inv then
-          raise (Eval_Exc ("Unexpected direction: Peek only works in the incoming direction", Some e, None))
-        else
-          match outgoing with
-          | v :: _ -> incoming, outgoing, v, ctxt
-          | [] -> raise (Empty_Channel ctxt) in
-    try
-      let v, ctxt' =
-        channel_fun_ident chan_ident
-          (if not inv then "peek" else "inverted peek")
-          (if not inv then Incoming else Outgoing)
-          (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
-      (return_eval v, ctxt')
-    with
-    | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
-      (retry e, ctxt)
+    (*How we operate depends on whether we're speaking to a local channel or
+      an external one*)
+    let (c_name, _(*idx_opt*)) = chan_ident in
+    (*FIXME how to handle channel arrays*)
+    match List.assoc c_name ctxt.Runtime_data.value_table with
+    | ChanType _ ->
+      begin
+      let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+        match dir with
+        | Incoming ->
+          if not inv then
+            match incoming with
+            | v :: _ -> incoming, outgoing, v, ctxt
+            | [] -> raise (Empty_Channel ctxt)
+          else
+            raise (Eval_Exc ("Unexpected direction: inverted Peek only works in the outgoing direction", Some e, None))
+        | Outgoing ->
+          if not inv then
+            raise (Eval_Exc ("Unexpected direction: Peek only works in the incoming direction", Some e, None))
+          else
+            match outgoing with
+            | v :: _ -> incoming, outgoing, v, ctxt
+            | [] -> raise (Empty_Channel ctxt) in
+      try
+        let v, ctxt' =
+          channel_fun_ident chan_ident
+            (if not inv then "peek" else "inverted peek")
+            (if not inv then Incoming else Outgoing)
+            (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
+        (return_eval v, ctxt')
+      with
+      | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
+        (retry e, ctxt)
+      end
+      | Resource (Channel_resource r) ->
+        failwith "TODO"
     end
 
   | Seq (TypeAnnotation (Meta_quoted mis, _), e') ->
@@ -834,37 +872,63 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Receive (inv, chan_ident)
       | Peek (inv, chan_ident) ->
         begin
-        let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+        (*How we operate depends on whether we're speaking to a local channel or
+          an external one*)
+        let (c_name, _(*idx_opt*)) = chan_ident in
+        (*FIXME how to handle channel arrays*)
+        match List.assoc c_name ctxt.Runtime_data.value_table with
+        | ChanType _ ->
           begin
-          match dir with
-          | Incoming ->
-            if not inv then
-              match incoming with
-              | _ :: _ -> incoming, outgoing, Boolean true, ctxt
-              | [] -> incoming, outgoing, Boolean false, ctxt
-            else
-              raise (Eval_Exc ("Unexpected direction: inverted Receive only works in the outgoing direction", Some e, None))
-          | Outgoing ->
-            if not inv then
-              raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None))
-            else
-              begin
-              match outgoing with
-              | _ :: _ -> incoming, outgoing, Boolean true, ctxt
-              | [] -> incoming, outgoing, Boolean false, ctxt
-              end
-          end in
-        let v, ctxt' =
-          channel_fun_ident chan_ident
-            (if not inv then "receive" else "inverted receive")
-            (if not inv then Incoming else Outgoing)
-            (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
-        (return_eval v, ctxt')
+          let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+            begin
+            match dir with
+            | Incoming ->
+              if not inv then
+                match incoming with
+                | _ :: _ -> incoming, outgoing, Boolean true, ctxt
+                | [] -> incoming, outgoing, Boolean false, ctxt
+              else
+                raise (Eval_Exc ("Unexpected direction: inverted Receive only works in the outgoing direction", Some e, None))
+            | Outgoing ->
+              if not inv then
+                raise (Eval_Exc ("Unexpected direction: Receive only works in the incoming direction", Some e, None))
+              else
+                begin
+                match outgoing with
+                | _ :: _ -> incoming, outgoing, Boolean true, ctxt
+                | [] -> incoming, outgoing, Boolean false, ctxt
+                end
+            end in
+          let v, ctxt' =
+            channel_fun_ident chan_ident
+              (if not inv then "receive" else "inverted receive")
+              (if not inv then Incoming else Outgoing)
+              (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
+          (return_eval v, ctxt')
+          end
+        | Resource (Channel_resource r) ->
+          match Resource_instances.Channel_FIFO.can_receive r with
+          | Expression e -> return_eval e, ctxt
+          | Unavailable -> retry e, ctxt
+          | Error s ->
+            (*FIXME use separate exception type*)
+            failwith ("External channel error: " ^ s)
         end
-      | Send _ ->
-        (*FIXME crude -- in this runtime we can always send on a channel since
-                we assume an infinitely-sized buffer*)
-        (return_eval Crisp_syntax.True, ctxt)
+
+      | Send (inv, chan_ident, _) ->
+        begin
+        (*How we operate depends on whether we're speaking to a local channel or
+          an external one*)
+        let (c_name, _(*idx_opt*)) = chan_ident in
+        (*FIXME how to handle channel arrays*)
+        match List.assoc c_name ctxt.Runtime_data.value_table with
+        | ChanType _ ->
+          (*FIXME crude -- in this runtime we can always send on a channel since
+                  we assume an infinitely-sized buffer*)
+          (return_eval Crisp_syntax.True, ctxt)
+        | Resource (Channel_resource r) ->
+          failwith "TODO"
+        end
 
 
       | Variable l ->
@@ -916,28 +980,38 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Peek (inv, chan_ident)
       | Send (inv, chan_ident, _) ->
         begin
-        let direction =
-          match e with
-          | Receive _
-          | Peek _ -> if not inv then Incoming else Outgoing
-          | Send _ -> if not inv then Outgoing else Incoming in
-        let op_name =
-          match e with
-          | Receive _ -> if not inv then "receive" else "inverted receive"
-          | Peek _ -> if not inv then "peek" else "inverted peek"
-          | Send _ -> if not inv then "send" else "inverted send" in
-        let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
-          match dir with
-          | Incoming ->
-            incoming, outgoing, Integer (List.length incoming), ctxt
-          | Outgoing ->
-            incoming, outgoing, Integer (List.length outgoing), ctxt in
-        let v, ctxt' =
-          channel_fun_ident chan_ident
-            op_name
-            direction
-            (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
-        (return_eval v, ctxt')
+        (*How we operate depends on whether we're speaking to a local channel or
+          an external one*)
+        let (c_name, _(*idx_opt*)) = chan_ident in
+        (*FIXME how to handle channel arrays*)
+        match List.assoc c_name ctxt.Runtime_data.value_table with
+        | ChanType _ ->
+          begin
+          let direction =
+            match e with
+            | Receive _
+            | Peek _ -> if not inv then Incoming else Outgoing
+            | Send _ -> if not inv then Outgoing else Incoming in
+          let op_name =
+            match e with
+            | Receive _ -> if not inv then "receive" else "inverted receive"
+            | Peek _ -> if not inv then "peek" else "inverted peek"
+            | Send _ -> if not inv then "send" else "inverted send" in
+          let f dir (ctxt : runtime_ctxt) (incoming, outgoing) =
+            match dir with
+            | Incoming ->
+              incoming, outgoing, Integer (List.length incoming), ctxt
+            | Outgoing ->
+              incoming, outgoing, Integer (List.length outgoing), ctxt in
+          let v, ctxt' =
+            channel_fun_ident chan_ident
+              op_name
+              direction
+              (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
+          (return_eval v, ctxt')
+          end
+        | Resource (Channel_resource r) ->
+          failwith "TODO"
         end
 
       | _ -> failwith "TODO"

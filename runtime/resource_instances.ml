@@ -118,3 +118,255 @@ struct
   let as_expression t =
     failwith "TODO"
 end
+
+(*FIXME could instantiate DICTIONARY to give Flick programs access to the
+        process environment, though that might incline them too much in the
+        direction of Unix*)
+let _BUFSIZE (*FIXME const*) = 200;;
+let _ZERO =
+  (*FIXME is this const already defined in std libraries?*)
+  char_of_int 0x0;;
+
+module Channel_FIFO : CHANNEL =
+struct
+  type t = {
+    target : string ref;
+    fd : Unix.file_descr option ref;
+
+    (*Callback expressions. These must be of type "unit"*)
+    on_attach : expression ref;
+    on_detach : expression ref;
+
+    (*RX and TX buffers. These are backed by a ring buffer of bytes.
+      In RX, the ring buffer feeds a buffer of parsed expressions*)
+    rx_pre_parse_buffer : bytes;
+    rx_write_ofs : int ref;
+    rx_read_ofs : int ref;
+    rx_buffer : expression list ref;
+    (*In TX the ring buffer feeds from a buffer of parsed expressions*)
+    tx_post_unparse_buffer : bytes;
+    tx_write_ofs : int ref;
+    tx_read_ofs : int ref;
+    tx_buffer : expression list ref;
+  }
+
+  let allocate n_opt =
+    assert (n_opt = None);
+    {
+      target = ref "";
+      fd = ref None;
+      on_attach = ref flick_unit_value;
+      on_detach = ref flick_unit_value;
+      rx_buffer = ref [];
+      tx_buffer = ref [];
+
+      (*Allocate the buffers an initialise them to contain the character '0'*)
+      rx_pre_parse_buffer = Bytes.make _BUFSIZE _ZERO;
+      tx_post_unparse_buffer = Bytes.make _BUFSIZE _ZERO;
+      rx_write_ofs = ref 0;
+      rx_read_ofs = ref 0;
+      tx_write_ofs = ref 0;
+      tx_read_ofs = ref 0;
+     }
+
+  let initialise t (Some s) =
+    (*FIXME could set flags according to the channel type -- that is, whether
+            the channel is read-only, write-only, or read-write.*)
+    let flags =
+      [Unix.O_NOCTTY; (*Because we don't expect to interact with a TTY via this channel.*)
+       Unix.O_CLOEXEC; (*For defensive programming; we don't expect to spawn processes anyway.*)
+       Unix.O_NONBLOCK; (*We don't want blocking, so our runtime can retain more control over interaction with resources.*)
+       Unix.O_RDWR; (*FIXME current default*)
+      ] in
+    t.target := s;
+    (*t.fd := Some (Unix.openfile s flags 0o600);*)
+    t.fd := Some (Unix.openfile s flags 0);
+    (*FIXME check status, and return 'false' if something's wrong*)
+    true
+
+  let is_available t = (!(t.fd) <> None)
+
+  let dismiss t =
+    assert (!(t.fd) <> None);
+    General.the (!(t.fd))
+    |> Unix.close;
+    t.fd := None;
+    t.target := "";
+    t.on_attach := flick_unit_value;
+    t.on_detach := flick_unit_value;
+    t.rx_buffer := [];
+    (*FIXME we should flush the tx_buffer first, rather than simply ignore its contents*)
+    t.tx_buffer := [];
+    (*FIXME zero-out the byte buffers, and reset the read/write offset "pointers"*)
+    true
+
+  let attach_to t e =
+    (*FIXME could carry out the file opening here instead of in "initialise".
+            this also has the advantage that t.on_attach and t.on_detach could
+            be defined by the programmer at this point, while at "initialise"
+            they'd still have their initial value.*)
+    failwith "TODO"
+
+  let attached_to t =
+    assert (!(t.fd) <> None);
+    Expression (Str !(t.target))
+
+  let on_attachment t e =
+    assert (!(t.fd) <> None);
+(*  FIXME ensure that 'e' is typed 'unit'
+    let ty, _ = Type_infer.ty_of_expr st e in
+    assert (ty = ...);
+*)
+    t.on_attach := e
+
+  let on_detachment t e =
+    assert (!(t.fd) <> None);
+(*  FIXME ensure that 'e' is typed 'unit'
+    let ty, _ = Type_infer.ty_of_expr st e in
+    assert (ty = ...);
+*)
+    t.on_detach := e
+
+  (*Read from the fd until the rx_buffer is at maximum capacity (if it has a
+    maximum capacity), or until the fd has no more to give at this time.*)
+  (*FIXME we disregard maximum capacity at the moment*)
+  let read_AMAP t : unit =
+    assert (!(t.fd) <> None);
+
+    let parse (s : string) : expression =
+print_endline ("parsed:" ^ s);
+      (*FIXME really basic! only works for integers.*)
+      Int (int_of_string s) in
+
+    let fd = General.the !(t.fd) in
+    let bufsize = Bytes.length t.rx_pre_parse_buffer in
+    let quant =
+      if !(t.rx_read_ofs) > !(t.rx_write_ofs) then
+        (*Can write until just short of the read offset, otherwise we'd
+          overwrite stuff that hasn't yet been parsed.*)
+        !(t.rx_read_ofs) - !(t.rx_write_ofs)
+      else
+        (*Can write until the end of the buffer*)
+        bufsize - !(t.rx_write_ofs) in
+print_endline ("quant:" ^ string_of_int quant);
+print_endline ("rx_write_ofs:" ^ string_of_int !(t.rx_write_ofs));
+
+    (*Read AMAP into rx_pre_parse_buffer*)
+    let written_quant =
+      try
+        Unix.read fd t.rx_pre_parse_buffer
+         !(t.rx_write_ofs) quant
+      (*Update ring buffer's write pointer*)
+      with
+      (*Since we're in non-blocking mode, ignore such exceptions;
+        interpret them to mean that no data is currently available.*)
+      | Unix.Unix_error (Unix.EAGAIN, "read", _)
+      | Unix.Unix_error (Unix.EWOULDBLOCK, "read", _) -> 0 in
+    t.rx_write_ofs := (!(t.rx_write_ofs) + written_quant) mod bufsize;
+
+print_endline ("written_quant:" ^ string_of_int written_quant);
+print_endline ("rx_write_ofs:" ^ string_of_int !(t.rx_write_ofs));
+    (*Parse AMAP from rx_pre_parse_buffer into rx_buffer*)
+    (*Look for string terminator, possibly wrapping around the buffer
+      FIXME actually we just treat each byte as an int at the moment.*)
+    let stop = ref false in
+
+    (*FIXME inefficient! we do this because we'll be adding stuff at the end*)
+    t.rx_buffer := List.rev !(t.rx_buffer);
+
+print_endline ("|rx_buffer|:" ^ string_of_int (List.length !(t.rx_buffer)));
+    for i = !(t.rx_read_ofs) to
+            !(t.rx_read_ofs) + bufsize (*we will use mod to wrap*)
+    do
+      (*FIXME find way to break out of the loop if we've reached rx_write_ofs*)
+      if !stop || i = !(t.rx_write_ofs) then
+        stop := true
+      else
+      begin
+        let c = Bytes.get t.rx_pre_parse_buffer (i mod bufsize) in
+        if c = _ZERO then
+          stop := true
+        else
+        begin
+          t.rx_buffer := Str (Char.escaped c) :: !(t.rx_buffer);
+          (*Update ring buffer's read pointer*)
+          t.rx_read_ofs := 1 + !(t.rx_read_ofs);
+        end
+      end
+    done;
+    (*FIXME inefficient! we do this to restore the order in which values arrived*)
+print_endline ("|rx_buffer|:" ^ string_of_int (List.length !(t.rx_buffer)));
+    t.rx_buffer := List.rev !(t.rx_buffer)
+
+  (*Write to the fd until the tx_buffer is empty, or until the fd cannot accept
+    any more at this time.*)
+  let write_AMAP t : unit =
+    assert (!(t.fd) <> None);
+    failwith "TODO"
+
+  let can_receive t =
+    assert (!(t.fd) <> None);
+    (*FIXME check type of channel -- can we receive on it?*)
+    (*FIXME check waiting contents of channel -- is there anything waiting to be read?*)
+    read_AMAP t;
+    Expression
+     ((!(t.rx_buffer) <> [])
+      |> Crisp_syntax_aux.lift_bool)
+
+  let size_receive t =
+    assert (!(t.fd) <> None);
+    (*FIXME check type of channel -- if we cannot receive on it, then "size" is -1*)
+    (*FIXME check waiting contents of channel -- is there anything waiting to be read?*)
+    read_AMAP t;
+    Expression (Int (List.length !(t.rx_buffer)))
+
+  let can_send t =
+    assert (!(t.fd) <> None);
+    failwith "TODO"
+  let size_send t =
+    assert (!(t.fd) <> None);
+    failwith "TODO"
+
+  let peek t =
+    assert (!(t.fd) <> None);
+    read_AMAP t;
+    let result =
+      match !(t.rx_buffer) with
+      | [] -> Unavailable
+      | e :: _ ->
+        Expression e
+    in result
+
+  let receive t =
+    assert (!(t.fd) <> None);
+    read_AMAP t;
+    let result =
+      match !(t.rx_buffer) with
+      | [] -> Unavailable
+      | e :: es ->
+        t.rx_buffer := es;
+        Expression e
+    in result
+
+  let send t e =
+    assert (!(t.fd) <> None);
+    failwith "TODO"
+end
+
+(*
+(*This is an example of using channels as an interface for asynchronous
+  event processing or functions. This can also be used for non-blocking
+  read and write to a device, for instance: we send the request on a channel,
+  and set up a listener for a reply on that channel.*)
+module Channel_Timer : CHANNEL =
+struct
+  ...
+end
+
+module Channel_Socket : CHANNEL =
+struct
+  ...
+end
+*)
+
+(*FIXME could have console and error channels as instances of CHANNEL*)

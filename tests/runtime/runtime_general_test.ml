@@ -350,3 +350,19 @@ let _ = run [
   Eval "can dict_res";
   Unlink "dict_res";
 ]
+
+let c_fifo = Channel_resource (Resource_instances.Channel_FIFO.allocate None)
+let _ = run [
+  Acquire_Resource (c_fifo, Some "my_fifo");
+  Declare_channel ("chan_fifo", "integer/integer");
+(*  Eval "can chan_fifo";*)(*FIXME cannot "can" this sort of identifier!*)
+  Assign_Resource ("chan_fifo", c_fifo);
+  Eval "can chan_fifo";
+  Eval "? chan_fifo";
+
+  Eval "can (? chan_fifo)";
+
+  Dismiss_Resource c_fifo;
+  Eval "can chan_fifo";
+  Unlink "chan_fifo";
+]

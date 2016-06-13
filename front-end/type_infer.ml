@@ -342,8 +342,12 @@ let rec ty_of_expr
         | Some acc_ty ->
           if type_match ty acc_ty then ()
           else
-            (*FIXME give more info*)
-            raise (Type_Inference_Exc ("Accumulator type not matched with body type", e, st)) in
+            begin
+            let ty_s = type_value_to_string true false min_indentation ty in
+            let acc_ty_s = type_value_to_string true false min_indentation acc_ty in
+            raise (Type_Inference_Exc ("Accumulator type (" ^ acc_ty_s ^
+              ") not matched with body type (" ^ ty_s ^ ")", e, st))
+            end in
     (*NOTE we should return st, not st'', since we don't want the bindings made
            for body_e to spill over to the rest of the scope.*)
     (ty, st)

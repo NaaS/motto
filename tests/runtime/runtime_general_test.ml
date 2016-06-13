@@ -316,8 +316,8 @@ open Resource_instance_wrappers
 let r = Reference_resource
   (module struct
      module Reference = Resource_instances.Reference
-     let state = Resource_instances.Reference.allocate (Some 1)
-   end : REFERENCE_Instance)
+     let state = Reference.allocate (Some 1)
+   end)
 let d = Dictionary_resource (Resource_instances.Dictionary.allocate (Some 10))
 let _ = run [
   Acquire_Resource (r, Some "4");

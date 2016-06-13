@@ -313,7 +313,7 @@ let _ = run [
 
 open Resources
 let r = Reference_resource (Resource_varieties.Reference.local_reference 1)
-let d = Dictionary_resource (Resource_instances.Dictionary.allocate (Some 10))
+let d = Dictionary_resource (Resource_varieties.Dictionary.local_hashtable 10)
 let _ = run [
   Acquire_Resource (r, Some "4");
   Declare_reference ("testref", "3");
@@ -408,8 +408,7 @@ let _ = run [
 *)
 (*FIXME test channel arrays*)
 
-(*FIXME can uncomment this -- but how to test more reliably?
-let c_fifo = Channel_resource (Resource_instances.Channel_FIFO.allocate None)
+let c_fifo = Channel_resource (Resource_varieties.Channel.fifo ())
 let _ = run [
   Acquire_Resource (c_fifo, Some "my_fifo");
   Declare_channel ("chan_fifo", "integer/integer");
@@ -424,4 +423,3 @@ let _ = run [
   Eval "can chan_fifo";
   Unlink "chan_fifo";
 ]
-*)

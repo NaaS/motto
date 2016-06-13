@@ -136,15 +136,16 @@ let interpret_flick_list (e : expression) : expression list =
 type dictionary =
   | Local of (Runtime_data.typed_value * Runtime_data.typed_value) list
   (*FIXME not sure that this is the best place to declare this type*)
-  (*FIXME there may be more than one kind of external dictionary*)
-  | External of Resource_instances.Dictionary.t
+  | External of (module DICTIONARY_Instance)
 
 let get_dictionary caller_form e v ctxt : dictionary =
   if not (List.mem_assoc v ctxt.Runtime_data.value_table) then
     raise (Eval_Exc ("Cannot " ^ caller_form ^ ": Symbol " ^ v ^ " not in runtime context", Some e, None));
   match List.assoc v ctxt.Runtime_data.value_table with
   | Dictionary d -> Local d
-  | Resource (Dictionary_resource d) -> External d
+  | Resource (Dictionary_resource (module R : DICTIONARY_Instance)) ->
+    External (module R : DICTIONARY_Instance)
+
   | _ ->
    raise (Eval_Exc ("Cannot " ^ caller_form ^ ": Symbol " ^ v ^ " not a dictionary ", Some e, None))
 
@@ -657,10 +658,10 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           { ctxt'' with Runtime_data.value_table =
               let pair = (v, Runtime_data.Dictionary dict') in
               General.add_unique_assoc pair ctxt''.Runtime_data.value_table }
-        | External dict ->
+        | External (module R : DICTIONARY_Instance) ->
           begin
           let result =
-            Resource_instances.Dictionary.update dict
+            R.Dictionary.update R.state
             (*We devaluate since the dictionary expects an 'expression', not
               a 'typed_value', while the internal dictionary works with
               typed_values. Perhaps a more uniform treatment can be found;
@@ -688,9 +689,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
            string_of_typed_value idx_v ^ " not found in dictionary " ^ v, Some e, None));
         List.assoc idx_v dict
         |> devaluate
-      | External dict ->
+      | External (module R : DICTIONARY_Instance) ->
         begin
-        match Resource_instances.Dictionary.lookup dict idx with
+        match R.Dictionary.lookup R.state idx with
         | Expression e -> e
         | Unavailable
         | Error _ -> failwith "TODO"
@@ -771,8 +772,8 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
         (retry e, ctxt)
       end
-      | Resource (Channel_resource r) ->
-        match Resource_instances.Channel_FIFO.receive r with
+      | Resource (Channel_resource (module R : CHANNEL_Instance)) ->
+        match R.Channel.receive R.state with
         | Expression e -> return_eval e, ctxt
         | Unavailable -> retry e, ctxt
         | Error s ->
@@ -855,12 +856,12 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           match dict with
           | Local dict ->
             Crisp_syntax_aux.lift_bool (List.mem_assoc idx_v dict)
-          | External dict ->
+          | External (module R : DICTIONARY_Instance) ->
             begin
-            if not (Resource_instances.Dictionary.is_available dict) then
+            if not (R.Dictionary.is_available R.state) then
               Crisp_syntax.False
             else
-              match Resource_instances.Dictionary.key_exists dict idx with
+              match R.Dictionary.key_exists R.state idx with
               | Expression e -> e
               | Unavailable
               | Error _ -> failwith "TODO"
@@ -903,8 +904,8 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
               (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
           (return_eval v, ctxt')
           end
-        | Resource (Channel_resource r) ->
-          match Resource_instances.Channel_FIFO.can_receive r with
+        | Resource (Channel_resource (module R : CHANNEL_Instance)) ->
+          match R.Channel.can_receive R.state with
           | Expression e -> return_eval e, ctxt
           | Unavailable -> retry e, ctxt
           | Error s ->

@@ -14,34 +14,42 @@ open Resource_instance_wrappers
 
 type resource =
   | Channel_resource (*FIXME how to deal with channel arrays?*)
-      of Channel_FIFO.t
-  | Dictionary_resource of Dictionary.t
+      of (module CHANNEL_Instance)
+  | Dictionary_resource of (module DICTIONARY_Instance)
   | Reference_resource of (module REFERENCE_Instance)
 
 (*FIXME could also print out the resource's initialisation string if it's been stored*)
 let string_of_resource = function
-  | Channel_resource _ -> "<channel resource>"
-  | Dictionary_resource _ -> "<dictionary resource>"
+  | Channel_resource (module R : CHANNEL_Instance) ->
+      "<channel resource: " ^ R.name ^ ">"
+  | Dictionary_resource (module R : DICTIONARY_Instance) ->
+      "<dictionary resource: " ^ R.name ^ ">"
   | Reference_resource (module R : REFERENCE_Instance) ->
       "<reference resource: " ^ R.name ^ ">"
 
 let acquire_resource (r : resource) (param : string option) : bool =
   match r with
-  | Channel_resource r -> Channel_FIFO.initialise r param
-  | Dictionary_resource r -> Dictionary.initialise r param
+  | Channel_resource (module R : CHANNEL_Instance) ->
+      R.Channel.initialise R.state param
+  | Dictionary_resource (module R : DICTIONARY_Instance) ->
+      R.Dictionary.initialise R.state param
   | Reference_resource (module R : REFERENCE_Instance) ->
       R.Reference.initialise R.state param
 
 let dismiss_resource (r : resource) : bool =
   match r with
-  | Channel_resource r -> Channel_FIFO.dismiss r
-  | Dictionary_resource r -> Dictionary.dismiss r
+  | Channel_resource (module R : CHANNEL_Instance) ->
+      R.Channel.dismiss R.state
+  | Dictionary_resource (module R : DICTIONARY_Instance) ->
+      R.Dictionary.dismiss R.state
   | Reference_resource (module R : REFERENCE_Instance) ->
       R.Reference.dismiss R.state
 
 let resource_is_available (r : resource) : bool =
   match r with
-  | Channel_resource r -> Channel_FIFO.is_available r
-  | Dictionary_resource r -> Dictionary.is_available r
+  | Channel_resource (module R : CHANNEL_Instance) ->
+      R.Channel.is_available R.state
+  | Dictionary_resource (module R : DICTIONARY_Instance) ->
+      R.Dictionary.is_available R.state
   | Reference_resource (module R : REFERENCE_Instance) ->
       R.Reference.is_available R.state

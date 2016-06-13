@@ -312,7 +312,12 @@ let _ = run [
 ;;
 
 open Resources
-let r = Reference_resource (Resource_instances.Reference.allocate (Some 1))
+open Resource_instance_wrappers
+let r = Reference_resource
+  (module struct
+     module Reference = Resource_instances.Reference
+     let state = None (*FIXME this is not updated!*)
+   end : REFERENCE_Instance)
 let d = Dictionary_resource (Resource_instances.Dictionary.allocate (Some 10))
 let _ = run [
   Acquire_Resource (r, Some "4");

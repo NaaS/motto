@@ -11,6 +11,7 @@ open Crisp_syntax
 open State
 open Runtime_data
 open Eval_monad
+open Resource_instance_wrappers
 
 (*FIXME include runtime_ctxt in state?*)
 exception Eval_Exc of string * expression option * typed_value option (** state -- FIXME include runtime_ctxt*)
@@ -75,10 +76,8 @@ let rec devaluate (v : typed_value) : expression =
     (*FIXME could serialise as an association list?*)
     raise (Eval_Exc ("Cannot represent as Flick expression", None, Some v))
   | ChanType (cn, _) -> Variable cn
-  | Resource (Reference_resource r) ->
-    (*FIXME "Reference" is only one possible implementation -- we could
-             generalise this code to use any implementation.*)
-    match Resource_instances.Reference.retrieve r with
+  | Resource (Reference_resource (module R : REFERENCE_Instance)) ->
+    match R.Reference.retrieve (the R.state) with
     | Expression e -> e
     | Unavailable ->
       (*FIXME this is not caught properly at the moment*)
@@ -612,11 +611,9 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
             let pair, e' =
               let current_value = List.assoc v ctxt'.Runtime_data.value_table in
               match current_value with
-              | Resource (Reference_resource r) ->
+              | Resource (Reference_resource (module R : REFERENCE_Instance)) ->
                 begin
-                (*FIXME "Reference" is only one possible implementation -- we could
-                         generalise this code to use any implementation.*)
-                match Resource_instances.Reference.update r e' with
+                match R.Reference.update (the R.state) e' with
                 | Expression e' ->
                   (*Extract the value from the reference, but leave the reference
                     as it is -- i.e., referring to an external "back-patched"

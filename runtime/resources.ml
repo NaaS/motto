@@ -10,14 +10,13 @@
 open Crisp_syntax
 open Resource_types
 open Resource_instances
+open Resource_instance_wrappers
 
 type resource =
-  (*FIXME there may be several kinds of channels, dictionaries, and references.
-          should we use OCaml's class system for abstracting their interfaces?*)
   | Channel_resource (*FIXME how to deal with channel arrays?*)
       of Channel_FIFO.t
   | Dictionary_resource of Dictionary.t
-  | Reference_resource of Reference.t
+  | Reference_resource of (module REFERENCE_Instance)
 
 let string_of_resource = function
   | Channel_resource _ -> "<channel resource>"
@@ -28,16 +27,19 @@ let acquire_resource (r : resource) (param : string option) : bool =
   match r with
   | Channel_resource r -> Channel_FIFO.initialise r param
   | Dictionary_resource r -> Dictionary.initialise r param
-  | Reference_resource r -> Reference.initialise r param
+  | Reference_resource (module R : REFERENCE_Instance) ->
+      R.Reference.initialise (General.the R.state) param
 
 let dismiss_resource (r : resource) : bool =
   match r with
   | Channel_resource r -> Channel_FIFO.dismiss r
   | Dictionary_resource r -> Dictionary.dismiss r
-  | Reference_resource r -> Reference.dismiss r
+  | Reference_resource (module R : REFERENCE_Instance) ->
+      R.Reference.dismiss (General.the R.state)
 
 let resource_is_available (r : resource) : bool =
   match r with
   | Channel_resource r -> Channel_FIFO.is_available r
   | Dictionary_resource r -> Dictionary.is_available r
-  | Reference_resource r -> Reference.is_available r
+  | Reference_resource (module R : REFERENCE_Instance) ->
+      R.Reference.is_available (General.the R.state)

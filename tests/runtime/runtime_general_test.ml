@@ -316,22 +316,22 @@ open Resource_instance_wrappers
 let r = Reference_resource
   (module struct
      module Reference = Resource_instances.Reference
-     let state = None (*FIXME this is not updated!*)
+     let state = Resource_instances.Reference.allocate (Some 1)
    end : REFERENCE_Instance)
 let d = Dictionary_resource (Resource_instances.Dictionary.allocate (Some 10))
 let _ = run [
   Acquire_Resource (r, Some "4");
   Declare_reference ("testref", "3");
-  Eval "testref";
+  Eval "testref = 3";
   Assign_Resource ("testref", r);
-  Eval "testref";
+  Eval "testref = 4";
   Eval "testref := 5";
-  Eval "testref";
-  Eval "can testref"; (*This tells us that the resource is currently available*)
+  Eval "testref = 5";
+  Eval "(can testref) = True"; (*This tells us that the resource is currently available*)
   Dismiss_Resource r;
 (*  Eval "testref";*) (*We can no longer evaluate this since the resource has
                         been dismissed*)
-  Eval "can testref"; (*This tells us that the resource is unavailable*)
+  Eval "(can testref) = False"; (*This tells us that the resource is unavailable*)
   Unlink "testref";
 (*  Eval "testref";*) (*We can no longer evaluate this since the resource has
                         is not even referenced in our runtime state.
@@ -413,6 +413,7 @@ let _ = run [
 *)
 (*FIXME test channel arrays*)
 
+(*FIXME can uncomment this -- but how to test more reliably?
 let c_fifo = Channel_resource (Resource_instances.Channel_FIFO.allocate None)
 let _ = run [
   Acquire_Resource (c_fifo, Some "my_fifo");
@@ -428,3 +429,4 @@ let _ = run [
   Eval "can chan_fifo";
   Unlink "chan_fifo";
 ]
+*)

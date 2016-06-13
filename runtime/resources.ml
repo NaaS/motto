@@ -28,18 +28,18 @@ let acquire_resource (r : resource) (param : string option) : bool =
   | Channel_resource r -> Channel_FIFO.initialise r param
   | Dictionary_resource r -> Dictionary.initialise r param
   | Reference_resource (module R : REFERENCE_Instance) ->
-      R.Reference.initialise (General.the R.state) param
+      R.Reference.initialise R.state param
 
 let dismiss_resource (r : resource) : bool =
   match r with
   | Channel_resource r -> Channel_FIFO.dismiss r
   | Dictionary_resource r -> Dictionary.dismiss r
   | Reference_resource (module R : REFERENCE_Instance) ->
-      R.Reference.dismiss (General.the R.state)
+      R.Reference.dismiss R.state
 
 let resource_is_available (r : resource) : bool =
   match r with
   | Channel_resource r -> Channel_FIFO.is_available r
   | Dictionary_resource r -> Dictionary.is_available r
   | Reference_resource (module R : REFERENCE_Instance) ->
-      R.Reference.is_available (General.the R.state)
+      R.Reference.is_available R.state

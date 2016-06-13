@@ -12,5 +12,5 @@ open Resource_types
 module type REFERENCE_Instance =
   sig
     module Reference : REFERENCE
-    val state : Reference.t option
+    val state : Reference.t
   end

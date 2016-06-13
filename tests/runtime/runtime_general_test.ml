@@ -312,8 +312,7 @@ let _ = run [
 ;;
 
 open Resources
-let r = Reference_resource
-  (Resource_varieties.Reference.local_reference 1)
+let r = Reference_resource (Resource_varieties.Reference.local_reference 1)
 let d = Dictionary_resource (Resource_instances.Dictionary.allocate (Some 10))
 let _ = run [
   Acquire_Resource (r, Some "4");

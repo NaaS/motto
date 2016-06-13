@@ -14,3 +14,15 @@ module type REFERENCE_Instance =
     module Reference : REFERENCE
     val state : Reference.t
   end
+
+module type DICTIONARY_Instance =
+  sig
+    module Dictionary : DICTIONARY
+    val state : Dictionary.t
+  end
+
+module type CHANNEL_Instance =
+  sig
+    module Channel : CHANNEL
+    val state : Channel.t
+  end

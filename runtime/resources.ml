@@ -18,10 +18,12 @@ type resource =
   | Dictionary_resource of Dictionary.t
   | Reference_resource of (module REFERENCE_Instance)
 
+(*FIXME could also print out the resource's initialisation string if it's been stored*)
 let string_of_resource = function
   | Channel_resource _ -> "<channel resource>"
   | Dictionary_resource _ -> "<dictionary resource>"
-  | Reference_resource _ -> "<reference resource>"
+  | Reference_resource (module R : REFERENCE_Instance) ->
+      "<reference resource: " ^ R.name ^ ">"
 
 let acquire_resource (r : resource) (param : string option) : bool =
   match r with

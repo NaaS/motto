@@ -13,16 +13,19 @@ module type REFERENCE_Instance =
   sig
     module Reference : REFERENCE
     val state : Reference.t
+    val name : string
   end
 
 module type DICTIONARY_Instance =
   sig
     module Dictionary : DICTIONARY
     val state : Dictionary.t
+    val name : string
   end
 
 module type CHANNEL_Instance =
   sig
     module Channel : CHANNEL
     val state : Channel.t
+    val name : string
   end

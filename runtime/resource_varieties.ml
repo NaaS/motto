@@ -17,5 +17,6 @@ struct
     (module struct
        module Reference = Resource_instances.Reference
        let state = Reference.allocate (Some n)
+       let name = "local_reference"
      end : REFERENCE_Instance)
 end

@@ -20,3 +20,23 @@ struct
        let name = "local_reference"
      end : REFERENCE_Instance)
 end
+
+module Dictionary =
+struct
+  let local_hashtable n =
+    (module struct
+       module Dictionary = Resource_instances.Dictionary
+       let state = Resource_instances.Dictionary.allocate (Some 10)
+       let name = "local_hashtable"
+     end : DICTIONARY_Instance)
+end
+
+module Channel =
+struct
+  let fifo ()(*FIXME assign some sort of resource quantity? for size of buffers, for instance*) =
+    (module struct
+       module Channel = Resource_instances.Channel_FIFO
+       let state = Channel.allocate None
+       let name = "fifo"
+     end : CHANNEL_Instance)
+end

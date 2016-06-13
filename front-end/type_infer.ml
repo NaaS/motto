@@ -382,8 +382,12 @@ let rec ty_of_expr
       | Some (Dictionary (lbl_opt, idx_ty, val_ty)) ->
         if not (lbl_opt = Some map_name) then
           begin
-          (*FIXME give more info*)
-          raise (Type_Inference_Exc ("UpdateIndexable: Mismatch between label and map name", e, st))
+          let lbl_s =
+            match lbl_opt with
+            | Some s -> s
+            | None -> "label missing" in
+          raise (Type_Inference_Exc ("UpdateIndexable: Mismatch between label (" ^ lbl_s ^
+            ") and map name (" ^ map_name ^ ")", e, st))
           end;
         idx_ty, val_ty
       | _ -> raise (Type_Inference_Exc ("Expected to find dictionary type", e, st)) in
@@ -405,15 +409,23 @@ let rec ty_of_expr
       | Some (Dictionary (lbl_opt, idx_ty, val_ty)) ->
         if not (lbl_opt = Some map_name) then
           begin
-          (*FIXME give more info*)
-          raise (Type_Inference_Exc ("IndexableProjection: Mismatch between label and map name for dictionary", e, st))
+          let lbl_s =
+            match lbl_opt with
+            | Some s -> s
+            | None -> "label missing" in
+          raise (Type_Inference_Exc ("IndexableProjection: Mismatch between label (" ^ lbl_s ^
+            ") and map name for dictionary (" ^ map_name ^ ")", e, st))
           end;
         idx_ty, val_ty
       | Some (ChanType (lbl_opt, ChannelArray (rx_ty, tx_ty, di_opt))) ->
         if not (lbl_opt = Some map_name) then
           begin
-          (*FIXME give more info*)
-          raise (Type_Inference_Exc ("IndexableProjection: Mismatch between label and map name for channel array", e, st))
+          let lbl_s =
+            match lbl_opt with
+            | Some s -> s
+            | None -> "label missing" in
+          raise (Type_Inference_Exc ("IndexableProjection: Mismatch between label (" ^ lbl_s ^
+            ") and map name for channel array (" ^ map_name ^ ")", e, st))
           end;
         (def_undefined(*FIXME unsure how to index channel arrays*),
          ChanType (lbl_opt, ChannelArray (rx_ty, tx_ty, di_opt)))
@@ -458,8 +470,8 @@ let rec ty_of_expr
           match md.identifier_kind with
           | Field record_ty -> record_ty
           | _ ->
-            (*FIXME give more info*)
-            raise (Type_Inference_Exc ("Unexpected identifier kind", e, st)) in
+            let identifier_kind_s = string_of_identifier_kind md.identifier_kind in
+            raise (Type_Inference_Exc ("Unexpected identifier kind (" ^ identifier_kind_s ^ ")", e, st)) in
         (*Ensure that the field type is labelled*)
         let ty =
           forget_label ty
@@ -484,7 +496,10 @@ let rec ty_of_expr
             match label_of_type ty with
             | None ->
               (*FIXME give more info*)
-              raise (Type_Inference_Exc ("Expected type to be labelled", e, st))
+              let ty_s = type_value_to_string true false min_indentation ty in
+              let record_ty_s = type_value_to_string true false min_indentation record_ty in
+              raise (Type_Inference_Exc ("Expected type to be labelled: " ^
+                                         ty_s ^ " within " ^ record_ty_s, e, st))
             | Some label ->
               let label_defined_in_value =
                 List.exists (fun lbl -> lbl = label) labels in
@@ -594,11 +609,16 @@ let rec ty_of_expr
                 | Function_Name -> ()
                 | Disjunct tv ->
                   if tv <> ty then
-                    (*FIXME give more info*)
-                    raise (Type_Inference_Exc ("Incorrect return type for disjunct", e, st))
+                    begin
+                    let ty_s = type_value_to_string true false min_indentation ty in
+                    let tv_s = type_value_to_string true false min_indentation tv in
+                    raise (Type_Inference_Exc ("Incorrect return type for disjunct: expected "
+                      ^ ty_s ^ " but found " ^ tv_s, e, st))
+                    end
                 | _ ->
-                  (*FIXME give more info*)
-                  raise (Type_Inference_Exc ("Incorrect identifier kind for functor", e, st)) in
+                  let identifier_kind_s = string_of_identifier_kind identifier_kind in
+                  raise (Type_Inference_Exc ("Incorrect identifier kind for functor ("
+                    ^ identifier_kind_s ^ ")", e, st)) in
             ty
           | [] -> flick_unit_type
           | _ ->
@@ -693,11 +713,16 @@ let rec ty_of_expr
                 | Function_Name -> ()
                 | Disjunct tv ->
                   if tv <> ty then
-                    (*FIXME give more info*)
-                    raise (Type_Inference_Exc ("Incorrect return type for disjunct", e, st))
+                    begin
+                    let ty_s = type_value_to_string true false min_indentation ty in
+                    let tv_s = type_value_to_string true false min_indentation tv in
+                    raise (Type_Inference_Exc ("Incorrect return type for disjunct: expected "
+                      ^ ty_s ^ " but found " ^ tv_s, e, st))
+                    end
                 | _ ->
-                  (*FIXME give more info*)
-                  raise (Type_Inference_Exc ("Incorrect identifier kind for functor", e, st)) in
+                  let identifier_kind_s = string_of_identifier_kind identifier_kind in
+                  raise (Type_Inference_Exc ("Incorrect identifier kind for functor ("
+                    ^ identifier_kind_s ^ ")", e, st)) in
             ty
           | [] -> flick_unit_type
           | _ ->
@@ -932,8 +957,8 @@ let rec ty_of_expr
              ("Send: Mismatch between type of data (" ^ data_ty_s ^
                ") and that of channel (" ^ xx_chan_ty_s ^ ")", e, st))
       | _ ->
-        (*FIXME give more info*)
-        raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in
+        let chan_ty_s = type_value_to_string true false min_indentation chan_ty in
+        raise (Type_Inference_Exc ("Expected type to be channel, found " ^ chan_ty_s, e, st)) in
     (ty, st)
   | Receive (inv, (c_name, idx_opt))
   | Peek (inv, (c_name, idx_opt)) ->
@@ -948,14 +973,18 @@ let rec ty_of_expr
       | ChanType (label_opt, ct) ->
         if not (label_opt = Some c_name) then
           begin
-          (*FIXME give more info*)
-          raise (Type_Inference_Exc ("Peek: Mismatch between label and map name", e, st))
+          let label_s =
+            match label_opt with
+            | Some s -> s
+            | None -> "label missing" in
+          raise (Type_Inference_Exc ("Peek: Mismatch between label (" ^ label_s ^
+            " and map name (" ^ c_name ^ ")", e, st)) (*FIXME should this error message say channel name instead of map name? *)
           end;
         if not inv then rx_chan_type ct
         else tx_chan_type ct
       | _ ->
-        (*FIXME give more info*)
-        raise (Type_Inference_Exc ("Expected type to be channel", e, st)) in
+        let chan_ty_s = type_value_to_string true false min_indentation chan_ty in
+        raise (Type_Inference_Exc ("Expected type to be channel, found " ^ chan_ty_s, e, st)) in
     (ty, st)
 (*FIXME currently not using this primitive
   | Exchange (chan1_e, chan2_e) ->

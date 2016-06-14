@@ -415,9 +415,8 @@ let _ = run [
 (*  Eval "can chan_fifo";*)(*FIXME cannot "can" this sort of identifier!*)
   Assign_Resource ("chan_fifo", c_fifo);
   Eval "can chan_fifo";
-  Eval "? chan_fifo";
-
   Eval "can (? chan_fifo)";
+  Eval "if can (? chan_fifo): ? chan_fifo else: 0";
 
   Dismiss_Resource c_fifo;
   Eval "can chan_fifo";

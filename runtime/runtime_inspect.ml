@@ -347,6 +347,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       let ty_s =
         type_value_to_string ~summary_types:true ~show_annot:false true false 0 ty in
       let value, ctxt' = Eval.evaluate st ctxt result_e in
+      (*FIXME colourify, as done in "Eval"*)
       print_endline ("(asynch) " ^ name ^ " ~> " ^
                      expression_to_string min_indentation result_e ^
                      " typed: " ^ ty_s);

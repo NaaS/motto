@@ -124,6 +124,7 @@ NOTE for better performance we could batch "receive" and "send" requests and
 (*
 NOTE TRANSLATORs could be passed as parameters to other resources (that are made into
      functors) to map between the Flick level and the value stored by the resource.
+FIXME not sure TRANSLATOR is needed any longer -- might have been subsumed by PARSER.
 *)
 module type TRANSLATOR =
   sig
@@ -134,6 +135,74 @@ module type TRANSLATOR =
             We could use an instance of REFERENCE for such.*)
     val to_ : t -> expression -> result
     val from_ : t -> expression -> result
+  end
+
+module type BUFFER =
+  sig
+    type t = Bytes.t ref
+    (*Allocate a piece of memory of a certain size, with all values set to
+      init_value if it's provided.*)
+    (*FIXME can we source the buffer directly from a resource, and interact
+            with the resource to make the buffer "zero-copy"?*)
+    val create : ?init_value:int -> int -> t
+    (*The size of the buffer. This is specified at creation time, and cannot
+      be changed after that.*)
+    val size : int
+    (*How much of the buffer is currently occupied.
+      Naturally, occupied_size <= size.*)
+    val occupied_size : int
+    (*Registers a function that will be called by "fill_unit". This function
+      can be updated by registering a different function later one.
+      The function accepts a single parameter (the number of bytes it will
+      attempt to read from a resource (it is expected that this resource will
+      supply the function) and returns the number of bytes that it was able
+      to read.*)
+    val register_reader : (int -> int) -> unit
+    (*Attempts to fill the buffer until its occupied_size is as large as the
+      given parameter.
+      It fails if the parameter is greater than size, or if a reader function
+      has not yet been registered (using register_reader).*)
+    val fill_until : int -> bool
+    (*FIXME need to add function for writing into the buffer, and have the buffer
+            written to the resource*)
+  end
+
+module type PARSER =
+  sig
+    (*We can be transparent about the buffer type since it's not abstract
+      to the parser: it's overseen by a BUFFER module.*)
+    type buffer = (module BUFFER) (*FIXME because how we use "buffer", it seems
+                                          reasonable to make PARSER a functor
+                                          over it.*)
+    (*Given a buffer, we keep track of it for the rest of time.*)
+    val init : buffer -> unit
+    (*Return the buffer we're using.
+      FIXME not sure this is needed, since we probably don't want something
+            else messing with our buffer*)
+    val buffer : buffer
+    (*Parsing involves engaging with the buffer to ensure it contains
+      the least amount of data we need in order to interpret (parse) it and
+      decide whether it constitutes a result (in which case return it, introducing
+      it into the Flick world), or continue parsing. In that case, we return
+      Unavailable to signal that we had our go, and will continue when we're
+      rescheduled later.*)
+    val parse : type_value -> result
+    (*Unparsing involves serialising a Flick expression into bytes (in the
+      parser's buffer) then writing out the buffer (using the BUFFER's API).
+      If this suceeds then we return "true".
+      If it fails because we cannot write (e.g., because the "write" to a socket
+      couldn't write all the bytes out) then we return "false". This should show
+      up at the Flick level as Unavailable, which means that the expression's
+      evaluation in the Flick world blocked, and will be retried next time it's
+      scheduled by the Evaluation Monad.
+      FIXME currently we assume/require that compound expressions need to be written in a single go?
+            and if that fails, then the whole expression will be retried later?
+            does this make it more difficult to write compositional unparsers,
+            because they'd need to undo any incomplete expressions that have
+            started to be written out? can we wrap this in a transaction then
+            to simplify? then the transaction will only succeed if all the writes
+            it includes will succeed*)
+    val unparse : type_value -> expression -> bool
   end
 
 (*Bindings with functions executed externally.

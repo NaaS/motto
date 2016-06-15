@@ -11,6 +11,18 @@
 open Lexing
 open Crisp_parser
 
+
+let next_line lexbuf =
+  (*this function was adapted from
+    https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html*)
+  let pos = lexbuf.lex_curr_p in
+  lexbuf.lex_curr_p <-
+    {
+      (* The position of the first token on the line, even if NL *)
+      pos with pos_bol = lexbuf.lex_start_pos + 1; 
+      pos_lnum = pos.pos_lnum + 1
+    }
+;;
 let scope_stack : int Stack.t =
   Stack.create ()
 ;;
@@ -19,14 +31,6 @@ Stack.push Crisp_syntax.min_indentation scope_stack;;
 let test_indentation indentation follow_on_tokens lexbuf =
   assert (not (Stack.is_empty scope_stack)); (*There should always be at least
                                                one element in the stack: 0*)
-  let next_line () =
-    (*this function was adapted from
-      https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html*)
-    let pos = lexbuf.lex_curr_p in
-    lexbuf.lex_curr_p <-
-      { pos with pos_bol = lexbuf.lex_curr_pos;
-        pos_lnum = pos.pos_lnum + 1
-      } in
   (*Count how many scopes we've moved down (out of).*)
   let rec undented_scopes (offset : int) =
     if Stack.top scope_stack = indentation then
@@ -39,29 +43,26 @@ let test_indentation indentation follow_on_tokens lexbuf =
         undented_scopes (offset + 1)
       end in
   let prev = Stack.top scope_stack in
-    if indentation > prev then
-      begin
-        Stack.push indentation scope_stack;
-        next_line ();
-        INDENT
-      end
-    else if indentation = prev then
-      begin
-        next_line ();
-        if follow_on_tokens <> [] then
-          begin
-            assert (List.length follow_on_tokens = 1);
-            List.hd follow_on_tokens
-          end
-        else NL
-      end
-    else
-      begin
-        assert (indentation < prev);
-        next_line ();
-        UNDENTN (undented_scopes Crisp_syntax.min_indentation,
-                 follow_on_tokens)
-      end
+  if indentation > prev then
+    begin
+      Stack.push indentation scope_stack;
+      INDENT
+    end
+  else if indentation = prev then
+    begin
+      if follow_on_tokens <> [] then
+        begin
+          assert (List.length follow_on_tokens = 1);
+          List.hd follow_on_tokens
+        end
+      else NL
+    end
+  else
+    begin
+      assert (indentation < prev);
+      UNDENTN (undented_scopes Crisp_syntax.min_indentation,
+               follow_on_tokens)
+    end
 }
 
 (*NOTE tabs are not recognised, because they suck. They also make it more
@@ -75,12 +76,12 @@ let nl = '\n'
 
 rule main = parse
   | comment {main lexbuf}
-  | nl+ ' '* comment {main lexbuf}
+  | nl+ ' '* comment {next_line lexbuf; main lexbuf}
   | nl+ (ws as spaces)
-      {test_indentation (String.length spaces) [] lexbuf}
+    {next_line lexbuf; test_indentation (String.length spaces) [] lexbuf}
   | "type" {TYPE}
   | "typed" {TYPED}
-  | nl+"type" {test_indentation Crisp_syntax.min_indentation [TYPE] lexbuf}
+  | nl+"type" {next_line lexbuf; test_indentation Crisp_syntax.min_indentation [TYPE] lexbuf}
   | "integer" {TYPE_INTEGER}
   | "string" {TYPE_STRING}
   | "boolean" {TYPE_BOOLEAN}
@@ -104,7 +105,7 @@ rule main = parse
   | "=>" {ARR_RIGHT}
   | "->" {AR_RIGHT}
   | "-" {DASH}
-  | nl {NL}
+  | nl {next_line lexbuf; NL}
   | ws {main lexbuf}
   | eof {test_indentation Crisp_syntax.min_indentation [EOF] lexbuf}
   | "ipv4_address" {TYPE_IPv4ADDRESS}

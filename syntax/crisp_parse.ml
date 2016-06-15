@@ -100,7 +100,7 @@ let expand_macro_tokens
 let print_position outx lexbuf =
   let pos = lexbuf.lex_curr_p in
   Printf.fprintf outx "%s:%d:%d" pos.pos_fname
-    pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
+    pos.pos_lnum (lexbuf.lex_start_pos - pos.pos_bol + 1)
 
 let parse_with_error lexbuf : Crisp_syntax.source_file_contents =
   (*try Crisp_parser.program Crisp_lexer.main lexbuf with*)

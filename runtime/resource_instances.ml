@@ -170,13 +170,17 @@ struct
      }
 
   let initialise t (Some s) =
-    (*FIXME could set flags according to the channel type -- that is, whether
-            the channel is read-only, write-only, or read-write.*)
     let flags =
       [Unix.O_NOCTTY; (*Because we don't expect to interact with a TTY via this channel.*)
        Unix.O_CLOEXEC; (*For defensive programming; we don't expect to spawn processes anyway.*)
        Unix.O_NONBLOCK; (*We don't want blocking, so our runtime can retain more control over interaction with resources.*)
-       Unix.O_RDWR; (*FIXME current default*)
+      (*NOTE we set access to read&write irrespective of the channel's type,
+             since read&write fifo gives us more control over its use. For example,
+             no EOF will be received if we're write-only and the other (reading)
+             side has closed its side of the fifo.
+             We'll have to be careful to respect the channel's type, not to write
+             on a ready-only channel for instance.*)
+       Unix.O_RDWR;
       ] in
     t.target := s;
     (*t.fd := Some (Unix.openfile s flags 0o600);*)

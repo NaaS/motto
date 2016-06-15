@@ -167,13 +167,11 @@ module type BUFFER =
             written to the resource*)
   end
 
-module type PARSER =
+module type PARSER = functor (Buffer : BUFFER) ->
   sig
     (*We can be transparent about the buffer type since it's not abstract
       to the parser: it's overseen by a BUFFER module.*)
-    type buffer = (module BUFFER) (*FIXME because how we use "buffer", it seems
-                                          reasonable to make PARSER a functor
-                                          over it.*)
+    type buffer = Buffer.t
     (*Given a buffer, we keep track of it for the rest of time.*)
     val init : buffer -> unit
     (*Return the buffer we're using.

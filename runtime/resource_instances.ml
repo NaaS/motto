@@ -128,6 +128,8 @@ let _ZERO =
   char_of_int 0x0;;
 
 module Channel_FIFO : CHANNEL =
+(*FIXME make functor to accept parser, which decides on its buffering,
+        and returns an expression*)
 struct
   type t = {
     target : string ref;

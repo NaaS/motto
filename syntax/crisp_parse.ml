@@ -10,6 +10,7 @@
 
 open Lexing
 open Crisp_syntax
+open Debug
 
 (*NOTE this code depends on side-effects to expand tokens, to deal with the
   constraint that the lexer only emits one token at a time.*)
@@ -96,11 +97,6 @@ let expand_macro_tokens
         in expand_macro n Crisp_parser.UNDENT trailing_tokens
       | token -> token
   in token_stream_processor token_q wrapper_lexer lexer lexbuf
-
-let print_position outx lexbuf =
-  let pos = lexbuf.lex_curr_p in
-  Printf.fprintf outx "%s:%d:%d" pos.pos_fname
-    pos.pos_lnum (lexbuf.lex_start_pos - pos.pos_bol + 1)
 
 let parse_with_error lexbuf : Crisp_syntax.source_file_contents =
   (*try Crisp_parser.program Crisp_lexer.main lexbuf with*)

@@ -30,7 +30,7 @@ let next_line ?(nl_count=1) ?nl_str lexbuf =
     | None -> nl_count
     | Some str -> count_nl str in
   let pos = lexbuf.lex_curr_p in
-  (*DEBUG*) Printf.printf ">>DEBUG>> next_line %d @ %d (line %d, bol %d, sp %d)\n" nl_count lexbuf.lex_curr_pos pos.pos_lnum lexbuf.lex_curr_p.pos_bol lexbuf.lex_start_pos;
+(*  (*DEBUG*) Printf.printf ">>DEBUG>> next_line %d @ %d (line %d, bol %d, sp %d)\n" nl_count lexbuf.lex_curr_pos pos.pos_lnum lexbuf.lex_curr_p.pos_bol lexbuf.lex_start_pos;*)
   lexbuf.lex_curr_p <-
     {
       (* The position of the first token on the line, even if NL *)

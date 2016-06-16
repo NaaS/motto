@@ -11,22 +11,36 @@
 open Lexing
 open Crisp_parser
 
+let backtrack str lexbuf =
+  lexbuf.lex_curr_pos <- lexbuf.lex_curr_pos - (String.length str)
 
-let next_line lexbuf =
+let count_nl str =
+  if str <> (String.make (String.length str) '\n') then
+    failwith "Counting new lines in a string containing not only new lines"
+  else
+    String.length str (*NOTE assumes we only use unix-style newlines*)
+
+let next_line ?(nl_count=1) ?nl_str lexbuf =
   (*this function was adapted from
     https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html*)
+  let nl_count =
+    match nl_str with
+    | None -> nl_count
+    | Some str -> count_nl str in
   let pos = lexbuf.lex_curr_p in
+  (*DEBUG*) Printf.printf ">>DEBUG>> next_line %d @ %d (line %d, bol %d, sp %d)\n" nl_count lexbuf.lex_curr_pos pos.pos_lnum lexbuf.lex_curr_p.pos_bol lexbuf.lex_start_pos;
   lexbuf.lex_curr_p <-
     {
       (* The position of the first token on the line, even if NL *)
       pos with pos_bol = lexbuf.lex_start_pos + 1; 
-      pos_lnum = pos.pos_lnum + 1
+      pos_lnum = pos.pos_lnum + nl_count 
     }
 ;;
 let scope_stack : int Stack.t =
   Stack.create ()
 ;;
 Stack.push Crisp_syntax.min_indentation scope_stack;;
+
 
 let test_indentation indentation follow_on_tokens lexbuf =
   assert (not (Stack.is_empty scope_stack)); (*There should always be at least
@@ -36,7 +50,11 @@ let test_indentation indentation follow_on_tokens lexbuf =
     if Stack.top scope_stack = indentation then
       offset
     else if Stack.top scope_stack < indentation then
-      failwith "Undershot the scope?"
+      begin
+        (*Printf.fprintf stderr "%a: syntax error\n" Debug.print_position lexbuf;
+        exit 1(*FIXME const? best way to exit?*)*) (*Prevents remainder of files from being parsed*)
+        raise Crisp_parser.Error (* FIXME causes fatal error. Why? *)
+      end
     else
       begin
         ignore(Stack.pop scope_stack);
@@ -76,12 +94,21 @@ let nl = '\n'
 
 rule main = parse
   | comment {main lexbuf}
-  | nl+ ' '* comment {next_line lexbuf; main lexbuf}
-  | nl+ (ws as spaces)
-    {next_line lexbuf; test_indentation (String.length spaces) [] lexbuf}
+  | (nl+ as newlines) ' '* comment {next_line ~nl_str:newlines lexbuf; main lexbuf}
+  | (nl+ as newlines) (' '*) (nl as trailing_newline)
+    {
+      next_line ~nl_str:newlines lexbuf;
+      (*FIXME hack: *)
+      let trail = String.make 1 trailing_newline in
+      backtrack trail lexbuf;
+      NL
+    }
+  | (nl+ as newlines) (ws as spaces)
+    {next_line ~nl_str:newlines lexbuf; test_indentation (String.length spaces) [] lexbuf}
   | "type" {TYPE}
   | "typed" {TYPED}
-  | nl+"type" {next_line lexbuf; test_indentation Crisp_syntax.min_indentation [TYPE] lexbuf}
+  | (nl+ as newlines) "type"
+    {next_line ~nl_str:newlines lexbuf; test_indentation Crisp_syntax.min_indentation [TYPE] lexbuf}
   | "integer" {TYPE_INTEGER}
   | "string" {TYPE_STRING}
   | "boolean" {TYPE_BOOLEAN}

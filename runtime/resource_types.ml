@@ -205,6 +205,7 @@ module type PARSER = functor (Buffer : BUFFER) ->
 
 (*Bindings with functions executed externally.
   FIXME consider using this to abstract contents of front-end/functions.ml*)
+(*FIXME encode the function's argument and return types?*)
 module type FUNCTION =
   sig
     include RESOURCE

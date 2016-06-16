@@ -98,22 +98,56 @@ let expand_macro_tokens
       | token -> token
   in token_stream_processor token_q wrapper_lexer lexer lexbuf
 
-let parse_with_error lexbuf : Crisp_syntax.source_file_contents =
+(*FIXME error info should be inside the actual error, not lexbuf*)
+let handle_lex_error ?(silent=false) ex lexbuf =
+  match ex with
+  | Failure _ | Crisp_lexer.Error ->
+      if not silent then
+        Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf
+  | e -> raise e (*If we don't handle it here, re-raise it*)
+
+let lex_step_with_error ?(silent=false) lexbuf =
+  try Some (Crisp_lexer.main lexbuf) with
+  | ex -> handle_lex_error ~silent ex lexbuf; None
+
+let lex_with_error ?(silent=false) lexbuf =
+  try Some ((Crisp_lexer.main
+            |> expand_macro_tokens
+            |> filter_redundant_newlines) lexbuf)
+  with
+  | ex -> handle_lex_error ~silent ex lexbuf; None
+
+
+let parse_with_error ?(silent=false) lexbuf : Crisp_syntax.source_file_contents =
   (*try Crisp_parser.program Crisp_lexer.main lexbuf with*)
   (*try Crisp_parser.program (expand_macro_tokens Crisp_lexer.main) lexbuf with*)
-  try Crisp_parser.source_file_contents
-        (Crisp_lexer.main
-         |> expand_macro_tokens
-         |> filter_redundant_newlines) lexbuf with
-(*
-  | SyntaxError msg ->
-    fprintf stderr "%a: %s\n" print_position lexbuf msg;
-    None
-*)
+  let lexer = 
+    Crisp_lexer.main
+    |> expand_macro_tokens
+    |> filter_redundant_newlines in
+  let wrapped_lexer lexbuf =
+    try lexer lexbuf with
+    | ex ->
+        (*This will re-raise any errors that isn't handled as a lexing error,
+         * so allow them to propogate since they probably shouldn't be
+         * presented as parsing errors. *)
+        handle_lex_error ex lexbuf;
+        (*wrap the lexing exception as a generic lexing exception,
+         * since we have already handled it if we can, so that parsing fails.*)
+        raise Crisp_lexer.Error
+  in
+  try
+    Crisp_parser.source_file_contents wrapped_lexer lexbuf
+  with (*FIXME Could either:
+      ==> - handle lexing errors at each step and then throw a parsing error to wrap it; or
+          - handle lexing errors at the top, and assume that parsing errors will be re-raised. *)
   | Crisp_parser.Error ->
-    Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf;
-    (*exit(-1)*)
-    Empty
+      if not silent then
+        Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf;
+      (*exit(-1)*)
+      Empty
+  | Crisp_lexer.Error -> (* Lexing error - already handled *)
+      Empty
 
 let rec parse_and_print lexbuf =
   parse_with_error lexbuf

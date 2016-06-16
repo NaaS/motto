@@ -46,12 +46,11 @@ let lex_looper filename () =
     let rec contents acc =
       (*let x = Crisp_lexer.main lexbuf in*)
       (*let x = expand_macro_tokens Crisp_lexer.main lexbuf in*)
-      let x =
-        (Crisp_lexer.main
-         |> expand_macro_tokens
-         |> filter_redundant_newlines) lexbuf in
-      if x = Crisp_parser.EOF then List.rev (x :: acc)
-      else contents (x :: acc)
+      match Crisp_parse.lex_step_with_error ~silent:true lexbuf with
+      | None -> List.rev acc
+      | Some (Crisp_parser.EOF as t) -> List.rev (t :: acc)
+      | Some t -> contents (t :: acc)
+      (*NOTE will return what was lexed until error or end*)
     in contents [] in
   begin
     close_in inx;

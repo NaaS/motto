@@ -11,6 +11,8 @@
 open Lexing
 open Crisp_parser
 
+exception Error
+
 let backtrack str lexbuf =
   lexbuf.lex_curr_pos <- lexbuf.lex_curr_pos - (String.length str)
 
@@ -53,7 +55,7 @@ let test_indentation indentation follow_on_tokens lexbuf =
       begin
         (*Printf.fprintf stderr "%a: syntax error\n" Debug.print_position lexbuf;
         exit 1(*FIXME const? best way to exit?*)*) (*Prevents remainder of files from being parsed*)
-        raise Crisp_parser.Error (* FIXME causes fatal error. Why? *)
+        raise Error
       end
     else
       begin

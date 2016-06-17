@@ -182,22 +182,19 @@ let test filepath =
 let test_whole_dir testdir =
   let ending = ".cp" in
   let ending_length = String.length ending in
-  let dh = Unix.opendir testdir in
-  try
-    while true do
-      let filename = Unix.readdir dh in
-      let filename_length = String.length filename in
-      (*FIXME naive*)
-      if filename <> "." && filename <> ".." &&
-         filename_length > ending_length &&
-         ending = String.sub filename
-                    (filename_length - ending_length)
-                    ending_length then
-        test (testdir ^ "/" ^ filename)
-      else ()
-    done
-  with End_of_file ->
-    Unix.closedir dh
+  let endsWithCP filename =
+    let filename_length = String.length filename in
+    filename_length > ending_length &&
+      ending = String.sub filename
+                          (filename_length - ending_length)
+                          ending_length in
+  let filenames = 
+    Sys.readdir testdir 
+    |> Array.to_list 
+    |> List.filter endsWithCP 
+    |> List.sort compare
+    |> List.map (Filename.concat testdir) in 
+  List.iter (fun filename -> test filename) filenames
 ;;
 
 let run_parser_test directories files =

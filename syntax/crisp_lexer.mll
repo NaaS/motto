@@ -100,7 +100,16 @@ rule main = parse
   | (nl+ as newlines) (' '*) (nl as trailing_newline)
     {
       next_line ~nl_str:newlines lexbuf;
-      (*FIXME hack: *)
+      (*FIXME hack:
+       * We lex (nl+ ws* nl) as multiple empty lines, and then pretend that we 
+       *  didn't lex the final newline by resetting the lexbuf position.
+       * We need to do this because the final nl indicated that there is only
+       *  whitespace on that line, but is also used in lexing the next line.
+       *  Essentially, it is acting as both $ and ^.
+       * This is done here instead of as an intermediate step because we would
+       *  need to look ahead in the test_indentation function to make allowances
+       *  for empty lines.
+       * *)
       let trail = String.make 1 trailing_newline in
       backtrack trail lexbuf;
       NL

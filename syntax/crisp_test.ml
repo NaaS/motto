@@ -10,12 +10,28 @@ open Crisp_syntax
 open Crisp_parser
 open Crisp_parse
 
+let is_bad_test filename =
+  let bad = ".bad." in
+  let bad_len = String.length bad in
+  let len = String.length filename in
+  let rec contains_bad_from start =
+    let dotIndex = String.index_from filename start '.' in
+    let startsWithBad = (len - dotIndex >= bad_len) &&
+      (bad = String.sub filename dotIndex bad_len) in
+    startsWithBad || contains_bad_from (dotIndex + 1) in
+  try contains_bad_from 0 with Not_found -> false
+
 let loop filename () =
   print_endline "Starting source program";
-  parse_file filename
+  let contents = parse_file filename in
+  contents
   |> Crisp_syntax.source_file_contents_to_string
   |> print_endline;
   print_endline "Finished source program";
+  if (contents <> Empty && is_bad_test filename) then
+    Printf.eprintf "\027[1;33mWARNING:\027[0m test file %s didn't fail\n" filename
+  else if (contents = Empty && not (is_bad_test filename)) then
+    Printf.eprintf "\027[1;33mWARNING:\027[0m test file %s failed\n" filename
 (*FIXME this next block is very rudimentary
   print_endline "Starting translated program";
   result

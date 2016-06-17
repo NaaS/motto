@@ -1,9 +1,9 @@
-type record_0:record  # Multiple blank lines
+type record_0:record  # The next type is preceeded by multiple blank lines
  f1:string
 
 
 
-type record_0_2:record  # A single blank line
+type record_0_2:record  # The next type is preceeded by a single blank line
  f1_2:string
 
 type record_1:record
@@ -14,7 +14,7 @@ type record_1:record
 # This comment isn't aligned with indentation
   f2 : string
 
-type record_example: record # Nested scope
+type record_example: record # This type contains nested scope
   field1 : string
   field2 : boolean
   field3 : integer
@@ -28,6 +28,6 @@ type record_example: record # Nested scope
  
 
 type record_3:record
-  f1:string # Trailing lines
+  f1:string # There are trailing lines after this type
 
 

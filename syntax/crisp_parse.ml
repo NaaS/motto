@@ -119,8 +119,6 @@ let lex_with_error ?(silent=false) lexbuf =
 
 
 let parse_with_error ?(silent=false) lexbuf : Crisp_syntax.source_file_contents =
-  (*try Crisp_parser.program Crisp_lexer.main lexbuf with*)
-  (*try Crisp_parser.program (expand_macro_tokens Crisp_lexer.main) lexbuf with*)
   let lexer = 
     Crisp_lexer.main
     |> expand_macro_tokens
@@ -128,23 +126,20 @@ let parse_with_error ?(silent=false) lexbuf : Crisp_syntax.source_file_contents 
   let wrapped_lexer lexbuf =
     try lexer lexbuf with
     | ex ->
-        (*This will re-raise any errors that isn't handled as a lexing error,
-         * so allow them to propogate since they probably shouldn't be
-         * presented as parsing errors. *)
+        (*This will re-raise any errors that aren't handled as a lexing error,
+          so allow them to propogate since they probably shouldn't be
+          presented as parsing errors. *)
         handle_lex_error ex lexbuf;
-        (*wrap the lexing exception as a generic lexing exception,
-         * since we have already handled it if we can, so that parsing fails.*)
+        (*wrap the lexing exception as a generic lexing exception
+          since we have already handled it if we can, so that parsing fails.*)
         raise Crisp_lexer.Error
   in
   try
     Crisp_parser.source_file_contents wrapped_lexer lexbuf
-  with (*FIXME Could either:
-      ==> - handle lexing errors at each step and then throw a parsing error to wrap it; or
-          - handle lexing errors at the top, and assume that parsing errors will be re-raised. *)
+  with 
   | Crisp_parser.Error ->
       if not silent then
         Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf;
-      (*exit(-1)*)
       Empty
   | Crisp_lexer.Error -> (* Lexing error - already handled *)
       Empty

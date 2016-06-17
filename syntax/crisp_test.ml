@@ -43,14 +43,12 @@ let lex_looper filename () =
   let lexbuf = Lexing.from_channel inx in
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
   let results =
+    (*NOTE will return what was lexed until error or end*)
     let rec contents acc =
-      (*let x = Crisp_lexer.main lexbuf in*)
-      (*let x = expand_macro_tokens Crisp_lexer.main lexbuf in*)
       match Crisp_parse.lex_step_with_error ~silent:true lexbuf with
-      | None -> List.rev acc
+      | None -> List.rev acc (*error - return what we have so far*)
       | Some (Crisp_parser.EOF as t) -> List.rev (t :: acc)
       | Some t -> contents (t :: acc)
-      (*NOTE will return what was lexed until error or end*)
     in contents [] in
   begin
     close_in inx;

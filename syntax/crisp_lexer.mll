@@ -30,7 +30,10 @@ let next_line ?(nl_count=1) ?nl_str lexbuf =
     | None -> nl_count
     | Some str -> count_nl str in
   let pos = lexbuf.lex_curr_p in
-(*  (*DEBUG*) Printf.printf ">>DEBUG>> next_line %d @ %d (line %d, bol %d, sp %d)\n" nl_count lexbuf.lex_curr_pos pos.pos_lnum lexbuf.lex_curr_p.pos_bol lexbuf.lex_start_pos;*)
+  if !Config.cfg.Config.verbosity > 0 then
+    Printf.printf ">>DEBUG>> next_line %d @ %d (line %d, bol %d, sp %d)\n"
+      nl_count lexbuf.lex_curr_pos pos.pos_lnum
+      lexbuf.lex_curr_p.pos_bol lexbuf.lex_start_pos;
   lexbuf.lex_curr_p <-
     {
       (* The position of the first token on the line, even if NL *)
@@ -43,7 +46,6 @@ let scope_stack : int Stack.t =
 ;;
 Stack.push Crisp_syntax.min_indentation scope_stack;;
 
-
 let test_indentation indentation follow_on_tokens lexbuf =
   assert (not (Stack.is_empty scope_stack)); (*There should always be at least
                                                one element in the stack: 0*)
@@ -52,11 +54,7 @@ let test_indentation indentation follow_on_tokens lexbuf =
     if Stack.top scope_stack = indentation then
       offset
     else if Stack.top scope_stack < indentation then
-      begin
-        (*Printf.fprintf stderr "%a: syntax error\n" Debug.print_position lexbuf;
-        exit 1(*FIXME const? best way to exit?*)*) (*Prevents remainder of files from being parsed*)
-        raise Error
-      end
+      raise Error
     else
       begin
         ignore(Stack.pop scope_stack);

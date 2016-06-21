@@ -22,24 +22,28 @@ let count_nl str =
   else
     String.length str (*NOTE assumes we only use unix-style newlines*)
 
-let next_line ?(nl_count=1) ?nl_str lexbuf =
+let next_line ?(nl_count=1) ?nl_str ?(nl_at_end=false) lexbuf =
   (*this function was adapted from
     https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html*)
   let nl_count =
     match nl_str with
     | None -> nl_count
     | Some str -> count_nl str in
-  let pos = lexbuf.lex_curr_p in
-  if !Config.cfg.Config.verbosity > 0 then
-    Printf.printf ">>DEBUG>> next_line %d @ %d (line %d, bol %d, sp %d)\n"
-      nl_count lexbuf.lex_curr_pos pos.pos_lnum
-      lexbuf.lex_curr_p.pos_bol lexbuf.lex_start_pos;
-  lexbuf.lex_curr_p <-
-    {
-      (* The position of the first token on the line, even if NL *)
-      pos with pos_bol = lexbuf.lex_start_pos + 1; 
-      pos_lnum = pos.pos_lnum + nl_count 
-    }
+  if nl_count > 0 then
+    let pos = lexbuf.lex_curr_p in
+    let bol = if nl_at_end then lexbuf.lex_curr_pos
+                           else lexbuf.lex_start_pos + nl_count in
+    let new_line_num = pos.pos_lnum + nl_count in 
+    if !Config.cfg.Config.verbosity > 0 then
+      Printf.printf ">>DEBUG>> next_line %d @ %d (line %d, bol %d/%d, sp %d)\n"
+        nl_count lexbuf.lex_curr_pos pos.pos_lnum
+        lexbuf.lex_curr_p.pos_bol bol lexbuf.lex_start_pos;
+    lexbuf.lex_curr_p <-
+      {
+        (* The position of the first token on the line, even if NL *)
+        pos with pos_bol = bol; 
+        pos_lnum = new_line_num;
+      }
 ;;
 let scope_stack : int Stack.t =
   Stack.create ()
@@ -92,32 +96,35 @@ let integer = ['0'-'9']+
 (*NOTE currently only Unix-style newline is supported, because it's simpler.*)
 let nl = '\n'
 
-rule main = parse
-  | comment {main lexbuf}
-  | (nl+ as newlines) ' '* comment {next_line ~nl_str:newlines lexbuf; main lexbuf}
-  | (nl+ as newlines) (' '*) (nl as trailing_newline)
-    {
-      next_line ~nl_str:newlines lexbuf;
-      (*FIXME hack:
-       * We lex (nl+ ws* nl) as multiple empty lines, and then pretend that we 
-       *  didn't lex the final newline by resetting the lexbuf position.
-       * We need to do this because the final nl indicated that there is only
-       *  whitespace on that line, but is also used in lexing the next line.
-       *  Essentially, it is acting as both $ and ^.
-       * This is done here instead of as an intermediate step because we would
-       *  need to look ahead in the test_indentation function to make allowances
-       *  for empty lines.
-       * *)
-      let trail = String.make 1 trailing_newline in
-      backtrack trail lexbuf;
-      NL
-    }
+rule start_of_line = parse
+  | ' '* comment nl {next_line ~nl_at_end:true lexbuf; start_of_line lexbuf}
+  | ' '* (nl+ as newlines)
+    {next_line ~nl_at_end:true ~nl_str:newlines lexbuf;
+     start_of_line lexbuf}
+  | ws "type" {raise Error} (*throw error earlier to put error on correct line*)
+  | (ws as spaces) {test_indentation (String.length spaces) [] lexbuf}
+  | (nl+ as newlines) {next_line ~nl_str:newlines lexbuf; NL}
+  | "type" {test_indentation Crisp_syntax.min_indentation [TYPE] lexbuf}
+  | "process" {test_indentation Crisp_syntax.min_indentation [PROC] lexbuf}
+  | eof {test_indentation Crisp_syntax.min_indentation [EOF] lexbuf}
+(*NOTE since functions are effectful, could replace proc with fun, and signal
+  the entry point via some name -- e.g., main -- but then arbitrary functions
+  would be able to register listeners for events.*)
+  | "fun" {test_indentation Crisp_syntax.min_indentation [FUN] lexbuf}
+  | "(|" {FAT_BRACKET_OPEN}
+  | "(type|" {FAT_TYPE_BRACKET_OPEN}
+  | "|)" {FAT_BRACKET_CLOSE}
+  | "include" {INCLUDE}
+
+and main = parse
+  | comment nl {next_line ~nl_at_end:true lexbuf; start_of_line lexbuf}
+  | (nl+ as newlines) (' '* as spaces) comment nl
+    {next_line ~nl_str:newlines lexbuf; next_line ~nl_at_end:true lexbuf;
+     start_of_line lexbuf}
   | (nl+ as newlines) (ws as spaces)
     {next_line ~nl_str:newlines lexbuf; test_indentation (String.length spaces) [] lexbuf}
   | "type" {TYPE}
   | "typed" {TYPED}
-  | (nl+ as newlines) "type"
-    {next_line ~nl_str:newlines lexbuf; test_indentation Crisp_syntax.min_indentation [TYPE] lexbuf}
   | "integer" {TYPE_INTEGER}
   | "string" {TYPE_STRING}
   | "boolean" {TYPE_BOOLEAN}
@@ -126,7 +133,6 @@ rule main = parse
   | "list" {TYPE_LIST}
   | "tuple" {TYPE_TUPLE}
   | ":" {COLON}
-  | "process" {test_indentation Crisp_syntax.min_indentation [PROC] lexbuf}
   | "/" {SLASH}
   | "[" {LEFT_S_BRACKET}
   | "]" {RIGHT_S_BRACKET}
@@ -157,10 +163,6 @@ rule main = parse
   | ":=" {ASSIGN}
   | ";" {SEMICOLON}
   | "=" {EQUALS}
-(*NOTE since functions are effectful, could replace proc with fun, and signal
-  the entry point via some name -- e.g., main -- but then arbitrary functions
-  would be able to register listeners for events.*)
-  | "fun" {test_indentation Crisp_syntax.min_indentation [FUN] lexbuf}
   | "let" {LET}
   | "in" {IN}
   | "except" {EXCEPT}
@@ -197,16 +199,12 @@ rule main = parse
   | "<=" {ARR_LEFT}
   | "<=>" {ARR_BOTH}
 
-  | "include" {INCLUDE}
-
   | "dictionary" {TYPE_DICTIONARY}
   | "ref" {TYPE_REF}
 
   | "can" {CAN}
   | "unsafe_cast" {UNSAFE_CAST}
 
-  | "(|" {FAT_BRACKET_OPEN}
-  | "(type|" {FAT_TYPE_BRACKET_OPEN}
   | "|)" {FAT_BRACKET_CLOSE}
 
   | "@:" {META_OPEN}
@@ -228,3 +226,12 @@ rule main = parse
   | "|" {BAR}
 
 (*FIXME string primitives as keywords -- e.g., concat, etc*)
+
+{
+let at_start_of_line lexbuf =
+  lexbuf.lex_curr_pos = 0
+  || (lexbuf.lex_curr_pos = lexbuf.lex_curr_p.pos_bol)
+let main lexbuf =
+  if at_start_of_line lexbuf then start_of_line lexbuf
+                             else main lexbuf
+}

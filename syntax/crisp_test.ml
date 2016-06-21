@@ -185,11 +185,37 @@ let string_of_token = function
 
   | SIZE -> "SIZE"
 ;;
+let get_expanded_filtered_tokens filename () =
+  let inx = open_in filename in
+  let lexbuf = Lexing.from_channel inx in
+  lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
+  let lexer = (Crisp_lexer.main
+              |> expand_macro_tokens
+              |> filter_redundant_newlines) in
+  let results =
+    (*NOTE will return what was lexed until error or end*)
+    let rec contents acc =
+      match Crisp_parse.lex_with_error ~silent:true lexer lexbuf with
+      | None -> List.rev acc (*error - return what we have so far*)
+      | Some (Crisp_parser.EOF as t) -> List.rev (t :: acc)
+      | Some t -> contents (t :: acc)
+    in contents [] in
+  begin
+    close_in inx;
+    results
+  end
 
 let test filepath =
   print_endline ("Testing " ^ filepath);
+  Printf.printf "Lexed tokens:\n";
   Printf.printf "%s\n"
-    ((List.map string_of_token (lex_looper filepath ()))
+    (lex_looper filepath ()
+     |> List.map string_of_token
+     |> String.concat ", ");
+  Printf.printf "Lexed tokens, expanded and filtered:\n";
+  Printf.printf "%s\n"
+    (get_expanded_filtered_tokens filepath ()
+     |> List.map string_of_token
      |> String.concat ", ");
   loop filepath ()
 ;;

@@ -106,16 +106,13 @@ let handle_lex_error ?(silent=false) ex lexbuf =
         Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf
   | e -> raise e (*If we don't handle it here, re-raise it*)
 
-let lex_step_with_error ?(silent=false) lexbuf =
-  try Some (Crisp_lexer.main lexbuf) with
-  | ex -> handle_lex_error ~silent ex lexbuf; None
-
-let lex_with_error ?(silent=false) lexbuf =
-  try Some ((Crisp_lexer.main
-            |> expand_macro_tokens
-            |> filter_redundant_newlines) lexbuf)
+let lex_with_error ?(silent=false) lexer lexbuf =
+  try Some (lexer lexbuf)
   with
   | ex -> handle_lex_error ~silent ex lexbuf; None
+
+let lex_step_with_error ?(silent=false) lexbuf =
+  lex_with_error ~silent Crisp_lexer.main lexbuf
 
 
 let parse_with_error ?(silent=false) lexbuf : Crisp_syntax.source_file_contents =

@@ -95,6 +95,9 @@ let integer = ['0'-'9']+
 
 (*NOTE currently only Unix-style newline is supported, because it's simpler.*)
 let nl = '\n'
+(*NOTE we match nl with eof to maintain a correct line number in unix text files.
+  The whitespace and comment before it are to ensure it is the longest match. *)
+let end_of_file = nl* ' '* comment? nl* eof
 
 rule start_of_line = parse
   | ' '* comment nl {next_line ~nl_at_end:true lexbuf; start_of_line lexbuf}
@@ -106,7 +109,7 @@ rule start_of_line = parse
   | (nl+ as newlines) {next_line ~nl_str:newlines lexbuf; NL}
   | "type" {test_indentation Crisp_syntax.min_indentation [TYPE] lexbuf}
   | "process" {test_indentation Crisp_syntax.min_indentation [PROC] lexbuf}
-  | eof {test_indentation Crisp_syntax.min_indentation [EOF] lexbuf}
+  | end_of_file {test_indentation Crisp_syntax.min_indentation [EOF] lexbuf}
 (*NOTE since functions are effectful, could replace proc with fun, and signal
   the entry point via some name -- e.g., main -- but then arbitrary functions
   would be able to register listeners for events.*)
@@ -149,7 +152,7 @@ and main = parse
   | "-" {DASH}
   | nl {next_line lexbuf; NL}
   | ws {main lexbuf}
-  | eof {test_indentation Crisp_syntax.min_indentation [EOF] lexbuf}
+  | end_of_file {test_indentation Crisp_syntax.min_indentation [EOF] lexbuf}
   | "ipv4_address" {TYPE_IPv4ADDRESS}
   | (integer as oct1) '.' (integer as oct2) '.' (integer as oct3) '.' (integer as oct4)
       {IPv4 (int_of_string(oct1), int_of_string(oct2), int_of_string(oct3),

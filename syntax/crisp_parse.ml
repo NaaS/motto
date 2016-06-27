@@ -101,7 +101,10 @@ let expand_macro_tokens
 (*FIXME error info should be inside the actual error, not lexbuf*)
 let handle_lex_error ?(silent=false) ex lexbuf =
   match ex with
-  | Failure _ | Crisp_lexer.Error ->
+  | Failure m ->
+      if not silent then
+        Printf.fprintf stderr "%a: error - %s\n" print_position lexbuf m
+  | Crisp_lexer.Error ->
       if not silent then
         Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf
   | e -> raise e (*If we don't handle it here, re-raise it*)

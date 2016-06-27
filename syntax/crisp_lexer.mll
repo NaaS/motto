@@ -22,9 +22,18 @@ let count_nl str =
   else
     String.length str (*NOTE assumes we only use unix-style newlines*)
 
+(*Advance the line count, optionally incrementing by more than one. Also track
+    where the beginning of the line is. (lexbuf.curr_p.pos_bol)
+  `nl_count` specifies the number of lines, OR `nl_str` is a string of
+    new line characters that specifies the number of lines. Use one.
+  The reason we need this function is because we have lexing rules that
+    contain more than a single new line, so we can't just use
+    Lexing.new_line lexbuf*)
 let next_line ?(nl_count=1) ?nl_str ?(nl_at_end=false) lexbuf =
   (*this function was adapted from
     https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html*)
+  if nl_count <> 1 && nl_str <> None then
+    failwith "Use only one of nl_count and nl_str for next_line.";
   let nl_count =
     match nl_str with
     | None -> nl_count
@@ -50,6 +59,10 @@ let scope_stack : int Stack.t =
 ;;
 Stack.push Crisp_syntax.min_indentation scope_stack;;
 
+(*Check that the code is correctly indented, and produce the INDENT and
+    UNDENTN tokens that act as scoping bookends. Note UNDENTN tokens are
+    expanded in crisp_parse.expand_macro_tokens.
+  `follow_on_tokens` are injected after the expanded tokens.*)
 let test_indentation indentation follow_on_tokens lexbuf =
   assert (not (Stack.is_empty scope_stack)); (*There should always be at least
                                                one element in the stack: 0*)
@@ -232,8 +245,9 @@ and main = parse
 
 {
 let at_start_of_line lexbuf =
-  lexbuf.lex_curr_pos = 0
-  || (lexbuf.lex_curr_pos = lexbuf.lex_curr_p.pos_bol)
+  let beginning_of_line = lexbuf.lex_curr_p.pos_bol in
+  lexbuf.lex_curr_pos = 0 (* start of file, or *)
+  || (lexbuf.lex_curr_pos = beginning_of_line) (* start of line *)
 let main lexbuf =
   if at_start_of_line lexbuf then start_of_line lexbuf
                              else main lexbuf

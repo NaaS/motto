@@ -97,7 +97,7 @@ let integer = ['0'-'9']+
 let nl = '\n'
 (*NOTE we match nl with eof to maintain a correct line number in unix text files.
   The whitespace and comment before it are to ensure it is the longest match. *)
-let end_of_file = nl* ' '* comment? nl* eof
+let end_of_file = (nl|' '|comment)* eof
 
 rule start_of_line = parse
   | ' '* comment nl {next_line ~nl_at_end:true lexbuf; start_of_line lexbuf}

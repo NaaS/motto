@@ -173,3 +173,72 @@ let repeat (n : int) (x : 'a) : 'a list =
   in
   assert (n >= 0);
   repeat' n x []
+
+(*Referencing http://misc.flogisoft.com/bash/tip_colors_and_formatting*)
+module Terminal = struct
+  type terminal_colour =
+    Default | Black | Red | Green | Yellow | Blue | Magenta | Cyan | LightGray
+    | DarkGray | LightRed | LightGreen | LightYellow | LightBlue | LightMagenta
+    | LightCyan | White
+  type terminal_style = Bold | Dim | Underlined | Blink | Inverted | Hidden
+  type terminal_formatting =
+    { foreground:terminal_colour;
+      background:terminal_colour;
+      style:terminal_style }
+  let foreground_colour_code = function
+    | Default -> "39"
+    | Black -> "30"
+    | Red -> "31"
+    | Green -> "31"
+    | Yellow -> "33"
+    | Blue -> "34"
+    | Magenta -> "35"
+    | Cyan -> "36"
+    | LightGray -> "37"
+    | DarkGray ->"90"
+    | LightRed -> "91"
+    | LightGreen -> "92"
+    | LightYellow -> "93"
+    | LightBlue -> "94"
+    | LightMagenta -> "95"
+    | LightCyan -> "96"
+    | White -> "97"
+  let background_colour_code = function
+    | Default -> "49"
+    | Black -> "40"
+    | Red -> "41"
+    | Green -> "42"
+    | Yellow -> "43"
+    | Blue -> "44"
+    | Magenta -> "45"
+    | Cyan -> "46"
+    | LightGray -> "47"
+    | DarkGray ->"100"
+    | LightRed -> "101"
+    | LightGreen -> "102"
+    | LightYellow -> "103"
+    | LightBlue -> "104"
+    | LightMagenta -> "105"
+    | LightCyan -> "106"
+    | White -> "107"
+  let style_code = function
+    | Bold -> "1"
+    | Dim -> "2"
+    | Underlined -> "4"
+    | Blink -> "5"
+    | Inverted -> "7"
+    | Hidden -> "8"
+  let escape_char = "\027"
+  let code_for codes = escape_char ^ "[" ^ String.concat ";" codes ^ "m"
+  let reset_all = code_for ["0"]
+  let colour colour text =
+    code_for [foreground_colour_code colour] ^ text ^ reset_all
+  let bold text =
+    code_for [style_code Bold] ^ text ^ reset_all
+  let format fmt text =
+    code_for [foreground_colour_code fmt.foreground;
+              background_colour_code fmt.background;
+              style_code fmt.style] ^ text ^ reset_all
+  let warning = format {foreground=Yellow; background=Default; style=Bold} "WARNING:"
+  let error = format {foreground=Red; background=Default; style=Bold} "ERROR:"
+end

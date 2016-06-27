@@ -9,6 +9,7 @@ open Lexing
 open Crisp_syntax
 open Crisp_parser
 open Crisp_parse
+open General
 
 let is_bad_test filename =
   let bad = ".bad." in
@@ -29,9 +30,9 @@ let loop filename () =
   |> print_endline;
   print_endline "Finished source program";
   if (contents <> Empty && is_bad_test filename) then
-    Printf.eprintf "\027[1;33mWARNING:\027[0m test file %s didn't fail\n" filename
+    Printf.eprintf "%s test file %s didn't fail\n" Terminal.warning filename
   else if (contents = Empty && not (is_bad_test filename)) then
-    Printf.eprintf "\027[1;33mWARNING:\027[0m test file %s failed\n" filename
+    Printf.eprintf "%s test file %s failed\n" Terminal.warning filename
 (*FIXME this next block is very rudimentary
   print_endline "Starting translated program";
   result

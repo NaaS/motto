@@ -139,7 +139,7 @@ module type TRANSLATOR =
 
 module type BUFFER =
   sig
-    type t = Bytes.t ref
+    type t
     (*Allocate a piece of memory of a certain size, with all values set to
       init_value if it's provided.*)
     (*FIXME can we source the buffer directly from a resource, and interact
@@ -147,22 +147,32 @@ module type BUFFER =
     val create : ?init_value:int -> int -> t
     (*The size of the buffer. This is specified at creation time, and cannot
       be changed after that.*)
-    val size : int
+    val size : t -> int
     (*How much of the buffer is currently occupied.
       Naturally, occupied_size <= size.*)
-    val occupied_size : int
-    (*Registers a function that will be called by "fill_unit". This function
-      can be updated by registering a different function later one.
+    val occupied_size : t -> int
+    (*Registers a function that will be called by "fill_until". This function
+      can be updated by registering a different function later on.
       The function accepts a single parameter (the number of bytes it will
       attempt to read from a resource (it is expected that this resource will
       supply the function) and returns the number of bytes that it was able
-      to read.*)
-    val register_reader : (int -> int) -> unit
+      to read. The reader deposits the read data (from the resource) into the
+      buffer.
+      Thus the reader function is the "bridge" between the resource we're
+      reading from, and this buffer that we're using to store data that's
+      read from a resource.*)
+    val register_reader : t -> (int -> int) -> unit
     (*Attempts to fill the buffer until its occupied_size is as large as the
-      given parameter.
-      It fails if the parameter is greater than size, or if a reader function
-      has not yet been registered (using register_reader).*)
-    val fill_until : int -> bool
+      given parameter. It can return immediately with "true" if this is already
+      the case. Otherwise it will call the reader that's been registered with
+      the buffer. If it can read sufficient bytes, then it returns "true",
+      otherwise it returns "false" -- this is an indicator that "fill_until"
+      should be called again (with the same parameters) until it returns "true"
+      or until some timeout (handled separate, since it's unrelated to the
+      buffer) expires.
+      This function fails if the parameter is greater than size, or if a reader
+      function has not yet been registered (using register_reader).*)
+    val fill_until : t -> int -> bool
     (*FIXME need to add function for writing into the buffer, and have the buffer
             written to the resource*)
   end

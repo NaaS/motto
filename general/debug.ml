@@ -5,6 +5,7 @@
    Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 
+open Lexing
 
 (*Format a list of strings nicely*)
 let print_list indentation l =
@@ -21,3 +22,8 @@ let stringify (x : 'a) : string =
   else if Obj.tag (Obj.repr x) = Obj.int_tag then
     string_of_int (Obj.magic x)
   else failwith "stringify over unknown type"
+
+let print_position outx lexbuf =
+  let pos = lexbuf.lex_curr_p in
+  Printf.fprintf outx "%s:%d:%d" pos.pos_fname
+    pos.pos_lnum (lexbuf.lex_start_pos - pos.pos_bol + 1)

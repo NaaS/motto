@@ -3,3 +3,5 @@ motto.byte
 .project
 .settings
 _build
+
+*.swp

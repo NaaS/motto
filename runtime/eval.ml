@@ -774,7 +774,13 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       end
       | Resource (Channel_resource (module R : CHANNEL_Instance)) ->
         match R.Channel.receive R.state with
-        | Expression e -> return_eval e, ctxt
+        | Expression e ->
+          (*NOTE we currently don't check the type of "e". There's a
+                 risk that if the parser's buggy it might return us
+                 a value of a type that's different to that which we
+                 expect. Currently we don't check this, and trust the
+                 parser.*)
+          return_eval e, ctxt
         | Unavailable -> retry e, ctxt
         | Error s ->
           (*FIXME use separate exception type*)

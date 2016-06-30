@@ -2,6 +2,7 @@
 (*
    Parser spec for Crisp
    Nik Sultana, Cambridge University Computer Lab, January 2015
+   Jonny Shipton, Cambridge University Computer Lab, June 2016
 
    Target parser-generator: menhir 20140422
 

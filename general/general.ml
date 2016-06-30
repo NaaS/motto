@@ -1,6 +1,7 @@
 (*
    Collection of general functions used across the code base
    Nik Sultana, Cambridge University Computer Lab, February 2015
+   Jonny Shipton, Cambridge University Computer Lab, June 2016
 
    Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)

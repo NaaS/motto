@@ -1,6 +1,7 @@
 (*
   Simple test framework for the Crisp parser
   Nik Sultana, Cambridge University Computer Lab, January 2015
+  Jonny Shipton, Cambridge University Computer Lab, June 2016
 
   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)

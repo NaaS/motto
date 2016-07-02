@@ -137,6 +137,15 @@ module type TRANSLATOR =
     val from_ : t -> expression -> result
   end
 
+(*FIXME BUFFER originally didn't expose functions that read or write from "t".
+        It was assumed that some other module will know enough about
+        "t" to be able to encode/decode data appropriately.
+        Maybe I could return to this model?
+        The role of BUFFER is not to read/write into the buffer
+        wrt the buffer's user; but rather it's intended to mediate
+        between the buffer's user and the resource from which the
+        buffered data is obtained.
+        But perhaps having read/write functions in BUFFER is unavoidable?*)
 module type BUFFER =
   sig
     type t
@@ -175,26 +184,39 @@ module type BUFFER =
     val fill_until : t -> int -> bool
     (*FIXME need to add function for writing into the buffer, and have the buffer
             written to the resource*)
+
+    (*read given number of bytes from the buffer*)
+    val read : t -> int -> bytes
+    (*FIXME if i'm to keep "read", then perhaps should have
+            a "write" and/or "append" function too.*)
+
+    (*Expose the buffer as bytes.
+      NOTE the actual buffer should be exposed, not a copy*)
+    val raw : t -> bytes
   end
 
 module type PARSER = functor (Buffer : BUFFER) ->
   sig
+    type t
     (*We can be transparent about the buffer type since it's not abstract
       to the parser: it's overseen by a BUFFER module.*)
     type buffer = Buffer.t
-    (*Given a buffer, we keep track of it for the rest of time.*)
-    val init : buffer -> unit
-    (*Return the buffer we're using.
+    (*Given a buffer, we create a parser that uses it for the rest of time.
+      NOTE that the buffer would have had a reader registered with it
+           by the resource, so the parser can just try to pull data from
+           the buffer, which in turn try to pull data from the resource.*)
+    val init : buffer -> t
+    (*Return the buffer being used by a parser.
       FIXME not sure this is needed, since we probably don't want something
             else messing with our buffer*)
-    val buffer : buffer
+    val buffer : t -> buffer
     (*Parsing involves engaging with the buffer to ensure it contains
       the least amount of data we need in order to interpret (parse) it and
       decide whether it constitutes a result (in which case return it, introducing
       it into the Flick world), or continue parsing. In that case, we return
       Unavailable to signal that we had our go, and will continue when we're
       rescheduled later.*)
-    val parse : type_value -> result
+    val parse : t -> type_value -> result
     (*Unparsing involves serialising a Flick expression into bytes (in the
       parser's buffer) then writing out the buffer (using the BUFFER's API).
       If this suceeds then we return "true".
@@ -210,7 +232,7 @@ module type PARSER = functor (Buffer : BUFFER) ->
             started to be written out? can we wrap this in a transaction then
             to simplify? then the transaction will only succeed if all the writes
             it includes will succeed*)
-    val unparse : type_value -> expression -> bool
+    val unparse : t -> type_value -> expression -> bool
   end
 
 (*Bindings with functions executed externally.

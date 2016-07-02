@@ -46,7 +46,7 @@ let occupied_size t =
     !(t.write_ofs) - !(t.read_ofs)
   else
     begin
-    (*We must have wrapped around, evidence by the
+    (*We must have wrapped around, evidenced by the
       next assertion holding*)
     assert (!(t.read_ofs) > !(t.write_ofs));
     (*So we can read from read_ofs until the end of
@@ -60,7 +60,7 @@ let fill_until t n =
   (*Test the reader -- have it read 0 bytes. This should result in an exception
     if a reader hasn't been registered.*)
   ignore(!(t.reader) 0);
-  if (n > size t) then
+  if n > size t then
     (*FIXME give more info*)
     failwith "Read request exceeds buffer size"
   else
@@ -75,5 +75,89 @@ let fill_until t n =
              minimum number of bytes at a time,
              which it defaults to if n < minimum.*)
      let no_bytes_needed = n - occupied_size t in
-     !(t.reader) no_bytes_needed = no_bytes_needed)
+     let no_bytes_read = !(t.reader) no_bytes_needed in
+     t.write_ofs := no_bytes_read + !(t.write_ofs);
+     no_bytes_read = no_bytes_needed)
+
+let read t n =
+  assert (n > 0);
+  assert (!(t.read_ofs) <> !(t.write_ofs));
+  if n > occupied_size t then
+    (*FIXME give more info*)
+    failwith "Read request exceeds occupied size"
+  else
+    let result =
+      if !(t.read_ofs) < !(t.write_ofs) then
+        !(t.write_ofs) - !(t.read_ofs)
+        |> Bytes.sub t.buffer !(t.read_ofs)
+      else
+        begin
+        assert (!(t.read_ofs) > !(t.write_ofs));
+        Bytes.cat
+          (size t - !(t.read_ofs)
+           |> Bytes.sub t.buffer !(t.read_ofs))
+          (Bytes.sub t.buffer 0 !(t.write_ofs))
+        end in
+    begin
+      t.read_ofs := (!(t.read_ofs) + n) mod size t;
+      result
+    end
+
+let raw t =
+  (*FIXME ensure we don't get a copy of the buffer.*)
+  t.buffer
+end
+
+let _ZERO =
+  (*FIXME is this const already defined in std libraries?*)
+  char_of_int 0x0;;
+
+(*FIXME this doesn't really yet parse integers?*)
+module Integer_Parser : PARSER = functor (Buffer : BUFFER) ->
+struct
+  type buffer = Buffer.t
+  type t =
+    {
+      buffer : buffer
+    }
+  let init buf : t = { buffer = buf }
+  let buffer t : buffer = t.buffer
+  let parse t tv : result =
+    match tv with
+    | Integer _(*FIXME should we differentiate based
+                       on this parameter?*) ->
+      (*We're being asked to parse an integer from
+        the buffer referenced by "t".*)
+      (*Look into the buffer. If there's something
+        we can parse (fully or partly) then do this.
+        If we can parse it fully, then return it.
+        Otherwise return Unavailable, and store
+        intermediate state (partial parse), so we
+        can resume when more data's in the buffer.
+        Also, try to get more data in the buffer,
+        so when the parser's scheduled next time
+        it can continue with the job.*)
+      (*NOTE rather than taking action to fill the
+             buffer and parse when we're polled,
+             we could instead have background threads
+             that pull from the resource into the buffer,
+             and other threads that pull from the buffer
+             and parse the data (possibly storing the data
+             into a second buffer), so when the parsed
+             data's needed it can be retrieved directly,
+             rather than invoke a series of actions
+             that involve an IO step each time.*)
+        if Buffer.fill_until t.buffer 1 then
+          let c = (*FIXME bad code style*)
+            Bytes.get (Buffer.read t.buffer 1) 0 in
+          if c = _ZERO then Unavailable
+          else
+            (*FIXME note that this returns a string not an integer!*)
+            Expression (Str (Char.escaped c))
+        else Unavailable
+    | _ ->
+      (*FIXME give more info*)
+      failwith "Type not supported by parser"
+  let unparse t tv e : bool =
+    failwith "TODO"
 end

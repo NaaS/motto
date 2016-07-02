@@ -162,15 +162,16 @@ module type BUFFER =
     val occupied_size : t -> int
     (*Registers a function that will be called by "fill_until". This function
       can be updated by registering a different function later on.
-      The function accepts a single parameter (the number of bytes it will
-      attempt to read from a resource (it is expected that this resource will
-      supply the function) and returns the number of bytes that it was able
-      to read. The reader deposits the read data (from the resource) into the
+      The function accepts two parameters (the offset that it will be instructed
+      to start reading from, and the number of bytes it will
+      attempt to read from a resource. It is expected that this resource will
+      supply the filler function, which returns the number of bytes that it was able
+      to read. The filler deposits the data it read (from the resource) into the
       buffer.
-      Thus the reader function is the "bridge" between the resource we're
+      Thus the filler function is the "bridge" between the resource we're
       reading from, and this buffer that we're using to store data that's
       read from a resource.*)
-    val register_reader : t -> (int -> int) -> unit
+    val register_filler : t -> (int(*start offset*) -> int(*bytes to read*) -> int(*bytes read*)) -> unit
     (*Attempts to fill the buffer until its occupied_size is as large as the
       given parameter. It can return immediately with "true" if this is already
       the case. Otherwise it will call the reader that's been registered with
@@ -182,11 +183,13 @@ module type BUFFER =
       This function fails if the parameter is greater than size, or if a reader
       function has not yet been registered (using register_reader).*)
     val fill_until : t -> int -> bool
-    (*FIXME need to add function for writing into the buffer, and have the buffer
-            written to the resource*)
+    (*FIXME need to add function for writing ("unfilling") into the resource,
+            emptying the buffer.*)
 
-    (*read given number of bytes from the buffer*)
-    val read : t -> int -> bytes
+    (*Read given number of bytes from the buffer.
+      If the buffer contains fewer bytes than requested, then
+      None is returned.*)
+    val read : t -> int -> bytes option
     (*FIXME if i'm to keep "read", then perhaps should have
             a "write" and/or "append" function too.*)
 

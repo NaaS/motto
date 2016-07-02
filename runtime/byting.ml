@@ -11,7 +11,7 @@
 open Crisp_syntax
 open Resource_types
 
-module Buffer (*FIXME sig buffer_size : int end*) : BUFFER =
+module Buffer : BUFFER =
 struct
 type t =
   {
@@ -21,7 +21,7 @@ type t =
       to read_ofs, to implement a ring buffer.*)
     write_ofs : int ref;
     read_ofs : int ref;
-    reader : (int -> int) ref;
+    filler : (int -> int -> int) ref;
   }
 
 let create ?init_value:(init_value = 0x0) size =
@@ -30,9 +30,9 @@ let create ?init_value:(init_value = 0x0) size =
     buffer = Bytes.make size (char_of_int init_value);
     write_ofs = ref 0;
     read_ofs = ref 0;
-    reader = ref (fun _ ->
+    filler = ref (fun _ ->
       (*FIXME improve error -- have custom exception?*)
-      failwith "Reader not registered with buffer")
+      failwith "Filler not registered with buffer")
   }
 
 let size t = t.buffer_size
@@ -54,12 +54,24 @@ let occupied_size t =
     size t - !(t.read_ofs) + !(t.write_ofs)
     end
 
-let register_reader t f = t.reader := f
+let register_filler t f = t.filler := f
+
+(*This function attempts to fill "no_bytes_needed" bytes from the resource
+  into the buffer. Should fewer than "no_bytes_needed" be currently available
+  from the resource, then all of them are filled up. The function returns the
+  number of bytes that it has filled.*)
+let fill t no_bytes_needed =
+  let no_bytes_read = !(t.filler) !(t.write_ofs) no_bytes_needed in
+  (*NOTE the ring buffer's write pointer is encapsulated
+         from the filler, and it's up to the buffer to update it.
+         This is done next.*)
+  t.write_ofs := no_bytes_read + !(t.write_ofs);
+  no_bytes_read
 
 let fill_until t n =
-  (*Test the reader -- have it read 0 bytes. This should result in an exception
-    if a reader hasn't been registered.*)
-  ignore(!(t.reader) 0);
+  (*Test the filler -- have it read 0 bytes. This should result in an exception
+    if a filler hasn't been registered.*)
+  ignore(!(t.filler) 0 0);
   if n > size t then
     (*FIXME give more info*)
     failwith "Read request exceeds buffer size"
@@ -75,16 +87,29 @@ let fill_until t n =
              minimum number of bytes at a time,
              which it defaults to if n < minimum.*)
      let no_bytes_needed = n - occupied_size t in
-     let no_bytes_read = !(t.reader) no_bytes_needed in
-     t.write_ofs := no_bytes_read + !(t.write_ofs);
+     (*Split into two cases, in case there's wrapping-around*)
+     let no_bytes_read =
+       if no_bytes_needed + !(t.write_ofs) < size t then
+         fill t no_bytes_needed
+       else
+         let part1_width = size t - !(t.write_ofs) in
+         let part2_width = no_bytes_needed - part1_width in
+         let part1_nobytesread = fill t part1_width in
+         let part2_nobytesread =
+           (*If fewer than part1_width bytes were filled
+             so far, then don't bother trying to fill more since
+             the resource obviously doesn't have them.*)
+           if part1_nobytesread = part1_width then
+             fill t part2_width
+           else 0 in
+         part1_nobytesread + part2_nobytesread in
      no_bytes_read = no_bytes_needed)
 
 let read t n =
   assert (n > 0);
   assert (!(t.read_ofs) <> !(t.write_ofs));
   if n > occupied_size t then
-    (*FIXME give more info*)
-    failwith "Read request exceeds occupied size"
+    None
   else
     let result =
       if !(t.read_ofs) < !(t.write_ofs) then
@@ -100,7 +125,7 @@ let read t n =
         end in
     begin
       t.read_ofs := (!(t.read_ofs) + n) mod size t;
-      result
+      Some result
     end
 
 let raw t =
@@ -112,8 +137,7 @@ let _ZERO =
   (*FIXME is this const already defined in std libraries?*)
   char_of_int 0x0;;
 
-(*FIXME this doesn't really yet parse integers?*)
-module Integer_Parser : PARSER = functor (Buffer : BUFFER) ->
+module Decimal_Digit_Parser : PARSER = functor (Buffer : BUFFER) ->
 struct
   type buffer = Buffer.t
   type t =
@@ -147,13 +171,14 @@ struct
              data's needed it can be retrieved directly,
              rather than invoke a series of actions
              that involve an IO step each time.*)
-        if Buffer.fill_until t.buffer 1 then
-          let c = (*FIXME bad code style*)
-            Bytes.get (Buffer.read t.buffer 1) 0 in
-          if c = _ZERO then Unavailable
-          else
-            (*FIXME note that this returns a string not an integer!*)
-            Expression (Str (Char.escaped c))
+        if Buffer.fill_until t.buffer 1(*need a single byte in the buffer to proceed*) then
+          match Buffer.read t.buffer 1(*read that byte we have*) with
+          | None -> Unavailable
+          | Some bytes ->
+            let c = Bytes.get bytes 0(*FIXME const*) in
+            if c = _ZERO then Unavailable
+            else
+              Expression (Int (int_of_string (Char.escaped c)))
         else Unavailable
     | _ ->
       (*FIXME give more info*)

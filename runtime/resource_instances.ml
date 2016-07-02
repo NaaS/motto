@@ -361,7 +361,7 @@ print_endline ("|rx_buffer|:" ^ string_of_int (List.length !(t.rx_buffer)));
 end
 
 (*FIXME parametrise Channel_FIFO with IntParse*)
-module IntParse = Integer_Parser (Buffer);;
+module IntParse = Decimal_Digit_Parser (Buffer);;
 module Channel_FIFO : CHANNEL =
 (*FIXME make functor to accept parser, which decides on its buffering,
         and returns an expression*)
@@ -404,19 +404,21 @@ struct
        Unix.O_RDWR;
       ] in
     t.target := s;
-    (*t.fd := Some (Unix.openfile s flags 0o600);*)
-    let fd = Unix.openfile s flags 0 in
+    (*NOTE "mode" must be 0 since we're not (expecting to be) creating the file.*)
+    let mode = 0 in
+    let fd = Unix.openfile s flags mode in
     t.fd := Some fd;
-    (fun qty ->
+    (fun offset qty ->
      try
-      Unix.read fd (Buffer.raw t.buffr) 0(*FIXME, query t each time for read offset*) qty
-      (*FIXME Update ring buffer's write pointer*)
+       Unix.read fd (Buffer.raw t.buffr) offset qty
+       (*NOTE the ring buffer's write pointer is encapsulated
+              from the filler, and it's up to the buffer to update it.*)
      with
      (*Since we're in non-blocking mode, ignore such exceptions;
        interpret them to mean that no data is currently available.*)
      | Unix.Unix_error (Unix.EAGAIN, "read", _)
      | Unix.Unix_error (Unix.EWOULDBLOCK, "read", _) -> 0)
-    |> Buffer.register_reader t.buffr;
+    |> Buffer.register_filler t.buffr;
     (*FIXME check status, and return 'false' if something's wrong*)
     true
 

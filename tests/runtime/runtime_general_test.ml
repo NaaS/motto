@@ -417,6 +417,7 @@ let _ = run [
   Eval "can chan_fifo";
   Eval "can (? chan_fifo)";
   Eval "if can (? chan_fifo): ? chan_fifo else: 0";
+  Eval "if can (? chan_fifo): ? chan_fifo else: 0";
 
   Dismiss_Resource c_fifo;
   Eval "can chan_fifo";

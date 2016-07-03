@@ -82,7 +82,7 @@ module type DICTIONARY =
   end
 
 (*FIXME how are the sizes of the TX and RX buffers specified? via "allocate"?*)
-module type CHANNEL =
+module type CHANNEL_old =
   sig
     include RESOURCE
     (*What to attach the channel to.
@@ -198,12 +198,12 @@ module type BUFFER =
     val raw : t -> bytes
   end
 
-module type PARSER = functor (Buffer : BUFFER) ->
+module type PARSER =
   sig
     type t
     (*We can be transparent about the buffer type since it's not abstract
       to the parser: it's overseen by a BUFFER module.*)
-    type buffer = Buffer.t
+    type buffer
     (*Given a buffer, we create a parser that uses it for the rest of time.
       NOTE that the buffer would have had a reader registered with it
            by the resource, so the parser can just try to pull data from
@@ -237,6 +237,50 @@ module type PARSER = functor (Buffer : BUFFER) ->
             it includes will succeed*)
     val unparse : t -> type_value -> expression -> bool
   end
+
+module type PARSER_BUILDER = functor (Buffer : BUFFER) -> PARSER with type buffer = Buffer.t
+
+module type CHANNEL =
+  sig
+    include RESOURCE
+    (*What to attach the channel to.
+      FIXME provide some facility to restrict the use of this function within
+            Flick, to prevent the program logic from modifying the channels
+            that have been assigned to it by the runtime system.
+      FIXME currently we don't provide a way of calling this function from the
+            Flick level. This could be provided via an expression such as
+            "contact" for example.*)
+    val attach_to : t -> expression -> result
+    (*What are we connected to*)
+    val attached_to : t -> result
+    (*Register "callback functions". These consists of Flick expressions that
+      are evaluated each time the corresponding event occurs.*)
+    val on_attachment : t -> expression -> unit
+    val on_detachment : t -> expression -> unit
+
+    (*This next batch of functions provides semantics for the Flick-level "can"
+      and "size" expressions.
+      NOTE that for "peek" we use the "receive" equivalents -- "can_receive"
+           or "size_receive"*)
+    val can_receive : t -> result
+    val size_receive : t -> result
+    val can_send : t -> result
+    val size_send : t -> result
+
+    (*These functions provide semantics for the basic channel operators*)
+    val peek : t -> result
+    val receive : t -> result
+    val send : t -> expression -> result
+(*
+NOTE for better performance we could batch "receive" and "send" requests and
+     use functions such as those below, but this doesn't seem needed at the moment:
+    val receive : t -> int -> result list
+    val send : t -> expression list -> result
+*)
+  end
+
+(*FIXME how are the sizes of the TX and RX buffers specified? via "allocate"?*)
+module type CHANNEL_BUILDER = functor (Parser_Fun : PARSER_BUILDER) (RX_Buffer : BUFFER) -> CHANNEL
 
 (*Bindings with functions executed externally.
   FIXME consider using this to abstract contents of front-end/functions.ml*)

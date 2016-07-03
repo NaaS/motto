@@ -137,7 +137,7 @@ let _ZERO =
   (*FIXME is this const already defined in std libraries?*)
   char_of_int 0x0;;
 
-module Decimal_Digit_Parser : PARSER = functor (Buffer : BUFFER) ->
+module Decimal_Digit_Parser : PARSER_BUILDER = functor (Buffer : BUFFER) ->
 struct
   type buffer = Buffer.t
   type t =

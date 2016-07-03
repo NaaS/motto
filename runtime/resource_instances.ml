@@ -128,7 +128,7 @@ let _ZERO =
   (*FIXME is this const already defined in std libraries?*)
   char_of_int 0x0;;
 
-module Channel_FIFO_old : CHANNEL =
+module Channel_FIFO_old : CHANNEL_old =
 (*FIXME make functor to accept parser, which decides on its buffering,
         and returns an expression*)
 struct
@@ -360,12 +360,14 @@ print_endline ("|rx_buffer|:" ^ string_of_int (List.length !(t.rx_buffer)));
     failwith "TODO"
 end
 
-(*FIXME parametrise Channel_FIFO with IntParse*)
-module IntParse = Decimal_Digit_Parser (Buffer);;
-module Channel_FIFO : CHANNEL =
-(*FIXME make functor to accept parser, which decides on its buffering,
-        and returns an expression*)
+(*Channel accepts a parser, which decides on its buffering,
+  and returns an expression when one's received on the channel.*)
+(*FIXME would be neater if RX_Buffer was already encapsulated inside Parser, rather
+        then have the Channel build the parser (by applying Parser_Fun to RX_Buffer).*)
+module Channel_FIFO_Builder : CHANNEL_BUILDER = functor (Parser_Fun : PARSER_BUILDER) (RX_Buffer : BUFFER) ->
 struct
+  module Parser = Parser_Fun (RX_Buffer)
+
   type t = {
     target : string ref;
     fd : Unix.file_descr option ref;
@@ -374,20 +376,20 @@ struct
     on_attach : expression ref;
     on_detach : expression ref;
 
-    buffr : Buffer.t;
-    parsr : IntParse.t;
+    buffr : RX_Buffer.t;
+    parsr : Parser.t;
   }
 
   let allocate n_opt =
     assert (n_opt = None);
-    let buffr = Buffer.create 200(*FIXME const*) in
+    let buffr = RX_Buffer.create 200(*FIXME const*) in
     {
       target = ref "";
       fd = ref None;
       on_attach = ref flick_unit_value;
       on_detach = ref flick_unit_value;
       buffr = buffr;
-      parsr = IntParse.init buffr;
+      parsr = Parser.init buffr;
     }
 
   let initialise t (Some s) =
@@ -410,7 +412,7 @@ struct
     t.fd := Some fd;
     (fun offset qty ->
      try
-       Unix.read fd (Buffer.raw t.buffr) offset qty
+       Unix.read fd (RX_Buffer.raw t.buffr) offset qty
        (*NOTE the ring buffer's write pointer is encapsulated
               from the filler, and it's up to the buffer to update it.*)
      with
@@ -418,7 +420,7 @@ struct
        interpret them to mean that no data is currently available.*)
      | Unix.Unix_error (Unix.EAGAIN, "read", _)
      | Unix.Unix_error (Unix.EWOULDBLOCK, "read", _) -> 0)
-    |> Buffer.register_filler t.buffr;
+    |> RX_Buffer.register_filler t.buffr;
     (*FIXME check status, and return 'false' if something's wrong*)
     true
 
@@ -463,9 +465,9 @@ struct
 
   let can_receive t =
     assert (!(t.fd) <> None);
-    Buffer.fill_until t.buffr (Buffer.size t.buffr);
-print_endline ("|rx_buffer|:" ^ string_of_int (Buffer.size t.buffr));
-print_endline ("!rx_buffer!:" ^ string_of_int (Buffer.occupied_size t.buffr));
+    RX_Buffer.fill_until t.buffr (RX_Buffer.size t.buffr);
+print_endline ("|rx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
 
     (*FIXME check type of channel -- can we receive on it?*)
     (*FIXME check waiting contents of channel -- is there anything waiting to be read?*)
@@ -473,7 +475,7 @@ print_endline ("!rx_buffer!:" ^ string_of_int (Buffer.occupied_size t.buffr));
      ((*FIXME there might not be sufficient data
               for the parser to operate on, so we
               should instead query the parser about this*)
-      Buffer.occupied_size t.buffr > 0
+      RX_Buffer.occupied_size t.buffr > 0
       |> Crisp_syntax_aux.lift_bool)
 
   let size_receive t =
@@ -484,7 +486,7 @@ print_endline ("!rx_buffer!:" ^ string_of_int (Buffer.occupied_size t.buffr));
       (*FIXME there might not be sufficient data
               for the parser to operate on, so we
               should instead query the parser about this*)
-      Buffer.occupied_size t.buffr in
+      RX_Buffer.occupied_size t.buffr in
     Expression (Int size)
 
   let can_send t =
@@ -501,13 +503,15 @@ print_endline ("!rx_buffer!:" ^ string_of_int (Buffer.occupied_size t.buffr));
 
   let receive t =
     assert (!(t.fd) <> None);
-    IntParse.parse t.parsr
+    Parser.parse t.parsr
      (Integer (None, Crisp_type_annotation.empty_type_annotation))
 
   let send t e =
     assert (!(t.fd) <> None);
     failwith "TODO"
 end
+
+module Channel_FIFO = Channel_FIFO_Builder (Decimal_Digit_Parser) (Buffer);;
 
 (*
 (*This is an example of using channels as an interface for asynchronous

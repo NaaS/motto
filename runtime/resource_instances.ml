@@ -362,8 +362,6 @@ end
 
 (*Channel accepts a parser, which decides on its buffering,
   and returns an expression when one's received on the channel.*)
-(*FIXME would be neater if RX_Buffer was already encapsulated inside Parser, rather
-        then have the Channel build the parser (by applying Parser_Fun to RX_Buffer).*)
 module Channel_FIFO_Builder : CHANNEL_BUILDER = functor (Parser_Fun : PARSER_BUILDER) (RX_Buffer : BUFFER) ->
 struct
   module Parser = Parser_Fun (RX_Buffer)

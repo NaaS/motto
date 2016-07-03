@@ -213,6 +213,22 @@ module type PARSER =
       FIXME not sure this is needed, since we probably don't want something
             else messing with our buffer*)
     val buffer : t -> buffer
+
+(*NOTE i tried encapsulating a BUFFER inside a PARSER to redefine CHANNEL_BUILDER as
+    module type CHANNEL_BUILDER = functor (Parser : PARSER) -> CHANNEL
+instead of
+    module type CHANNEL_BUILDER = functor (Parser_Fun : PARSER_BUILDER) (RX_Buffer : BUFFER) -> CHANNEL
+I'd then have PARSER expose
+    val rx_buffer_module : (module BUFFER)
+which is implemented as
+    let rx_buffer_module = (module Buffer : BUFFER)
+and have
+    module RX_Buffer = (val Parser.rx_buffer_module : BUFFER)
+in instances of CHANNEL_BUILDER. But OCaml complained:
+Error: This expression creates fresh types.
+       It is not allowed inside applicative functors.
+*)
+
     (*Parsing involves engaging with the buffer to ensure it contains
       the least amount of data we need in order to interpret (parse) it and
       decide whether it constitutes a result (in which case return it, introducing
@@ -238,6 +254,7 @@ module type PARSER =
     val unparse : t -> type_value -> expression -> bool
   end
 
+(*FIXME how are the sizes of the TX and RX buffers specified? via "allocate"?*)
 module type PARSER_BUILDER = functor (Buffer : BUFFER) -> PARSER with type buffer = Buffer.t
 
 module type CHANNEL =
@@ -279,7 +296,8 @@ NOTE for better performance we could batch "receive" and "send" requests and
 *)
   end
 
-(*FIXME how are the sizes of the TX and RX buffers specified? via "allocate"?*)
+(*FIXME should the channel influence the sizes/dynamics of TX/RX buffers used by the parser?
+        how are the sizes of the TX and RX buffers specified? via "allocate"?*)
 module type CHANNEL_BUILDER = functor (Parser_Fun : PARSER_BUILDER) (RX_Buffer : BUFFER) -> CHANNEL
 
 (*Bindings with functions executed externally.

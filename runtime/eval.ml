@@ -1014,8 +1014,13 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
               (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
           (return_eval v, ctxt')
           end
-        | Resource (Channel_resource r) ->
-          failwith "TODO"
+        | Resource (Channel_resource (module R : CHANNEL_Instance)) ->
+          match R.Channel.size_receive R.state with
+          | Expression e -> return_eval e, ctxt
+          | Unavailable -> retry e, ctxt
+          | Error s ->
+            (*FIXME use separate exception type*)
+            failwith ("External channel error: " ^ s)
         end
 
       | _ -> failwith "TODO"

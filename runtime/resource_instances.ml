@@ -478,6 +478,9 @@ print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr))
 
   let size_receive t =
     assert (!(t.fd) <> None);
+    RX_Buffer.fill_until t.buffr (RX_Buffer.size t.buffr);
+print_endline ("|rx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
     (*FIXME check type of channel -- if we cannot receive on it, then "size" is -1*)
     (*FIXME check waiting contents of channel -- is there anything waiting to be read?*)
     let size =

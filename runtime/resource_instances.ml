@@ -409,6 +409,7 @@ struct
     let fd = Unix.openfile s flags mode in
     t.fd := Some fd;
     (fun raw_buffer offset qty ->
+     (*FIXME check that qty <= buffer size.*)
      try
        Unix.read fd raw_buffer offset qty
        (*NOTE the ring buffer's write pointer is encapsulated

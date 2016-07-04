@@ -182,16 +182,55 @@ module type BUFFER =
       buffer) expires.
       This function fails if the parameter is greater than size, or if a reader
       function has not yet been registered (using register_reader).*)
+    (*FIXME register_unfiller?*)
     val fill_until : t -> int -> bool
     (*FIXME need to add function for writing ("unfilling") into the resource,
             emptying the buffer.*)
 
     (*Read given number of bytes from the buffer.
       If the buffer contains fewer bytes than requested, then
-      None is returned.*)
+      None is returned. Otherwise the read pointer is incremented (modulo size)
+      by that number of bytes.*)
     val read : t -> int -> bytes option
-    (*FIXME if i'm to keep "read", then perhaps should have
-            a "write" and/or "append" function too.*)
+(* NOTE original idea for providing the "write" API function:
+    (*Obtain the next unused segment of the buffer, to which a given number of
+      bytes can be written to.
+      If the buffer contains fewer free bytes than requested, then
+      None is returned. Otherwise the write pointer is incremented (modulo size)
+      by that number of bytes.*)
+    val write : t -> int -> bytes option
+
+   I discarded this idea because it seemed wasteful: why get a sequence of bytes
+   from the original buffer, when those bytes will most likely be overwritten?
+   Also, where is the sequence of bytes to be stored until it's used to overwrite
+   those in the buffer?
+   It seems best to have direct access to the buffer, and this is provided
+   via the *_mod functions below.
+   I didn't include the function
+    val write_bytes : t -> int -> bytes -> bool
+   since the user would need to allocate the "bytes"-typed parameter in order
+   to give it to the buffer, and I want to avoid such ephemeral allocations.
+*)
+
+    (*These functions read and write to a given offset (modulo size) of the
+      buffer, starting from the write pointer of the ring buffer.
+     "write_byte_mod" updates a specific offset of the buffer (modulo size),
+       starting at the write pointer. It returns false if we cannot write at
+       that location (because unread data resides there).
+     "read_byte_mod" reads a specific offset of the buffer (modulo size).
+       starting at the write pointer.
+       NOTE it works wrt te write pointer, not the read pointer -- i.e, it reads
+            data that's already been written in the past.
+     "effect_write_byte_mod" moves the write pointer by a given quantity (mod size).
+
+      NOTE working modulo-size can be convenient when reading/writing in a loop,
+           but the user needs to ensure that they don't keep wrapping around the
+           buffer, since that's unlikely to be of any benefit.
+      Could use these as function(s) that mutate the buffer directly, by
+      partially-applying them to the "t"-typed parameter.*)
+    val read_byte_mod : t -> int -> char option
+    val write_byte_mod : t -> int -> char -> bool
+    val effect_write_byte_mod : t -> int -> bool
   end
 
 module type PARSER =

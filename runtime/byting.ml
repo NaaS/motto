@@ -127,6 +127,73 @@ let read t n =
       t.read_ofs := (!(t.read_ofs) + n) mod size t;
       Some result
     end
+
+(*Lifts a write-related function to work modulo the size of a buffer (and taking
+  into account the read_ofs). It's also given a paired function that's called
+  when the lifting cannot succeed. This occurs when the write_ofs would overlap
+  with read_ofs.
+  "lift_mod" raises exceptions when the offset it's given is obviously wrong --
+  way out of range.*)
+let lift_mod t offset
+ (can : t -> int(*offset*) -> 'a)
+ (cannot : t -> int(*offset*) -> 'a) : 'a =
+  assert (offset >= 0);
+  (*Check that the requested offset doesn't overlap with bytes in read_ofs*)
+  if !(t.write_ofs) = !(t.read_ofs) then
+    (*We can read any byte, since none's there for reading.*)
+    can t offset
+  else if !(t.write_ofs) < !(t.read_ofs) then
+    (*write_ofs shouldn't extend beyond read_ofs*)
+    if !(t.write_ofs) + offset < !(t.read_ofs) then
+      can t offset
+    else
+      (*We don't raise an exception in this case since the problem seems
+        tolerable: the user is not doing something very wrong, such as trying to
+        write more data than the whole buffer can take.*)
+      cannot t offset
+  else
+    begin
+    assert (!(t.write_ofs) > !(t.read_ofs));
+    if offset >= size t then
+      (*if wrap more than once, then we have a fail*)
+      (*FIXME give more info*)
+      failwith "The offset exceeds the buffer's size"
+    else
+      if !(t.write_ofs) + offset < size t then
+        (*if wrap zero times, then write_ofs must stay bigger (modulo size) then read_ofs*)
+        if !(t.write_ofs) + offset > !(t.read_ofs) then
+          can t offset
+        else
+          (*We don't raise an exception in this case since the problem seems
+            tolerable: the user is not doing something very wrong, such as
+            trying to write more data than the whole buffer can take.*)
+          cannot t offset
+      else if !(t.write_ofs) + offset mod size t >= !(t.read_ofs) then
+        (*if we wrap once (the only option left), then write_ofs must be
+          smaller (modulo size) than read_ofs*)
+        cannot t offset
+     else can t offset
+    end
+
+let read_byte_mod t offset : char option =
+  let can t offset : char option =
+    Some (Bytes.get t.buffer ((!(t.write_ofs) + offset) mod size t)) in
+  let cannot _ _ : char option = None in
+  lift_mod t offset can cannot
+
+let write_byte_mod t offset byte : bool =
+  let can t offset : bool =
+    Bytes.set t.buffer ((!(t.write_ofs) + offset) mod size t) byte;
+    true in
+  let cannot _ _ : bool = false in
+  lift_mod t offset can cannot
+
+let effect_write_byte_mod t length : bool =
+  let can t offset : bool =
+    t.write_ofs := (!(t.write_ofs) + offset) mod size t;
+    true in
+  let cannot _ _ : bool = false in
+  lift_mod t length can cannot
 end
 
 let _ZERO =
@@ -187,6 +254,26 @@ struct
     | _ ->
       (*FIXME give more info*)
       failwith "Type not supported by parser"
+
   let unparse t tv e : bool =
-    failwith "TODO"
+    match tv with
+    | Integer _(*FIXME should we differentiate based
+                       on this parameter?*) ->
+      (*We're being asked to emit an integer to
+        the buffer referenced by "t".*)
+      begin
+      match e with
+      | Int n ->
+        assert (0 <= n && n <= 9);
+        (*Ensure there's enough free space in the buffer so we can write to it.*)
+        if Buffer.size t.buffer - Buffer.occupied_size t.buffer < space_needed then false
+        else
+          let s = string_of_int n in
+          if Buffer.write_byte_mod t.buffer 0 s.[0] then
+            Buffer.effect_write_byte_mod t.buffer space_needed
+          else false
+      end
+    | _ ->
+      (*FIXME give more info*)
+      failwith "Type not supported by parser"
 end

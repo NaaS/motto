@@ -171,7 +171,7 @@ module type BUFFER =
       Thus the filler function is the "bridge" between the resource we're
       reading from, and this buffer that we're using to store data that's
       read from a resource.*)
-    val register_filler : t -> (int(*start offset*) -> int(*bytes to read*) -> int(*bytes read*)) -> unit
+    val register_filler : t -> (bytes -> int(*start offset*) -> int(*bytes to read*) -> int(*bytes read*)) -> unit
     (*Attempts to fill the buffer until its occupied_size is as large as the
       given parameter. It can return immediately with "true" if this is already
       the case. Otherwise it will call the reader that's been registered with
@@ -192,10 +192,6 @@ module type BUFFER =
     val read : t -> int -> bytes option
     (*FIXME if i'm to keep "read", then perhaps should have
             a "write" and/or "append" function too.*)
-
-    (*Expose the buffer as bytes.
-      NOTE the actual buffer should be exposed, not a copy*)
-    val raw : t -> bytes
   end
 
 module type PARSER =

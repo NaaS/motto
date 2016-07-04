@@ -408,9 +408,9 @@ struct
     let mode = 0 in
     let fd = Unix.openfile s flags mode in
     t.fd := Some fd;
-    (fun offset qty ->
+    (fun raw_buffer offset qty ->
      try
-       Unix.read fd (RX_Buffer.raw t.buffr) offset qty
+       Unix.read fd raw_buffer offset qty
        (*NOTE the ring buffer's write pointer is encapsulated
               from the filler, and it's up to the buffer to update it.*)
      with

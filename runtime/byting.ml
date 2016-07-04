@@ -21,7 +21,7 @@ type t =
       to read_ofs, to implement a ring buffer.*)
     write_ofs : int ref;
     read_ofs : int ref;
-    filler : (int -> int -> int) ref;
+    filler : (bytes -> int -> int -> int) ref;
   }
 
 let create ?init_value:(init_value = 0x0) size =
@@ -61,7 +61,7 @@ let register_filler t f = t.filler := f
   from the resource, then all of them are filled up. The function returns the
   number of bytes that it has filled.*)
 let fill t no_bytes_needed =
-  let no_bytes_read = !(t.filler) !(t.write_ofs) no_bytes_needed in
+  let no_bytes_read = !(t.filler) t.buffer !(t.write_ofs) no_bytes_needed in
   (*NOTE the ring buffer's write pointer is encapsulated
          from the filler, and it's up to the buffer to update it.
          This is done next.*)
@@ -71,7 +71,7 @@ let fill t no_bytes_needed =
 let fill_until t n =
   (*Test the filler -- have it read 0 bytes. This should result in an exception
     if a filler hasn't been registered.*)
-  ignore(!(t.filler) 0 0);
+  ignore(!(t.filler) t.buffer 0 0);
   if n > size t then
     (*FIXME give more info*)
     failwith "Read request exceeds buffer size"
@@ -127,16 +127,13 @@ let read t n =
       t.read_ofs := (!(t.read_ofs) + n) mod size t;
       Some result
     end
-
-let raw t =
-  (*FIXME ensure we don't get a copy of the buffer.*)
-  t.buffer
 end
 
 let _ZERO =
   (*FIXME is this const already defined in std libraries?*)
   char_of_int 0x0;;
 
+(*Character-encoded decimals*)
 module Decimal_Digit_Parser : PARSER_BUILDER = functor (Buffer : BUFFER) ->
 struct
   type buffer = Buffer.t
@@ -146,6 +143,11 @@ struct
     }
   let init buf : t = { buffer = buf }
   let buffer t : buffer = t.buffer
+  (*Bytes needed in a buffer in order to be able to
+    parse an entity.
+    Also, space needed in a buffer in order to unparse
+    an expression into it.*)
+  let space_needed = 1
   let parse t tv : result =
     match tv with
     | Integer _(*FIXME should we differentiate based
@@ -171,11 +173,13 @@ struct
              data's needed it can be retrieved directly,
              rather than invoke a series of actions
              that involve an IO step each time.*)
-        if Buffer.fill_until t.buffer 1(*need a single byte in the buffer to proceed*) then
-          match Buffer.read t.buffer 1(*read that byte we have*) with
+        if Buffer.fill_until t.buffer space_needed(*need a single byte in the buffer to proceed*) then
+          match Buffer.read t.buffer space_needed(*read that byte we have*) with
           | None -> Unavailable
           | Some bytes ->
-            let c = Bytes.get bytes 0(*FIXME const*) in
+            let c =
+              (*Read the first and only byte*)
+              Bytes.get bytes 0 in
             if c = _ZERO then Unavailable
             else
               Expression (Int (int_of_string (Char.escaped c)))

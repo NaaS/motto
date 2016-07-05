@@ -329,9 +329,16 @@ module type CHANNEL =
       and "size" expressions.
       NOTE that for "peek" we use the "receive" equivalents -- "can_receive"
            or "size_receive"*)
+    (*Check if at least one parsed unit can be obtained from the channel*)
     val can_receive : t -> result
+    (*Check how many parsed units can be obtained from the channel*)
     val size_receive : t -> result
+    (*Check if at least one unparsed unit can be buffered to be sent over the channel.
+      i.e., we don't check whether the channel can immediately carry the unit.
+      FIXME should this be specific to specific units of data?
+            e.g., buffering a small packet will take less space than a larger packet.*)
     val can_send : t -> result
+    (*Check how many unparsed units of data can be buffered for transmission.*)
     val size_send : t -> result
 
     (*These functions provide semantics for the basic channel operators*)

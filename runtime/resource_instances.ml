@@ -486,24 +486,6 @@ struct
 *)
     t.on_detach := e
 
-  let can_receive t =
-    assert (!(t.fd) <> None);
-    RX_Buffer.fill_until t.buffr (RX_Buffer.size t.buffr);
-    if !Config.cfg.Config.verbosity > 1 then
-    begin
-      print_endline ("|rx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
-      print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
-    end;
-
-    (*FIXME check type of channel -- can we receive on it?*)
-    (*FIXME check waiting contents of channel -- is there anything waiting to be read?*)
-    Expression
-     ((*FIXME there might not be sufficient data
-              for the parser to operate on, so we
-              should instead query the parser about this*)
-      RX_Buffer.occupied_size t.buffr > 0
-      |> Crisp_syntax_aux.lift_bool)
-
   let size_receive t =
     assert (!(t.fd) <> None);
     RX_Buffer.fill_until t.buffr (RX_Buffer.size t.buffr);
@@ -516,11 +498,22 @@ struct
     (*FIXME check type of channel -- if we cannot receive on it, then "size" is -1*)
     (*FIXME check waiting contents of channel -- is there anything waiting to be read?*)
     let size =
-      (*FIXME there might not be sufficient data
-              for the parser to operate on, so we
-              should instead query the parser about this*)
+      (*FIXME This currently is inconrrect since it returns the number of bytes
+              in the buffer used by the parser, but it should return the number
+              of units that can be parsed from those bytes.
+              Indeed the bytes in the buffer might not be sufficient for the
+              parser to operate on, so we should instead query the parser about
+              this.*)
       RX_Buffer.occupied_size t.buffr in
     Expression (Int size)
+
+  let can_receive t =
+    (*NOTE there could be a cheaper way to implement this, since "size" will
+           cause the parser to parse all available data, whereas "can" only
+           cares if we can returned one parsed unit of data.*)
+    match size_receive t with
+    | Expression (Int n) -> Expression (Crisp_syntax_aux.lift_bool (n > 0))
+    | r -> r
 
   let can_send t =
     assert (!(t.fd) <> None);

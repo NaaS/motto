@@ -172,6 +172,9 @@ module type BUFFER =
       reading from, and this buffer that we're using to store data that's
       read from a resource.*)
     val register_filler : t -> (bytes -> int(*start offset*) -> int(*bytes to read*) -> int(*bytes read*)) -> unit
+    (*An unfiller writes data from the buffer to the resource -- the opposite
+      direction to the filler function.*)
+    val register_unfiller : t -> (bytes -> int(*start offset*) -> int(*bytes to read*) -> int(*bytes read*)) -> unit
     (*Attempts to fill the buffer until its occupied_size is as large as the
       given parameter. It can return immediately with "true" if this is already
       the case. Otherwise it will call the reader that's been registered with
@@ -182,10 +185,10 @@ module type BUFFER =
       buffer) expires.
       This function fails if the parameter is greater than size, or if a reader
       function has not yet been registered (using register_reader).*)
-    (*FIXME register_unfiller?*)
     val fill_until : t -> int -> bool
-    (*FIXME need to add function for writing ("unfilling") into the resource,
-            emptying the buffer.*)
+    (*unfill_until (commonly called "flush") calls the unfilling function to
+      copy data from the buffer into the resource to which it's associated.*)
+    val unfill_until : t -> int -> bool
 
     (*Read given number of bytes from the buffer.
       If the buffer contains fewer bytes than requested, then

@@ -22,6 +22,7 @@ type t =
     write_ofs : int ref;
     read_ofs : int ref;
     filler : (bytes -> int -> int -> int) ref;
+    unfiller : (bytes -> int -> int -> int) ref;
   }
 
 let create ?init_value:(init_value = 0x0) size =
@@ -32,7 +33,10 @@ let create ?init_value:(init_value = 0x0) size =
     read_ofs = ref 0;
     filler = ref (fun _ ->
       (*FIXME improve error -- have custom exception?*)
-      failwith "Filler not registered with buffer")
+      failwith "Filler not registered with buffer");
+    unfiller = ref (fun _ ->
+      (*FIXME improve error -- have custom exception?*)
+      failwith "Unfiller not registered with buffer");
   }
 
 let size t = t.buffer_size
@@ -55,6 +59,7 @@ let occupied_size t =
     end
 
 let register_filler t f = t.filler := f
+let register_unfiller t f = t.unfiller := f
 
 (*This function attempts to fill "no_bytes_needed" bytes from the resource
   into the buffer. Should fewer than "no_bytes_needed" be currently available
@@ -68,13 +73,24 @@ let fill t no_bytes_needed =
   t.write_ofs := no_bytes_read + !(t.write_ofs);
   no_bytes_read
 
+(*Like "fill", but in the opposite direction: attempts to take bytes from the
+  buffer and write it to the resource.
+  NOTE this advances the read_ofs, since it's reading from the buffer.*)
+let unfill t no_bytes_needed =
+  let no_bytes_written = !(t.unfiller) t.buffer !(t.read_ofs) no_bytes_needed in
+  (*NOTE the ring buffer's read pointer is encapsulated
+         from the unfiller, and it's up to the buffer to update it.
+         This is done next.*)
+  t.read_ofs := no_bytes_written + !(t.read_ofs);
+  no_bytes_written
+
 let fill_until t n =
   (*Test the filler -- have it read 0 bytes. This should result in an exception
     if a filler hasn't been registered.*)
   ignore(!(t.filler) t.buffer 0 0);
   if n > size t then
     (*FIXME give more info*)
-    failwith "Read request exceeds buffer size"
+    failwith "Fill request exceeds buffer size"
   else
     (*We're done if we've got at least n bytes in
       the buffer*)
@@ -98,12 +114,52 @@ let fill_until t n =
          let part2_nobytesread =
            (*If fewer than part1_width bytes were filled
              so far, then don't bother trying to fill more since
-             the resource obviously doesn't have them.*)
+             the resource evidently doesn't have them.*)
            if part1_nobytesread = part1_width then
              fill t part2_width
            else 0 in
          part1_nobytesread + part2_nobytesread in
      no_bytes_read = no_bytes_needed)
+
+(*Try to flush n bytes from the buffer. Returns "true" if there are n free
+  (i.e., writeable by the client) bytes in the buffer, otherwise it tries to
+  unfill bytes to the resource, to free up space for the client to use.*)
+let unfill_until t n =
+  (*Test the unfiller -- have it read 0 bytes. This should result in an exception
+    if an unfiller hasn't been registered.*)
+  ignore(!(t.unfiller) t.buffer 0 0);
+  if n > size t then
+    (*FIXME give more info*)
+    failwith "Unfill request exceeds buffer size"
+  else
+    (*We're done if we've got at least n bytes in
+      the buffer*)
+    (n <= size t - occupied_size t ||
+     (*Try to write (to the resource) as many bytes as we need to get
+       the desired free space.
+       FIXME in case the granularity of the writes
+             is too fine, we could additionally
+             specify that an unfill tries to write a
+             minimum number of bytes at a time,
+             which it defaults to if n < minimum.*)
+     let no_bytes_needed = n - (size t - occupied_size t) in
+     (*Split into two cases, in case there's wrapping-around*)
+     let no_bytes_written =
+       if no_bytes_needed + !(t.read_ofs) < size t then
+         unfill t no_bytes_needed
+       else
+         let part1_width = size t - !(t.read_ofs) in
+         let part2_width = no_bytes_needed - part1_width in
+         let part1_nobyteswrit = unfill t part1_width in
+         let part2_nobyteswrit =
+           (*If fewer than part1_width bytes were unfilled
+             so far, then don't bother trying to unfill more since
+             the resource evidently cannot take them.*)
+           if part1_nobyteswrit = part1_width then
+             unfill t part2_width
+           else 0 in
+         part1_nobyteswrit + part2_nobyteswrit in
+     no_bytes_written = no_bytes_needed)
 
 let read t n =
   assert (n > 0);

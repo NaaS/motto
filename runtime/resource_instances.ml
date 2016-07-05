@@ -420,6 +420,15 @@ struct
      | Unix.Unix_error (Unix.EAGAIN, "read", _)
      | Unix.Unix_error (Unix.EWOULDBLOCK, "read", _) -> 0)
     |> RX_Buffer.register_filler t.buffr;
+
+    (fun raw_buffer offset qty ->
+     (*FIXME check that qty <= buffer size.*)
+       Unix.write fd raw_buffer offset qty
+       (*NOTE the ring buffer's write pointer is encapsulated
+              from the filler, and it's up to the buffer to update it.*)
+)
+    |> RX_Buffer.register_unfiller t.buffr; (*FIXME should be in TX_Buffer?*)
+
     (*FIXME check status, and return 'false' if something's wrong*)
     true
 
@@ -510,7 +519,19 @@ print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr))
 
   let send t e =
     assert (!(t.fd) <> None);
-    failwith "TODO"
+    (*FIXME improve code style*)
+    let result =
+    if Parser.unparse t.parsr
+       (Integer (None, Crisp_type_annotation.empty_type_annotation)) e then
+    Expression e else Unavailable in
+print_endline ("|tx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+print_endline ("!tx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    (*FIXME rather than doing this here, we could have another entity in the eval-monad
+            that takes care of doing some IO whenever it's scheduled.*)
+    RX_Buffer.unfill_until t.buffr (RX_Buffer.size t.buffr);
+print_endline ("|tx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+print_endline ("!tx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    result
 end
 
 module Channel_FIFO = Channel_FIFO_Builder (Decimal_Digit_Parser) (Buffer);;

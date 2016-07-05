@@ -353,6 +353,25 @@ NOTE for better performance we could batch "receive" and "send" requests and
 *)
   end
 
+(*
+NOTE idea for improved CHANNEL_BUILDER spec, where a channel accepts separate
+     buffers and parsers for either direction.
+     FIXME What happens if the channel is unidirectional?
+
+module type CHANNEL_CONFIG =
+  sig
+    module RX_Parser_Fun : PARSER_BUILDER
+    module RX_Config : BUFFER_CONFIG
+    module RX_Buffer : BUFFER
+
+    module TX_Parser_Fun : PARSER_BUILDER
+    module TX_Config : BUFFER_CONFIG
+    module TX_Buffer : BUFFER
+  end
+
+module type CHANNEL_BUILDER = functor CHANNEL_CONFIG -> CHANNEL
+*)
+
 module type CHANNEL_BUILDER = functor (Parser_Fun : PARSER_BUILDER)
  (Config : BUFFER_CONFIG)
  (RX_Buffer : BUFFER) -> CHANNEL

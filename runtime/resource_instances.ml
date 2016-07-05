@@ -411,7 +411,7 @@ struct
     let fd = Unix.openfile s flags mode in
     t.fd := Some fd;
     (fun raw_buffer offset qty ->
-     (*FIXME check that qty <= buffer size.*)
+     assert (qty <= Config.buffer_size);
      try
        Unix.read fd raw_buffer offset qty
        (*NOTE the ring buffer's write pointer is encapsulated
@@ -424,7 +424,7 @@ struct
     |> RX_Buffer.register_filler t.buffr;
 
     (fun raw_buffer offset qty ->
-     (*FIXME check that qty <= buffer size.*)
+     assert (qty <= Config.buffer_size);
        Unix.write fd raw_buffer offset qty
        (*NOTE the ring buffer's write pointer is encapsulated
               from the filler, and it's up to the buffer to update it.*)

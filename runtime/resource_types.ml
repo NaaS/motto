@@ -292,8 +292,13 @@ Error: This expression creates fresh types.
     val unparse : t -> type_value -> expression -> bool
   end
 
-(*FIXME how are the sizes of the TX and RX buffers specified? via "allocate"?*)
-module type PARSER_BUILDER = functor (Buffer : BUFFER) -> PARSER with type buffer = Buffer.t
+module type BUFFER_CONFIG =
+  sig
+    val buffer_size : int
+  end
+
+module type PARSER_BUILDER = functor (Buffer : BUFFER)
+  (Config : BUFFER_CONFIG) -> PARSER with type buffer = Buffer.t
 
 module type CHANNEL =
   sig
@@ -334,9 +339,9 @@ NOTE for better performance we could batch "receive" and "send" requests and
 *)
   end
 
-(*FIXME should the channel influence the sizes/dynamics of TX/RX buffers used by the parser?
-        how are the sizes of the TX and RX buffers specified? via "allocate"?*)
-module type CHANNEL_BUILDER = functor (Parser_Fun : PARSER_BUILDER) (RX_Buffer : BUFFER) -> CHANNEL
+module type CHANNEL_BUILDER = functor (Parser_Fun : PARSER_BUILDER)
+ (Config : BUFFER_CONFIG)
+ (RX_Buffer : BUFFER) -> CHANNEL
 
 (*Bindings with functions executed externally.
   FIXME consider using this to abstract contents of front-end/functions.ml*)

@@ -362,10 +362,12 @@ end
 
 (*Channel accepts a parser, which decides on its buffering,
   and returns an expression when one's received on the channel.*)
-module Channel_FIFO_Builder : CHANNEL_BUILDER = functor (Parser_Fun : PARSER_BUILDER) (RX_Buffer : BUFFER) ->
+module Channel_FIFO_Builder : CHANNEL_BUILDER =
+ functor (Parser_Fun : PARSER_BUILDER)
+ (Config : BUFFER_CONFIG)
+ (RX_Buffer : BUFFER) ->
 struct
-  module Parser = Parser_Fun (RX_Buffer)
-
+  module Parser = Parser_Fun (RX_Buffer) (Config)
   type t = {
     target : string ref;
     fd : Unix.file_descr option ref;
@@ -380,7 +382,7 @@ struct
 
   let allocate n_opt =
     assert (n_opt = None);
-    let buffr = RX_Buffer.create 200(*FIXME const*) in
+    let buffr = RX_Buffer.create Config.buffer_size in
     {
       target = ref "";
       fd = ref None;
@@ -534,7 +536,10 @@ print_endline ("!tx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr))
     result
 end
 
-module Channel_FIFO = Channel_FIFO_Builder (Decimal_Digit_Parser) (Buffer);;
+module Channel_FIFO =
+  Channel_FIFO_Builder (Decimal_Digit_Parser)
+  (struct let buffer_size = 200 end)
+  (Buffer);;
 
 (*
 (*This is an example of using channels as an interface for asynchronous

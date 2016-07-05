@@ -257,7 +257,8 @@ let _ZERO =
   char_of_int 0x0;;
 
 (*Character-encoded decimals*)
-module Decimal_Digit_Parser : PARSER_BUILDER = functor (Buffer : BUFFER) ->
+module Decimal_Digit_Parser : PARSER_BUILDER = functor (Buffer : BUFFER)
+  (Config : BUFFER_CONFIG) ->
 struct
   type buffer = Buffer.t
   type t =

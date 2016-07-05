@@ -193,8 +193,10 @@ module type BUFFER =
     (*Read given number of bytes from the buffer.
       If the buffer contains fewer bytes than requested, then
       None is returned. Otherwise the read pointer is incremented (modulo size)
-      by that number of bytes.*)
-    val read : t -> int -> bytes option
+      by that number of bytes.
+      A "read" can be turned into a "peek" by setting peek:true.
+    *)
+    val read : ?peek:bool -> t -> int -> bytes option
 (* NOTE original idea for providing the "write" API function:
     (*Obtain the next unused segment of the buffer, to which a given number of
       bytes can be written to.
@@ -272,8 +274,13 @@ Error: This expression creates fresh types.
       decide whether it constitutes a result (in which case return it, introducing
       it into the Flick world), or continue parsing. In that case, we return
       Unavailable to signal that we had our go, and will continue when we're
-      rescheduled later.*)
-    val parse : t -> type_value -> result
+      rescheduled later.
+      Setting peek:true will affect how we read from the underlying buffer --
+      the peek parameter's value is passed on to read. Parsing with peek:true
+      means that we parse a value without removing it from the buffer, and this
+      allow us to call parse on this same value again in the future.
+    *)
+    val parse : ?peek:bool -> t -> type_value -> result
     (*Unparsing involves serialising a Flick expression into bytes (in the
       parser's buffer) then writing out the buffer (using the BUFFER's API).
       If this suceeds then we return "true".

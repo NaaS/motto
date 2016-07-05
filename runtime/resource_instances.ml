@@ -364,10 +364,10 @@ end
   and returns an expression when one's received on the channel.*)
 module Channel_FIFO_Builder : CHANNEL_BUILDER =
  functor (Parser_Fun : PARSER_BUILDER)
- (Config : BUFFER_CONFIG)
+ (Buffer_Config : BUFFER_CONFIG)
  (RX_Buffer : BUFFER) ->
 struct
-  module Parser = Parser_Fun (RX_Buffer) (Config)
+  module Parser = Parser_Fun (RX_Buffer) (Buffer_Config)
   type t = {
     target : string ref;
     fd : Unix.file_descr option ref;
@@ -382,7 +382,7 @@ struct
 
   let allocate n_opt =
     assert (n_opt = None);
-    let buffr = RX_Buffer.create Config.buffer_size in
+    let buffr = RX_Buffer.create Buffer_Config.buffer_size in
     {
       target = ref "";
       fd = ref None;
@@ -411,7 +411,7 @@ struct
     let fd = Unix.openfile s flags mode in
     t.fd := Some fd;
     (fun raw_buffer offset qty ->
-     assert (qty <= Config.buffer_size);
+     assert (qty <= Buffer_Config.buffer_size);
      try
        Unix.read fd raw_buffer offset qty
        (*NOTE the ring buffer's write pointer is encapsulated
@@ -424,10 +424,23 @@ struct
     |> RX_Buffer.register_filler t.buffr;
 
     (fun raw_buffer offset qty ->
-     assert (qty <= Config.buffer_size);
+     assert (qty <= Buffer_Config.buffer_size);
+     if !Config.cfg.Config.verbosity > 1 then
+     begin
+       print_endline ("offset=" ^ string_of_int offset);
+       print_endline ("qty=" ^ string_of_int qty);
+     end;
+(*     try*)
        Unix.write fd raw_buffer offset qty
        (*NOTE the ring buffer's write pointer is encapsulated
               from the filler, and it's up to the buffer to update it.*)
+(*FIXME not sure if these are needed
+     with
+     (*Since we're in non-blocking mode, ignore such exceptions;
+       interpret them to mean that no data is currently available.*)
+     | Unix.Unix_error (Unix.EAGAIN, "write", _)
+     | Unix.Unix_error (Unix.EWOULDBLOCK, "write", _) -> 0
+*)
 )
     |> RX_Buffer.register_unfiller t.buffr; (*FIXME should be in TX_Buffer?*)
 
@@ -476,8 +489,11 @@ struct
   let can_receive t =
     assert (!(t.fd) <> None);
     RX_Buffer.fill_until t.buffr (RX_Buffer.size t.buffr);
-print_endline ("|rx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
-print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    if !Config.cfg.Config.verbosity > 1 then
+    begin
+      print_endline ("|rx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+      print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    end;
 
     (*FIXME check type of channel -- can we receive on it?*)
     (*FIXME check waiting contents of channel -- is there anything waiting to be read?*)
@@ -491,8 +507,12 @@ print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr))
   let size_receive t =
     assert (!(t.fd) <> None);
     RX_Buffer.fill_until t.buffr (RX_Buffer.size t.buffr);
-print_endline ("|rx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
-print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    if !Config.cfg.Config.verbosity > 1 then
+    begin
+      print_endline ("|rx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+      print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    end;
+
     (*FIXME check type of channel -- if we cannot receive on it, then "size" is -1*)
     (*FIXME check waiting contents of channel -- is there anything waiting to be read?*)
     let size =
@@ -511,8 +531,8 @@ print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr))
 
   let peek t =
     assert (!(t.fd) <> None);
-    (*FIXME BUFFER needs to support peeking*)
-    failwith "TODO"
+    Parser.parse ~peek:true t.parsr
+     (Integer (None, Crisp_type_annotation.empty_type_annotation))
 
   let receive t =
     assert (!(t.fd) <> None);
@@ -526,13 +546,19 @@ print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr))
     if Parser.unparse t.parsr
        (Integer (None, Crisp_type_annotation.empty_type_annotation)) e then
     Expression e else Unavailable in
-print_endline ("|tx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
-print_endline ("!tx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    if !Config.cfg.Config.verbosity > 1 then
+    begin
+      print_endline ("|tx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+      print_endline ("!tx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    end;
     (*FIXME rather than doing this here, we could have another entity in the eval-monad
             that takes care of doing some IO whenever it's scheduled.*)
     RX_Buffer.unfill_until t.buffr (RX_Buffer.size t.buffr);
-print_endline ("|tx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
-print_endline ("!tx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    if !Config.cfg.Config.verbosity > 1 then
+    begin
+      print_endline ("|tx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+      print_endline ("!tx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    end;
     result
 end
 

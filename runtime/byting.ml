@@ -70,7 +70,7 @@ let fill t no_bytes_needed =
   (*NOTE the ring buffer's write pointer is encapsulated
          from the filler, and it's up to the buffer to update it.
          This is done next.*)
-  t.write_ofs := no_bytes_read + !(t.write_ofs);
+  t.write_ofs := no_bytes_read + !(t.write_ofs) mod size t;
   no_bytes_read
 
 (*Like "fill", but in the opposite direction: attempts to take bytes from the
@@ -81,7 +81,7 @@ let unfill t no_bytes_needed =
   (*NOTE the ring buffer's read pointer is encapsulated
          from the unfiller, and it's up to the buffer to update it.
          This is done next.*)
-  t.read_ofs := no_bytes_written + !(t.read_ofs);
+  t.read_ofs := no_bytes_written + !(t.read_ofs) mod size t;
   no_bytes_written
 
 let fill_until t n =
@@ -91,10 +91,11 @@ let fill_until t n =
   if n > size t then
     (*FIXME give more info*)
     failwith "Fill request exceeds buffer size"
-  else
+  else if n <= occupied_size t then
     (*We're done if we've got at least n bytes in
       the buffer*)
-    (n <= occupied_size t ||
+    true
+  else
      (*Try to read as many bytes as we need to get
        the desired occupied_size.
        FIXME in case the granularity of the reads
@@ -119,7 +120,7 @@ let fill_until t n =
              fill t part2_width
            else 0 in
          part1_nobytesread + part2_nobytesread in
-     no_bytes_read = no_bytes_needed)
+     no_bytes_read = no_bytes_needed
 
 (*Try to flush n bytes from the buffer. Returns "true" if there are n free
   (i.e., writeable by the client) bytes in the buffer, otherwise it tries to
@@ -128,13 +129,23 @@ let unfill_until t n =
   (*Test the unfiller -- have it read 0 bytes. This should result in an exception
     if an unfiller hasn't been registered.*)
   ignore(!(t.unfiller) t.buffer 0 0);
+  if !Config.cfg.Config.verbosity > 1 then
+  begin
+    print_endline ("size=" ^ string_of_int(size t));
+    print_endline ("occupied_size=" ^ string_of_int(occupied_size t));
+  end;
+
   if n > size t then
     (*FIXME give more info*)
     failwith "Unfill request exceeds buffer size"
-  else
+  else if n <= size t - occupied_size t then
     (*We're done if we've got at least n bytes in
       the buffer*)
-    (n <= size t - occupied_size t ||
+    true
+  else if occupied_size t = size t then
+    (*Don't overflow the buffer*)
+    false
+  else
      (*Try to write (to the resource) as many bytes as we need to get
        the desired free space.
        FIXME in case the granularity of the writes
@@ -159,9 +170,9 @@ let unfill_until t n =
              unfill t part2_width
            else 0 in
          part1_nobyteswrit + part2_nobyteswrit in
-     no_bytes_written = no_bytes_needed)
+     no_bytes_written = no_bytes_needed
 
-let read t n =
+let read ?peek:(peek : bool = false) t n =
   assert (n > 0);
   assert (!(t.read_ofs) <> !(t.write_ofs));
   if n > occupied_size t then
@@ -180,7 +191,12 @@ let read t n =
           (Bytes.sub t.buffer 0 !(t.write_ofs))
         end in
     begin
-      t.read_ofs := (!(t.read_ofs) + n) mod size t;
+      if not peek then
+        begin
+          (*Since this is a ring buffer, a "peek" is simply a read that doesn't
+            advance the read pointer.*)
+          t.read_ofs := (!(t.read_ofs) + n) mod size t
+        end;
       Some result
     end
 
@@ -272,7 +288,7 @@ struct
     Also, space needed in a buffer in order to unparse
     an expression into it.*)
   let space_needed = 1
-  let parse t tv : result =
+  let parse ?peek:(peek : bool = false) t tv : result =
     match tv with
     | Integer _(*FIXME should we differentiate based
                        on this parameter?*) ->
@@ -298,7 +314,7 @@ struct
              rather than invoke a series of actions
              that involve an IO step each time.*)
         if Buffer.fill_until t.buffer space_needed(*need a single byte in the buffer to proceed*) then
-          match Buffer.read t.buffer space_needed(*read that byte we have*) with
+          match Buffer.read ~peek t.buffer space_needed(*read that byte we have*) with
           | None -> Unavailable
           | Some bytes ->
             let c =

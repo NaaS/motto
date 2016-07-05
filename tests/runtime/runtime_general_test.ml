@@ -408,20 +408,44 @@ let _ = run [
 *)
 (*FIXME test channel arrays*)
 
-let c_fifo = Channel_resource (Resource_varieties.Channel.fifo ())
+let c_fifo1 = Channel_resource (Resource_varieties.Channel.fifo "chan_fifo1")
+let c_fifo2 = Channel_resource (Resource_varieties.Channel.fifo "chan_fifo2")
 let _ = run [
-  Acquire_Resource (c_fifo, Some "my_fifo");
-  Declare_channel ("chan_fifo", "integer/integer");
+  Acquire_Resource (c_fifo1, Some "my_fifo1");
+  Acquire_Resource (c_fifo2, Some "my_fifo2");
+  Declare_channel ("chan_fifo1", "integer/-");
+  Declare_channel ("chan_fifo2", "-/integer");
 (*  Eval "can chan_fifo";*)(*FIXME cannot "can" this sort of identifier!*)
-  Assign_Resource ("chan_fifo", c_fifo);
-  Eval "can chan_fifo";
+  Assign_Resource ("chan_fifo1", c_fifo1);
+  Assign_Resource ("chan_fifo2", c_fifo2);
+  Eval "can chan_fifo1";
+  Eval "can chan_fifo2";
+(*
   Eval "can (? chan_fifo)";
   Eval "size (? chan_fifo)";
   Eval "if can (? chan_fifo): ? chan_fifo else: 0";
   Eval "size (? chan_fifo)";
   Eval "if can (? chan_fifo): ? chan_fifo else: 0";
+*)
+(*
+  Eval "chan_fifo ! 5";
+  Eval "chan_fifo ! 6";
+  Eval "chan_fifo ! 7";
+  Eval "chan_fifo ! 8";
+  Eval "chan_fifo ! 9";
+*)
 
-  Dismiss_Resource c_fifo;
-  Eval "can chan_fifo";
-  Unlink "chan_fifo";
+  MI (Show_symbol_table None);
+  MI (Show_runtime_ctxt None);
+
+  Load "tests/flick_code/process_forwarder.cp";
+  Instantiate_Process ("forwarder", "Forwarder(chan_fifo1, chan_fifo2)");
+  Run_Asynch;
+
+  Dismiss_Resource c_fifo1;
+  Dismiss_Resource c_fifo2;
+  Eval "can chan_fifo1";
+  Eval "can chan_fifo2";
+  Unlink "chan_fifo1";
+  Unlink "chan_fifo2";
 ]

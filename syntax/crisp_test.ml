@@ -1,6 +1,7 @@
 (*
   Simple test framework for the Crisp parser
   Nik Sultana, Cambridge University Computer Lab, January 2015
+  Jonny Shipton, Cambridge University Computer Lab, June 2016
 
   Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
@@ -9,13 +10,30 @@ open Lexing
 open Crisp_syntax
 open Crisp_parser
 open Crisp_parse
+open General
+
+let is_bad_test filename =
+  let bad = ".bad." in
+  let bad_len = String.length bad in
+  let len = String.length filename in
+  let rec contains_bad_from start =
+    let dotIndex = String.index_from filename start '.' in
+    let startsWithBad = (len - dotIndex >= bad_len) &&
+      (bad = String.sub filename dotIndex bad_len) in
+    startsWithBad || contains_bad_from (dotIndex + 1) in
+  try contains_bad_from 0 with Not_found -> false
 
 let loop filename () =
   print_endline "Starting source program";
-  parse_file filename
+  let contents = parse_file filename in
+  contents
   |> Crisp_syntax.source_file_contents_to_string
   |> print_endline;
   print_endline "Finished source program";
+  if (contents <> Empty && is_bad_test filename) then
+    Printf.eprintf "%s test file %s didn't fail\n" Terminal.warning filename
+  else if (contents = Empty && not (is_bad_test filename)) then
+    Printf.eprintf "%s test file %s failed\n" Terminal.warning filename
 (*FIXME this next block is very rudimentary
   print_endline "Starting translated program";
   result
@@ -43,15 +61,12 @@ let lex_looper filename () =
   let lexbuf = Lexing.from_channel inx in
   lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
   let results =
+    (*NOTE will return what was lexed until error or end*)
     let rec contents acc =
-      (*let x = Crisp_lexer.main lexbuf in*)
-      (*let x = expand_macro_tokens Crisp_lexer.main lexbuf in*)
-      let x =
-        (Crisp_lexer.main
-         |> expand_macro_tokens
-         |> filter_redundant_newlines) lexbuf in
-      if x = Crisp_parser.EOF then List.rev (x :: acc)
-      else contents (x :: acc)
+      match Crisp_parse.lex_step_with_error ~silent:true lexbuf with
+      | None -> List.rev acc (*error - return what we have so far*)
+      | Some (Crisp_parser.EOF as t) -> List.rev (t :: acc)
+      | Some t -> contents (t :: acc)
     in contents [] in
   begin
     close_in inx;
@@ -172,11 +187,37 @@ let string_of_token = function
 
   | SIZE -> "SIZE"
 ;;
+let get_expanded_filtered_tokens filename () =
+  let inx = open_in filename in
+  let lexbuf = Lexing.from_channel inx in
+  lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
+  let lexer = (Crisp_lexer.main
+              |> expand_macro_tokens
+              |> filter_redundant_newlines) in
+  let results =
+    (*NOTE will return what was lexed until error or end*)
+    let rec contents acc =
+      match Crisp_parse.lex_with_error ~silent:true lexer lexbuf with
+      | None -> List.rev acc (*error - return what we have so far*)
+      | Some (Crisp_parser.EOF as t) -> List.rev (t :: acc)
+      | Some t -> contents (t :: acc)
+    in contents [] in
+  begin
+    close_in inx;
+    results
+  end
 
 let test filepath =
   print_endline ("Testing " ^ filepath);
+  Printf.printf "Lexed tokens:\n";
   Printf.printf "%s\n"
-    ((List.map string_of_token (lex_looper filepath ()))
+    (lex_looper filepath ()
+     |> List.map string_of_token
+     |> String.concat ", ");
+  Printf.printf "Lexed tokens, expanded and filtered:\n";
+  Printf.printf "%s\n"
+    (get_expanded_filtered_tokens filepath ()
+     |> List.map string_of_token
      |> String.concat ", ");
   loop filepath ()
 ;;
@@ -185,22 +226,19 @@ let test filepath =
 let test_whole_dir testdir =
   let ending = ".cp" in
   let ending_length = String.length ending in
-  let dh = Unix.opendir testdir in
-  try
-    while true do
-      let filename = Unix.readdir dh in
-      let filename_length = String.length filename in
-      (*FIXME naive*)
-      if filename <> "." && filename <> ".." &&
-         filename_length > ending_length &&
-         ending = String.sub filename
-                    (filename_length - ending_length)
-                    ending_length then
-        test (testdir ^ "/" ^ filename)
-      else ()
-    done
-  with End_of_file ->
-    Unix.closedir dh
+  let endsWithCP filename =
+    let filename_length = String.length filename in
+    filename_length > ending_length &&
+      ending = String.sub filename
+                          (filename_length - ending_length)
+                          ending_length in
+  let filenames = 
+    Sys.readdir testdir 
+    |> Array.to_list 
+    |> List.filter endsWithCP 
+    |> List.sort compare
+    |> List.map (Filename.concat testdir) in 
+  List.iter (fun filename -> test filename) filenames
 ;;
 
 let run_parser_test directories files =

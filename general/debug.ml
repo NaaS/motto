@@ -5,6 +5,7 @@
    Use of this source code is governed by the Apache 2.0 license; see LICENSE
 *)
 
+open Lexing
 
 (*Format a list of strings nicely*)
 let print_list indentation l =
@@ -51,3 +52,8 @@ let foreground_colour (c : colour) : unit =
   |> print_string
 
 let reset_colour = "\027[0;22m"
+
+let print_position outx lexbuf =
+  let pos = lexbuf.lex_curr_p in
+  Printf.fprintf outx "%s:%d:%d" pos.pos_fname
+    pos.pos_lnum (lexbuf.lex_start_pos - pos.pos_bol + 1)

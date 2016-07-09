@@ -1,6 +1,7 @@
 (*
   Parser interface for Flick
   Nik Sultana, Cambridge University Computer Lab, January 2015
+  Jonny Shipton, Cambridge University Computer Lab, June 2016
 
   Parts of this module is based on explanation & code given at
   https://realworldocaml.org/v1/en/html/parsing-with-ocamllex-and-menhir.html
@@ -10,6 +11,7 @@
 
 open Lexing
 open Crisp_syntax
+open Debug
 
 (*NOTE this code depends on side-effects to expand tokens, to deal with the
   constraint that the lexer only emits one token at a time.*)
@@ -97,27 +99,51 @@ let expand_macro_tokens
       | token -> token
   in token_stream_processor token_q wrapper_lexer lexer lexbuf
 
-let print_position outx lexbuf =
-  let pos = lexbuf.lex_curr_p in
-  Printf.fprintf outx "%s:%d:%d" pos.pos_fname
-    pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
+(*FIXME error info should be inside the actual error, not lexbuf*)
+let handle_lex_error ?(silent=false) ex lexbuf =
+  match ex with
+  | Failure m ->
+      if not silent then
+        Printf.fprintf stderr "%a: error - %s\n" print_position lexbuf m
+  | Crisp_lexer.Error ->
+      if not silent then
+        Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf
+  | e -> raise e (*If we don't handle it here, re-raise it*)
 
-let parse_with_error lexbuf : Crisp_syntax.source_file_contents =
-  (*try Crisp_parser.program Crisp_lexer.main lexbuf with*)
-  (*try Crisp_parser.program (expand_macro_tokens Crisp_lexer.main) lexbuf with*)
-  try Crisp_parser.source_file_contents
-        (Crisp_lexer.main
-         |> expand_macro_tokens
-         |> filter_redundant_newlines) lexbuf with
-(*
-  | SyntaxError msg ->
-    fprintf stderr "%a: %s\n" print_position lexbuf msg;
-    None
-*)
+let lex_with_error ?(silent=false) lexer lexbuf =
+  try Some (lexer lexbuf)
+  with
+  | ex -> handle_lex_error ~silent ex lexbuf; None
+
+let lex_step_with_error ?(silent=false) lexbuf =
+  lex_with_error ~silent Crisp_lexer.main lexbuf
+
+
+let parse_with_error ?(silent=false) lexbuf : Crisp_syntax.source_file_contents =
+  let lexer = 
+    Crisp_lexer.main
+    |> expand_macro_tokens
+    |> filter_redundant_newlines in
+  let wrapped_lexer lexbuf =
+    try lexer lexbuf with
+    | ex ->
+        (*This will re-raise any errors that aren't handled as a lexing error,
+          so allow them to propogate since they probably shouldn't be
+          presented as parsing errors. *)
+        handle_lex_error ex lexbuf;
+        (*wrap the lexing exception as a generic lexing exception
+          since we have already handled it if we can, so that parsing fails.*)
+        raise Crisp_lexer.Error
+  in
+  try
+    Crisp_parser.source_file_contents wrapped_lexer lexbuf
+  with 
   | Crisp_parser.Error ->
-    Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf;
-    (*exit(-1)*)
-    Empty
+      if not silent then
+        Printf.fprintf stderr "%a: syntax error\n" print_position lexbuf;
+      Empty
+  | Crisp_lexer.Error -> (* Lexing error - already handled *)
+      Empty
 
 let rec parse_and_print lexbuf =
   parse_with_error lexbuf

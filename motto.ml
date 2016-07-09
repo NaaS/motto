@@ -326,4 +326,4 @@ match !cfg.source_file with
   if !cfg.parser_test_files <> [] || !cfg.parser_test_dirs <> [] then
     Crisp_test.run_parser_test !cfg.parser_test_dirs !cfg.parser_test_files;
   if !cfg.output_location <> No_output then
-    Printf.printf "(Not given a file to compile)"
+    Printf.printf "(Not given a file to compile)\n"

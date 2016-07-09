@@ -49,6 +49,19 @@ let wrap (f : 'a -> 'b) (x : 'a) : 'b =
         rtv_s)
     end;
     exit 1
+  | Eval_monad.EvalMonad_Exc (msg, eval_monad_opt) ->
+    begin
+    if not !cfg.unexceptional then
+      let eval_monad_s =
+        match eval_monad_opt with
+        | None -> ""
+        | Some eval_monad -> "evaluation monad: " ^ Eval_monad.evalm_to_string eval_monad in
+      print_endline
+        ("Evaluation monad error: " ^ msg ^ "\n" ^
+(*FIXME        "in file " ^ source_file ^ "\n" ^*)
+        eval_monad_s)
+    end;
+    exit 1
   | Translation.Translation_Expr_Exc (msg, e_opt, local_name_map_opt, sts_acc_opt, st) ->
     begin
     if not !cfg.unexceptional then

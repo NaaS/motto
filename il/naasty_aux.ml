@@ -281,23 +281,27 @@ let rec size_of_naasty_expression : naasty_expression -> int = function
       1 + e1_size + e2_size
 
 let rec string_of_template_parameter ?st_opt:((st_opt : state option) = None)
+          ?hex_ints:(hex_ints = false)
           (tp : template_parameter) : string =
   match tp with
   | Type_Parameter ty ->
     string_of_naasty_type ~st_opt 0 ty
   | Term_Parameter e ->
-    string_of_naasty_expression ~st_opt e
+    string_of_naasty_expression ~hex_ints ~st_opt e
     |> fst
 and string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
+          ?hex_ints:(hex_ints = false)
           ?no_outer_brackets:(no_outer_brackets = false)
           (e : naasty_expression) : string * bool(*if bracketed*) =
   let e_s =  
     match e with
     | Minus (Int_Value 0, Int_Value n) -> "-" ^ string_of_int n
-    | Int_Value i -> string_of_int i
+    | Int_Value i ->
+        if hex_ints then Printf.sprintf ("0x%x") i
+        else string_of_int i
     | Plus (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " + " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " + " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Var id -> id_name st_opt id
     | Const id -> id_name st_opt id
     | Call_Function (id, template_params, es) ->
@@ -305,80 +309,80 @@ and string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
         if template_params = [] then ""
         else
           let body =
-          List.map (string_of_template_parameter ~st_opt) template_params
+          List.map (string_of_template_parameter ~hex_ints ~st_opt) template_params
           |> String.concat ", "
           in "<" ^ body ^  ">" in
       let arg_s =
-        List.map (string_of_naasty_expression ~no_outer_brackets:true ~st_opt) es
+        List.map (string_of_naasty_expression ~hex_ints ~no_outer_brackets:true ~st_opt) es
         |> List.map fst
         |> String.concat ", " in
       id_name st_opt id ^ template_params_s ^ " (" ^ arg_s ^ ")"
     | GEq (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " >= " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " >= " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Gt (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " > " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " > " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Cast (ty, e) ->
       "(" ^ string_of_naasty_type no_indent ~st_opt ty ^ ")" ^
-      fst (string_of_naasty_expression ~st_opt e)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e)
     | Field_In_Record (Dereference record_ref, field) ->
       (*NOTE this syntactic sugaring is handled directly*)
-      fst (string_of_naasty_expression ~st_opt record_ref) ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt record_ref) ^
       "->" ^
-      fst (string_of_naasty_expression ~st_opt field)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt field)
     | Dereference e ->
-      "*" ^ fst (string_of_naasty_expression ~st_opt e)
+      "*" ^ fst (string_of_naasty_expression ~hex_ints ~st_opt e)
     | Field_In_Record (record, field) ->
-      fst (string_of_naasty_expression ~st_opt record) ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt record) ^
       "." ^
-      fst (string_of_naasty_expression ~st_opt field)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt field)
     | Address_of e ->
-      "&" ^ fst (string_of_naasty_expression ~st_opt e)
+      "&" ^ fst (string_of_naasty_expression ~hex_ints ~st_opt e)
     | And (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " && " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " && " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Or (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " || " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " || " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Not e ->
-      "!" ^ fst (string_of_naasty_expression ~st_opt e)
+      "!" ^ fst (string_of_naasty_expression ~hex_ints ~st_opt e)
     | Equals (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " == " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " == " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Lt (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " < " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " < " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Minus (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " - " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " - " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Times (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " * " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " * " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | LEq (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " <= " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " <= " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | ArrayElement (arr, idx) ->
-      fst (string_of_naasty_expression ~st_opt arr) ^ "[" ^
-      fst (string_of_naasty_expression ~st_opt ~no_outer_brackets:true idx) ^ "]"
+      fst (string_of_naasty_expression ~hex_ints ~st_opt arr) ^ "[" ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt ~no_outer_brackets:true idx) ^ "]"
     | Left_shift (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " << " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " << " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Right_shift (e1, e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " >> " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " >> " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Bool_Value (b) -> 
       string_of_bool b
     | Abs (e) ->
-      "abs (" ^ fst (string_of_naasty_expression ~st_opt e) ^ ")" 
+      "abs (" ^ fst (string_of_naasty_expression ~hex_ints ~st_opt e) ^ ")" 
     | Mod (e1,e2) ->
-      fst (string_of_naasty_expression ~st_opt e1) ^ " % " ^
-      fst (string_of_naasty_expression ~st_opt e2)
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e1) ^ " % " ^
+      fst (string_of_naasty_expression ~hex_ints ~st_opt e2)
     | Record_Value fields ->
       let fields_s =
         List.map (fun (id, e) ->
           "." ^ id_name st_opt id ^ " = " ^
-          fst (string_of_naasty_expression ~st_opt e)) fields
+          fst (string_of_naasty_expression ~hex_ints ~st_opt e)) fields
          |> String.concat ", " in
       "{" ^ fields_s ^ "}" 
     | Nullptr -> "nullptr"
@@ -389,6 +393,7 @@ and string_of_naasty_expression ?st_opt:((st_opt : state option) = None)
     "(" ^ e_s ^ ")", true
 
 let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
+          ?hex_ints:(hex_ints = false)
           ?print_semicolon:(print_semicolon : bool = true) indent statement =
   let terminal =
     if print_semicolon then ";" else "" in
@@ -399,7 +404,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     let definition =
       match e_opt with
       | None -> ""
-      | Some e -> " = " ^ fst (string_of_naasty_expression ~no_outer_brackets:true ~st_opt e) in
+      | Some e -> " = " ^ fst (string_of_naasty_expression ~hex_ints ~no_outer_brackets:true ~st_opt e) in
     let prefix_s, trailing_comment_s =
       if not b then
         "/*", " -- This declaration is not to be emitted to the back-end*/"
@@ -407,46 +412,46 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     in indn indent ^ prefix_s ^ string_of_naasty_type ~st_opt no_indent ty ^
        definition ^ trailing_comment_s ^ terminal
   | Seq (stmt1, stmt2) ->
-    string_of_naasty_statement ~st_opt indent stmt1 ^ "\n" ^
-    string_of_naasty_statement ~st_opt indent stmt2
+    string_of_naasty_statement ~hex_ints ~st_opt indent stmt1 ^ "\n" ^
+    string_of_naasty_statement ~hex_ints ~st_opt indent stmt2
   | Assign (lvalue, e) ->
-    indn indent ^ fst (string_of_naasty_expression ~st_opt lvalue) ^ " = " ^
-    fst (string_of_naasty_expression ~no_outer_brackets:true ~st_opt e) ^ terminal
+    indn indent ^ fst (string_of_naasty_expression ~hex_ints ~st_opt lvalue) ^ " = " ^
+    fst (string_of_naasty_expression ~hex_ints ~no_outer_brackets:true ~st_opt e) ^ terminal
   | Increment (id, e) ->
     indn indent ^ id_name st_opt id ^ " += " ^
-    fst (string_of_naasty_expression ~no_outer_brackets:true ~st_opt e) ^ terminal
+    fst (string_of_naasty_expression ~hex_ints ~no_outer_brackets:true ~st_opt e) ^ terminal
   | For (((id, id_init), condition, increment), body) ->
     (*FIXME check if the target syntax is correct*)
     indn indent ^ "for (" ^
     string_of_naasty_type ~st_opt no_indent id ^ " = " ^
-    fst (string_of_naasty_expression ~st_opt id_init) ^ "; " ^
-    fst (string_of_naasty_expression ~no_outer_brackets:true ~st_opt condition) ^ "; " ^
-    string_of_naasty_statement ~st_opt no_indent ~print_semicolon:false increment ^ ") {\n" ^
-    string_of_naasty_statement ~st_opt (indent + indentation) body ^
+    fst (string_of_naasty_expression ~hex_ints ~st_opt id_init) ^ "; " ^
+    fst (string_of_naasty_expression ~hex_ints ~no_outer_brackets:true ~st_opt condition) ^ "; " ^
+    string_of_naasty_statement ~hex_ints ~st_opt no_indent ~print_semicolon:false increment ^ ") {\n" ^
+    string_of_naasty_statement ~hex_ints ~st_opt (indent + indentation) body ^
     "\n" ^ indn indent ^ "}"
   | If (e, stmt1, stmt2) ->
     let cond_s =
-      match string_of_naasty_expression ~st_opt e with
+      match string_of_naasty_expression ~hex_ints ~st_opt e with
       | s, true -> s
       | s, false ->
         (*Ensure that condition is bracketed*)
         "(" ^ s ^ ")" in
     indn indent ^ "if " ^ cond_s ^ " {\n" ^
-    string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
+    string_of_naasty_statement ~hex_ints ~st_opt (indent + indentation) stmt1 ^
     "\n" ^
     indn indent ^ "} else {\n" ^
-    string_of_naasty_statement ~st_opt (indent + indentation) stmt2 ^
+    string_of_naasty_statement ~hex_ints ~st_opt (indent + indentation) stmt2 ^
     "\n" ^
     indn indent ^ "}"
   | If1 (e, stmt1) ->
     let cond_s =
-      match string_of_naasty_expression ~st_opt e with
+      match string_of_naasty_expression ~hex_ints ~st_opt e with
       | s, true -> s
       | s, false ->
         (*Ensure that condition is bracketed*)
         "(" ^ s ^ ")" in
     indn indent ^ "if " ^ cond_s ^ " {\n" ^
-    string_of_naasty_statement ~st_opt (indent + indentation) stmt1 ^
+    string_of_naasty_statement ~hex_ints ~st_opt (indent + indentation) stmt1 ^
     "\n" ^
     indn indent ^ "}"
   | Break -> indn indent ^ "break" ^ terminal
@@ -457,7 +462,7 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
 	| ForwardChan of identifier * identifier
 *)
   | Return e_opt ->
-    let f e = " " ^ fst (string_of_naasty_expression ~st_opt e) in
+    let f e = " " ^ fst (string_of_naasty_expression ~hex_ints ~st_opt e) in
     indn indent ^ "return" ^  bind_opt f "" e_opt ^ terminal
   | Skip -> indn indent ^ "/*skip*/"
   | Commented (Skip, comment) ->
@@ -465,27 +470,27 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     indn indent ^ "// " ^ comment
   | Commented (stmt, comment) ->
     (*First print the statement, then the comment*)
-    string_of_naasty_statement ~st_opt indent stmt ^ " // " ^ comment
+    string_of_naasty_statement ~hex_ints ~st_opt indent stmt ^ " // " ^ comment
   | St_of_E e ->
-    indn indent ^ fst (string_of_naasty_expression ~no_outer_brackets:true ~st_opt e) ^ terminal
+    indn indent ^ fst (string_of_naasty_expression ~hex_ints ~no_outer_brackets:true ~st_opt e) ^ terminal
   | Label (lbl, stmt) ->
     indn indent ^ lbl ^ ": " ^
-    string_of_naasty_statement ~st_opt no_indent stmt ^ terminal
+    string_of_naasty_statement ~hex_ints ~st_opt no_indent stmt ^ terminal
   | GotoLabel lbl ->
     indn indent ^ "goto " ^ lbl ^ terminal
   | Switch (e, cases) ->
     let e_to_str e =
       (*FIXME this function seems to be generally useful -- lift to higher
               scope?*)
-      match string_of_naasty_expression ~st_opt e with
+      match string_of_naasty_expression ~hex_ints ~st_opt e with
       | s, true -> s
       | s, false ->
         (*Ensure that condition is bracketed*)
         "(" ^ s ^ ")" in
     let case_s (e, stmt) =
-      let e_s, _ = string_of_naasty_expression ~st_opt e in
+      let e_s, _ = string_of_naasty_expression ~hex_ints ~st_opt e in
       indn (indent + default_indentation) ^ "case " ^ e_s ^ ": {\n" ^
-      string_of_naasty_statement ~st_opt (indent + (2 * default_indentation)) stmt ^
+      string_of_naasty_statement ~hex_ints ~st_opt (indent + (2 * default_indentation)) stmt ^
       "\n" ^
       indn (indent + 2 * default_indentation) ^ "} break"(*FIXME add "break" to Naasty*) ^
       terminal in
@@ -493,26 +498,32 @@ let rec string_of_naasty_statement ?st_opt:((st_opt : state option) = None)
     String.concat "\n" (List.map case_s cases) ^
     "\n" ^ indn indent ^ "}"
 
-let string_of_naasty_function ?st_opt:((st_opt : state option) = None) indent naasty_function =
+let string_of_naasty_function
+          ?hex_ints:(hex_ints = false)
+          ?st_opt:((st_opt : state option) = None) indent naasty_function =
   let arg_types_s =
    List.map (string_of_naasty_type ~st_opt indent) naasty_function.arg_tys
    |> String.concat ", " in
 string_of_naasty_type ~st_opt indent naasty_function.ret_ty ^ " " ^
   id_name st_opt naasty_function.id ^ " " ^
     "(" ^ arg_types_s ^ ") {\n" ^
-    string_of_naasty_statement ~st_opt (indent + default_indentation)
+    string_of_naasty_statement ~hex_ints ~st_opt (indent + default_indentation)
       naasty_function.body ^ "\n" ^
     "}"
 
-let string_of_naasty_declaration ?st_opt:((st_opt : state option) = None) indent = function
+let string_of_naasty_declaration
+          ?hex_ints:(hex_ints = false)
+          ?st_opt:((st_opt : state option) = None) indent = function
   | Type_Decl naasty_type -> string_of_naasty_type ~st_opt indent naasty_type
-  | Fun_Decl naasty_function -> string_of_naasty_function ~st_opt indent naasty_function
-  | Stmt naasty_statement -> string_of_naasty_statement ~st_opt indent naasty_statement
+  | Fun_Decl naasty_function -> string_of_naasty_function ~hex_ints ~st_opt indent naasty_function
+  | Stmt naasty_statement -> string_of_naasty_statement ~hex_ints ~st_opt indent naasty_statement
 
-let string_of_naasty_program ?st_opt:((st_opt : state option) = None) indent prog =
+let string_of_naasty_program
+          ?hex_ints:(hex_ints = false)
+          ?st_opt:((st_opt : state option) = None) indent prog =
   prog
   |> List.map
-       (string_of_naasty_declaration ~st_opt indent)
+       (string_of_naasty_declaration ~hex_ints ~st_opt indent)
   |> String.concat "\n"
 
 (*Extends a scope by adding a mapping between a name and an index.

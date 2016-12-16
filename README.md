@@ -38,7 +38,7 @@ $ docker run -v `pwd`/tests:/src motto -q --parser_test_file flick_code/types_pr
 
 # Getting going
 We start with the mathematical cousin of "Hello, world" -- i.e., the factorial
-program. Look at the [factorial function in Flick](https://github.com/NaaS/motto/blob/master/tests/flick_code/factorial.ml).
+program. Look at the [factorial function in Flick](https://github.com/NaaS/motto/blob/master/tests/flick_code/factorial.cp).
 To run this, we need an environment that can interpret it -- Motto provides
 this. This interpreter requires a runtime, which connects it with resources on
 the machine on which Flick programs are interpreted. For instance, sockets

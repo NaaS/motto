@@ -12,5 +12,6 @@ S general
 S runtime
 S syntax
 S il
-PKG core
 PKG dynlink
+PKG str
+PKG bytes

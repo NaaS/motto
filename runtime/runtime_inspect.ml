@@ -8,6 +8,7 @@
 open State
 open Crisp_syntax
 open Runtime_asynch
+open Debug
 
 exception Runtime_inspect_exc of string
 
@@ -135,7 +136,7 @@ let declare (v : string) (st : state) (ctxt : Runtime_data.runtime_ctxt) (d : de
 
 (*Evaluate a single inspect-instruction*)
 let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
-   (actxt : asynch_ctxt) (i : inspect_instruction)
+   (actxt : asynch_ctxt) (instruction_number : int) (i : inspect_instruction)
    : ((state * Runtime_data.runtime_ctxt) * asynch_ctxt) =
   match i with
   | Declare_value (v, e_s) ->
@@ -296,8 +297,15 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
     let ty_s =
       type_value_to_string ~summary_types:true ~show_annot:false true false 0 ty in
     let value, ctxt' = Eval.evaluate st ctxt e in
-    print_endline (e_s ^ " ~> " ^ Runtime_data.string_of_typed_value value ^
-                  " typed: " ^ ty_s);
+    print_string (encolour Blue (string_of_int instruction_number));
+    print_string (encolour Cyan ":");
+    foreground_colour Yellow;
+    print_endline (e_s ^
+      encolour White " ~> " ^
+      encolour Yellow (Runtime_data.string_of_typed_value value) ^
+      encolour White " typed: " ^
+      encolour Red ty_s ^
+      reset_colour);
     (st, ctxt'), actxt
 
   | MI mi ->
@@ -339,6 +347,7 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
       let ty_s =
         type_value_to_string ~summary_types:true ~show_annot:false true false 0 ty in
       let value, ctxt' = Eval.evaluate st ctxt result_e in
+      (*FIXME colourify, as done in "Eval"*)
       print_endline ("(asynch) " ^ name ^ " ~> " ^
                      expression_to_string min_indentation result_e ^
                      " typed: " ^ ty_s);
@@ -437,8 +446,11 @@ let eval (st : state) (ctxt : Runtime_data.runtime_ctxt)
 let evals (st : state) (ctxt : Runtime_data.runtime_ctxt)
    (actxt : asynch_ctxt) (is : inspect_instruction list)
    : ((state * Runtime_data.runtime_ctxt) * asynch_ctxt) =
-  List.fold_right (fun instr ((st, ctxt), actxt) ->
-   Wrap_err.wrap (eval st ctxt actxt) instr) (List.rev is) ((st, ctxt), actxt)
+  List.fold_right (fun instr (((st, ctxt), actxt), inst_no) ->
+   ((Wrap_err.wrap (eval st ctxt actxt inst_no) instr), inst_no + 1))
+   (List.rev is)
+   (((st, ctxt), actxt), 1)
+  |> fst
 
 let run (is : inspect_instruction list) : unit =
   ignore(evals initial_state Runtime_data.initial_runtime_ctxt

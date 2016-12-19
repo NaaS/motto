@@ -9,6 +9,7 @@
 
 open Crisp_syntax
 open Resource_types
+open Byting
 
 (*Instead of un/parsing expressions, we store them directly in this example.*)
 (*FIXME implement example involving remote reference?*)
@@ -127,7 +128,9 @@ let _ZERO =
   (*FIXME is this const already defined in std libraries?*)
   char_of_int 0x0;;
 
-module Channel_FIFO : CHANNEL =
+module Channel_FIFO_old : CHANNEL_old =
+(*FIXME make functor to accept parser, which decides on its buffering,
+        and returns an expression*)
 struct
   type t = {
     target : string ref;
@@ -170,13 +173,17 @@ struct
      }
 
   let initialise t (Some s) =
-    (*FIXME could set flags according to the channel type -- that is, whether
-            the channel is read-only, write-only, or read-write.*)
     let flags =
       [Unix.O_NOCTTY; (*Because we don't expect to interact with a TTY via this channel.*)
        Unix.O_CLOEXEC; (*For defensive programming; we don't expect to spawn processes anyway.*)
        Unix.O_NONBLOCK; (*We don't want blocking, so our runtime can retain more control over interaction with resources.*)
-       Unix.O_RDWR; (*FIXME current default*)
+      (*NOTE we set access to read&write irrespective of the channel's type,
+             since read&write fifo gives us more control over its use. For example,
+             no EOF will be received if we're write-only and the other (reading)
+             side has closed its side of the fifo.
+             We'll have to be careful to respect the channel's type, not to write
+             on a ready-only channel for instance.*)
+       Unix.O_RDWR;
       ] in
     t.target := s;
     (*t.fd := Some (Unix.openfile s flags 0o600);*)
@@ -352,6 +359,206 @@ print_endline ("|rx_buffer|:" ^ string_of_int (List.length !(t.rx_buffer)));
     assert (!(t.fd) <> None);
     failwith "TODO"
 end
+
+(*Channel accepts a parser, which decides on its buffering,
+  and returns an expression when one's received on the channel.*)
+module Channel_FIFO_Builder : CHANNEL_BUILDER =
+ functor (Parser_Fun : PARSER_BUILDER)
+ (Buffer_Config : BUFFER_CONFIG)
+ (RX_Buffer : BUFFER) ->
+struct
+  module Parser = Parser_Fun (RX_Buffer) (Buffer_Config)
+  type t = {
+    target : string ref;
+    fd : Unix.file_descr option ref;
+
+    (*Callback expressions. These must be of type "unit"*)
+    on_attach : expression ref;
+    on_detach : expression ref;
+
+    buffr : RX_Buffer.t;
+    parsr : Parser.t;
+  }
+
+  let allocate n_opt =
+    assert (n_opt = None);
+    let buffr = RX_Buffer.create Buffer_Config.buffer_size in
+    {
+      target = ref "";
+      fd = ref None;
+      on_attach = ref flick_unit_value;
+      on_detach = ref flick_unit_value;
+      buffr = buffr;
+      parsr = Parser.init buffr;
+    }
+
+  let initialise t (Some s) =
+    let flags =
+      [Unix.O_NOCTTY; (*Because we don't expect to interact with a TTY via this channel.*)
+       Unix.O_CLOEXEC; (*For defensive programming; we don't expect to spawn processes anyway.*)
+       Unix.O_NONBLOCK; (*We don't want blocking, so our runtime can retain more control over interaction with resources.*)
+      (*NOTE we set access to read&write irrespective of the channel's type,
+             since read&write fifo gives us more control over its use. For example,
+             no EOF will be received if we're write-only and the other (reading)
+             side has closed its side of the fifo.
+             We'll have to be careful to respect the channel's type, not to write
+             on a ready-only channel for instance.*)
+       Unix.O_RDWR;
+      ] in
+    t.target := s;
+    (*NOTE "mode" must be 0 since we're not (expecting to be) creating the file.*)
+    let mode = 0 in
+    let fd = Unix.openfile s flags mode in
+    t.fd := Some fd;
+    (fun raw_buffer offset qty ->
+     assert (qty <= Buffer_Config.buffer_size);
+     try
+       Unix.read fd raw_buffer offset qty
+       (*NOTE the ring buffer's write pointer is encapsulated
+              from the filler, and it's up to the buffer to update it.*)
+     with
+     (*Since we're in non-blocking mode, ignore such exceptions;
+       interpret them to mean that no data is currently available.*)
+     | Unix.Unix_error (Unix.EAGAIN, "read", _)
+     | Unix.Unix_error (Unix.EWOULDBLOCK, "read", _) -> 0)
+    |> RX_Buffer.register_filler t.buffr;
+
+    (fun raw_buffer offset qty ->
+     assert (qty <= Buffer_Config.buffer_size);
+     if !Config.cfg.Config.verbosity > 1 then
+     begin
+       print_endline ("offset=" ^ string_of_int offset);
+       print_endline ("qty=" ^ string_of_int qty);
+     end;
+(*     try*)
+       Unix.write fd raw_buffer offset qty
+       (*NOTE the ring buffer's write pointer is encapsulated
+              from the filler, and it's up to the buffer to update it.*)
+(*FIXME not sure if these are needed
+     with
+     (*Since we're in non-blocking mode, ignore such exceptions;
+       interpret them to mean that no data is currently available.*)
+     | Unix.Unix_error (Unix.EAGAIN, "write", _)
+     | Unix.Unix_error (Unix.EWOULDBLOCK, "write", _) -> 0
+*)
+)
+    |> RX_Buffer.register_unfiller t.buffr; (*FIXME should be in TX_Buffer?*)
+
+    (*FIXME check status, and return 'false' if something's wrong*)
+    true
+
+  let is_available t = (!(t.fd) <> None)
+
+  let dismiss t =
+    assert (!(t.fd) <> None);
+    General.the (!(t.fd))
+    |> Unix.close;
+    t.fd := None;
+    t.target := "";
+    t.on_attach := flick_unit_value;
+    t.on_detach := flick_unit_value;
+    true
+
+  let attach_to t e =
+    (*FIXME could carry out the file opening here instead of in "initialise".
+            this also has the advantage that t.on_attach and t.on_detach could
+            be defined by the programmer at this point, while at "initialise"
+            they'd still have their initial value.*)
+    failwith "TODO"
+
+  let attached_to t =
+    assert (!(t.fd) <> None);
+    Expression (Str !(t.target))
+
+  let on_attachment t e =
+    assert (!(t.fd) <> None);
+(*  FIXME ensure that 'e' is typed 'unit'
+    let ty, _ = Type_infer.ty_of_expr st e in
+    assert (ty = ...);
+*)
+    t.on_attach := e
+
+  let on_detachment t e =
+    assert (!(t.fd) <> None);
+(*  FIXME ensure that 'e' is typed 'unit'
+    let ty, _ = Type_infer.ty_of_expr st e in
+    assert (ty = ...);
+*)
+    t.on_detach := e
+
+  let size_receive t =
+    assert (!(t.fd) <> None);
+    RX_Buffer.fill_until t.buffr (RX_Buffer.size t.buffr);
+    if !Config.cfg.Config.verbosity > 1 then
+    begin
+      print_endline ("|rx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+      print_endline ("!rx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    end;
+
+    (*FIXME check type of channel -- if we cannot receive on it, then "size" is -1*)
+    (*FIXME check waiting contents of channel -- is there anything waiting to be read?*)
+    let size =
+      (*FIXME This currently is inconrrect since it returns the number of bytes
+              in the buffer used by the parser, but it should return the number
+              of units that can be parsed from those bytes.
+              Indeed the bytes in the buffer might not be sufficient for the
+              parser to operate on, so we should instead query the parser about
+              this.*)
+      RX_Buffer.occupied_size t.buffr in
+    Expression (Int size)
+
+  let can_receive t =
+    (*NOTE there could be a cheaper way to implement this, since "size" will
+           cause the parser to parse all available data, whereas "can" only
+           cares if we can returned one parsed unit of data.*)
+    match size_receive t with
+    | Expression (Int n) -> Expression (Crisp_syntax_aux.lift_bool (n > 0))
+    | r -> r
+
+  let can_send t =
+    assert (!(t.fd) <> None);
+    failwith "TODO"
+  let size_send t =
+    assert (!(t.fd) <> None);
+    failwith "TODO"
+
+  let peek t =
+    assert (!(t.fd) <> None);
+    Parser.parse ~peek:true t.parsr
+     (Integer (None, Crisp_type_annotation.empty_type_annotation))
+
+  let receive t =
+    assert (!(t.fd) <> None);
+    Parser.parse t.parsr
+     (Integer (None, Crisp_type_annotation.empty_type_annotation))
+
+  let send t e =
+    assert (!(t.fd) <> None);
+    (*FIXME improve code style*)
+    let result =
+    if Parser.unparse t.parsr
+       (Integer (None, Crisp_type_annotation.empty_type_annotation)) e then
+    Expression e else Unavailable in
+    if !Config.cfg.Config.verbosity > 1 then
+    begin
+      print_endline ("|tx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+      print_endline ("!tx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    end;
+    (*FIXME rather than doing this here, we could have another entity in the eval-monad
+            that takes care of doing some IO whenever it's scheduled.*)
+    RX_Buffer.unfill_until t.buffr (RX_Buffer.size t.buffr);
+    if !Config.cfg.Config.verbosity > 1 then
+    begin
+      print_endline ("|tx_buffer|:" ^ string_of_int (RX_Buffer.size t.buffr));
+      print_endline ("!tx_buffer!:" ^ string_of_int (RX_Buffer.occupied_size t.buffr));
+    end;
+    result
+end
+
+module Channel_FIFO =
+  Channel_FIFO_Builder (Decimal_Digit_Parser)
+  (struct let buffer_size = 200 end)
+  (Buffer);;
 
 (*
 (*This is an example of using channels as an interface for asynchronous

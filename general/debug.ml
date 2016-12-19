@@ -23,6 +23,36 @@ let stringify (x : 'a) : string =
     string_of_int (Obj.magic x)
   else failwith "stringify over unknown type"
 
+type colour =
+ | Black
+ | Red
+ | Green
+ | Yellow
+ | Blue
+ | Magenta
+ | Cyan
+ | White
+
+let int_of_colour = function
+ | Black -> 0
+ | Red -> 1
+ | Green -> 2
+ | Yellow -> 3
+ | Blue -> 4
+ | Magenta -> 5
+ | Cyan -> 6
+ | White -> 7
+
+let ansi_prefix = "\027[3"
+let encolour (c : colour) (s : string) : string =
+  ansi_prefix ^ string_of_int (int_of_colour c) ^ "m" ^ s
+
+let foreground_colour (c : colour) : unit =
+  ansi_prefix ^ string_of_int (int_of_colour c) ^ "m"
+  |> print_string
+
+let reset_colour = "\027[0;22m"
+
 let print_position outx lexbuf =
   let pos = lexbuf.lex_curr_p in
   Printf.fprintf outx "%s:%d:%d" pos.pos_fname

@@ -77,6 +77,7 @@ let rec devaluate (v : typed_value) : expression =
     raise (Eval_Exc ("Cannot represent as Flick expression", None, Some v))
   | ChanType (cn, _) -> Variable cn
   | Resource (Reference_resource (module R : REFERENCE_Instance)) ->
+    begin
     match R.Reference.retrieve R.state with
     | Expression e -> e
     | Unavailable ->
@@ -84,6 +85,13 @@ let rec devaluate (v : typed_value) : expression =
       raise Unavailue
     | Error s ->
       raise (Eval_Exc ("(Resource error) " ^ s, None, Some v))
+    end
+  | Resource (Channel_resource (module R : CHANNEL_Instance)) ->
+    (*As when 'devaluating' internal channels we return a name,
+      which will be resolved against later on. (We must resolve against
+      such a name, to pull/push values, since channels are not first
+      class in Flick.)*)
+    Variable (R.varname)
 
 (*NOTE b and l should be in normal form*)
 let rec fold_list ?acc:(acc : expression option = None)
@@ -731,8 +739,19 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
           (fun s -> Eval_Exc (s, Some e, None)) f st ctxt
         |> apfst return_eval
         end
-      | Resource (Channel_resource r) ->
-        failwith "TODO"
+      | Resource (Channel_resource (module R : CHANNEL_Instance)) ->
+        match R.Channel.send R.state e' with
+        | Expression e ->
+          (*NOTE we currently don't check the type of "e". There's a
+                 risk that if the parser's buggy it might return us
+                 a value of a type that's different to that which we
+                 expect. Currently we don't check this, and trust the
+                 parser.*)
+          return_eval e, ctxt
+        | Unavailable -> retry e, ctxt
+        | Error s ->
+          (*FIXME use separate exception type*)
+          failwith ("External channel error: " ^ s)
 
     in result), ctxt
 
@@ -772,13 +791,19 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
         (retry e, ctxt)
       end
-      | Resource (Channel_resource (module R : CHANNEL_Instance)) ->
-        match R.Channel.receive R.state with
-        | Expression e -> return_eval e, ctxt
-        | Unavailable -> retry e, ctxt
-        | Error s ->
-          (*FIXME use separate exception type*)
-          failwith ("External channel error: " ^ s)
+    | Resource (Channel_resource (module R : CHANNEL_Instance)) ->
+      match R.Channel.receive R.state with
+      | Expression e ->
+        (*NOTE we currently don't check the type of "e". There's a
+               risk that if the parser's buggy it might return us
+               a value of a type that's different to that which we
+               expect. Currently we don't check this, and trust the
+               parser.*)
+        return_eval e, ctxt
+      | Unavailable -> retry e, ctxt
+      | Error s ->
+        (*FIXME use separate exception type*)
+        failwith ("External channel error: " ^ s)
     end
   | Peek (inv, chan_ident) ->
     begin
@@ -816,8 +841,19 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
       | Empty_Channel _(*FIXME was "ctxt", but should ignore any changes done to the context*) ->
         (retry e, ctxt)
       end
-      | Resource (Channel_resource r) ->
-        failwith "TODO"
+    | Resource (Channel_resource (module R : CHANNEL_Instance)) ->
+      match R.Channel.peek R.state with
+      | Expression e ->
+        (*NOTE we currently don't check the type of "e". There's a
+               risk that if the parser's buggy it might return us
+               a value of a type that's different to that which we
+               expect. Currently we don't check this, and trust the
+               parser.*)
+        return_eval e, ctxt
+      | Unavailable -> retry e, ctxt
+      | Error s ->
+        (*FIXME use separate exception type*)
+        failwith ("External channel error: " ^ s)
     end
 
   | Seq (TypeAnnotation (Meta_quoted mis, _), e') ->
@@ -1008,8 +1044,13 @@ let rec normalise (st : state) (ctxt : runtime_ctxt) (e : expression) : eval_mon
               (fun s -> Eval_Exc (s, Some e, None)) f st ctxt in
           (return_eval v, ctxt')
           end
-        | Resource (Channel_resource r) ->
-          failwith "TODO"
+        | Resource (Channel_resource (module R : CHANNEL_Instance)) ->
+          match R.Channel.size_receive R.state with
+          | Expression e -> return_eval e, ctxt
+          | Unavailable -> retry e, ctxt
+          | Error s ->
+            (*FIXME use separate exception type*)
+            failwith ("External channel error: " ^ s)
         end
 
       | _ -> failwith "TODO"

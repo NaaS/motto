@@ -33,10 +33,11 @@ end
 
 module Channel =
 struct
-  let fifo ()(*FIXME assign some sort of resource quantity? for size of buffers, for instance*) =
+  let fifo varname (*FIXME assign some sort of resource quantity? for size of buffers, for instance*) =
     (module struct
        module Channel = Resource_instances.Channel_FIFO
        let state = Channel.allocate None
        let name = "fifo"
+       let varname = varname
      end : CHANNEL_Instance)
 end

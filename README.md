@@ -126,9 +126,8 @@ To run the type checker on regression tests, see the
 
 # Background
 
-The Flick language implements the [crisp](https://github.com/NaaS/admin/wiki/crisp) language idea,
-but simplified as described in the
-[Flick](https://github.com/NaaS/system/tree/master/crisp/flick) description.
+The Flick language implements the crisplanguage idea, but simplified as described in the
+[Flick](https://github.com/NaaS/motto/blob/master/doc/crisp.md) description.
 
 
 # Dependencies
